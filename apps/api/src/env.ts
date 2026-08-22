@@ -14,6 +14,7 @@ export interface AppConfig {
 	modelApiKey: string;
 	modelContextWindow: number;
 	modelMaxTokens: number;
+	modelExtraBody: Record<string, unknown>;
 	knowledgeSearchLimit: number;
 	chunkerSize: number;
 	chunkerOverlap: number;
@@ -26,7 +27,16 @@ export interface FileConfig {
 	server?: { host?: string; port?: number };
 	data?: { dataDir?: string };
 	tenant?: { defaultTenantId?: string };
-	model?: { provider?: string; modelId?: string; baseUrl?: string; apiKey?: string; contextWindow?: number; maxTokens?: number };
+	model?: {
+		provider?: string;
+		modelId?: string;
+		baseUrl?: string;
+		apiKey?: string;
+		contextWindow?: number;
+		maxTokens?: number;
+		/** 额外请求参数,统一放进请求体 extra_body 字段(不与其他参数平级) */
+		extraBody?: Record<string, unknown>;
+	};
 	chunker?: { size?: number; overlap?: number };
 	knowledge?: { searchLimit?: number };
 	company?: { name?: string; team?: string };
@@ -34,10 +44,54 @@ export interface FileConfig {
 
 export const CONFIG_FILE_NAME = "help-sale.config.json";
 
+/**
+ * 剥离开放 JSONC 注释(行注释 // 与块注释),字符串字面量内的内容不受影响。
+ * 配置文件支持注释,便于说明每个字段的用途。
+ */
+export function stripJsonc(source: string): string {
+	let out = "";
+	let inString = false;
+	let i = 0;
+	while (i < source.length) {
+		const ch = source[i];
+		const next = source[i + 1];
+		if (inString) {
+			out += ch;
+			if (ch === "\\") {
+				out += next ?? "";
+				i += 2;
+				continue;
+			}
+			if (ch === '"') inString = false;
+			i++;
+			continue;
+		}
+		if (ch === '"') {
+			inString = true;
+			out += ch;
+			i++;
+			continue;
+		}
+		if (ch === "/" && next === "/") {
+			while (i < source.length && source[i] !== "\n") i++;
+			continue;
+		}
+		if (ch === "/" && next === "*") {
+			i += 2;
+			while (i < source.length && !(source[i] === "*" && source[i + 1] === "/")) i++;
+			i += 2;
+			continue;
+		}
+		out += ch;
+		i++;
+	}
+	return out;
+}
+
 export function locateConfigFile(): string | undefined {
 	const override = process.env.CONFIG_PATH;
 	if (override) return override;
-	// 本文件位于 apps/api/src/env.ts,向上两级即仓库顶层
+	// 本文件位于 apps/api/src/env.ts,向上三级即仓库顶层
 	const here = path.dirname(fileURLToPath(import.meta.url));
 	const candidate = path.resolve(here, "..", "..", "..", CONFIG_FILE_NAME);
 	return existsSync(candidate) ? candidate : undefined;
@@ -53,9 +107,9 @@ export function loadConfigFile(): FileConfig {
 		throw new Error(`无法读取配置文件 ${file}: ${(error as Error).message}`);
 	}
 	try {
-		return JSON.parse(raw) as FileConfig;
+		return JSON.parse(stripJsonc(raw)) as FileConfig;
 	} catch (error) {
-		throw new Error(`配置文件 ${file} 不是合法 JSON: ${(error as Error).message}`);
+		throw new Error(`配置文件 ${file} 解析失败(支持 JSONC 注释): ${(error as Error).message}`);
 	}
 }
 
@@ -83,6 +137,7 @@ const defaults: AppConfig = {
 	modelApiKey: "local-key",
 	modelContextWindow: 32768,
 	modelMaxTokens: 8192,
+	modelExtraBody: {},
 	knowledgeSearchLimit: 5,
 	chunkerSize: 600,
 	chunkerOverlap: 80,
@@ -90,6 +145,15 @@ const defaults: AppConfig = {
 	teamName: "销售团队",
 	tenantId: "t_demo",
 };
+
+function safeParseJson(raw: string): Record<string, unknown> | undefined {
+	try {
+		const parsed = JSON.parse(raw) as unknown;
+		return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : undefined;
+	} catch {
+		return undefined;
+	}
+}
 
 function num(value: unknown, fallback: number): number {
 	const n = Number(value);
@@ -111,6 +175,8 @@ export function loadConfig(): AppConfig {
 		modelApiKey: env.MODEL_API_KEY ?? file.model?.apiKey ?? defaults.modelApiKey,
 		modelContextWindow: num(env.MODEL_CONTEXT_WINDOW ?? file.model?.contextWindow, defaults.modelContextWindow),
 		modelMaxTokens: num(env.MODEL_MAX_TOKENS ?? file.model?.maxTokens, defaults.modelMaxTokens),
+		modelExtraBody:
+			env.MODEL_EXTRA_BODY !== undefined ? (safeParseJson(env.MODEL_EXTRA_BODY) ?? {}) : (file.model?.extraBody ?? defaults.modelExtraBody),
 		knowledgeSearchLimit: num(env.KNOWLEDGE_SEARCH_LIMIT ?? file.knowledge?.searchLimit, defaults.knowledgeSearchLimit),
 		chunkerSize: num(env.CHUNKER_SIZE ?? file.chunker?.size, defaults.chunkerSize),
 		chunkerOverlap: num(env.CHUNKER_OVERLAP ?? file.chunker?.overlap, defaults.chunkerOverlap),

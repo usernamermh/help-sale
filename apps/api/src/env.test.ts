@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { loadConfig, loadConfigFile, locateConfigFile } from "./env.js";
+import { loadConfig, loadConfigFile, locateConfigFile, stripJsonc } from "./env.js";
 
 describe("config", () => {
 	it("定位到仓库顶层配置文件", () => {
@@ -51,5 +51,30 @@ describe("config", () => {
 		expect(file.server?.port).toBe(3000);
 		expect(file.model?.baseUrl).toBeTruthy();
 		expect(file.company?.name).toBeTruthy();
+	});
+});
+
+describe("stripJsonc", () => {
+	it("剥离行注释且保留字符串内的 //", () => {
+		const src = "{\n// 注释\n\"baseUrl\": \"http://x/v1\",\n\"a\": 1 // 尾部注释\n}";
+		expect(JSON.parse(stripJsonc(src))).toEqual({ baseUrl: "http://x/v1", a: 1 });
+	});
+
+	it("剥离块注释", () => {
+		const src = '{"a": /* 块 */ 1}';
+		expect(JSON.parse(stripJsonc(src))).toEqual({ a: 1 });
+	});
+});
+
+describe("extra body", () => {
+	it("环境变量 MODEL_EXTRA_BODY 以 JSON 覆盖", () => {
+		const old = process.env.MODEL_EXTRA_BODY;
+		process.env.MODEL_EXTRA_BODY = '{"temperature":0.7}';
+		try {
+			expect(loadConfig().modelExtraBody).toEqual({ temperature: 0.7 });
+		} finally {
+			if (old === undefined) delete process.env.MODEL_EXTRA_BODY;
+			else process.env.MODEL_EXTRA_BODY = old;
+		}
 	});
 });

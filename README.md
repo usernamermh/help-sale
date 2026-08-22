@@ -11,7 +11,7 @@
 
 ## 配置
 
-所有运行时配置集中在仓库顶层 **[help-sale.config.json](help-sale.config.json)**:服务监听、数据目录、默认租户、模型端点/模型名/密钥/上下文窗口、知识分块参数、检索条数、公司与团队名称。
+所有运行时配置集中在仓库顶层 **[help-sale.config.json](help-sale.config.json)**,文件**支持 // 与 /* */ 注释**,每个字段都写明了作用;覆盖:服务监听、数据目录、默认租户、模型端点/模型名/密钥/上下文窗口(含 `model.extraBody` —— 额外模型参数会统一放进请求体 `extra_body` 字段,不与标准参数平级)、知识分块参数、检索条数、公司与团队名称。
 
 环境变量可临时覆盖(见 `apps/api/.env.example`),例如 `MODEL_ID`、`MODEL_BASE_URL`、`PORT`、`DATA_DIR`;也可用 `CONFIG_PATH` 指定其他配置文件。
 
