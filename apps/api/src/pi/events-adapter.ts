@@ -28,7 +28,9 @@ export function toClientEvents(event: AgentEvent): ClientEvent[] {
 		case "turn_start":
 		case "turn_end":
 			return [];
-		default:
-			return [{ type: event.type }];
+		default: {
+			const unknownEvent = event as { type: string };
+			return [{ type: unknownEvent.type }];
+		}
 	}
 }
