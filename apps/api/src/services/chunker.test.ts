@@ -15,7 +15,7 @@ describe("splitText", () => {
 		const chunks = splitText(text, { size: 300, overlap: 50 });
 		expect(chunks.length).toBeGreaterThan(1);
 		for (const c of chunks) expect(c.length).toBeLessThanOrEqual(300);
-		expect(chunks.join("").length).toBeLessThan(1000); // 去重后总长缩小
+		expect(chunks.join("").length).toBeLessThanOrEqual(1100); // 原文 1000 + 2 次重叠 x50(重叠必然重复)
 	});
 
 	it("段落合并不超过上限", () => {
