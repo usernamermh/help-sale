@@ -25,7 +25,7 @@ export interface CustomerRow {
 export function upsertCustomer(db: DatabaseSync, input: CustomerInput): CustomerRow {
 	const existing = db
 		.prepare("SELECT * FROM customers WHERE tenant_id = ? AND key = ?")
-		.get(input.tenantId, input.key) as CustomerRow | undefined;
+		.get(input.tenantId, input.key) as unknown as CustomerRow | undefined;
 
 	if (existing) {
 		db.prepare(
@@ -33,7 +33,7 @@ export function upsertCustomer(db: DatabaseSync, input: CustomerInput): Customer
 			 SET name = ?, company = ?, stage = ?, notes = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
 			 WHERE id = ?`,
 		).run(input.name ?? existing.name, input.company ?? existing.company, input.stage ?? existing.stage, input.notes ?? existing.notes, existing.id);
-		return db.prepare("SELECT * FROM customers WHERE id = ?").get(existing.id) as CustomerRow;
+		return db.prepare("SELECT * FROM customers WHERE id = ?").get(existing.id) as unknown as CustomerRow;
 	}
 
 	const id = randomUUID();
@@ -46,11 +46,11 @@ export function upsertCustomer(db: DatabaseSync, input: CustomerInput): Customer
 		input.stage ?? null,
 		input.notes ?? null,
 	);
-	return db.prepare("SELECT * FROM customers WHERE id = ?").get(id) as CustomerRow;
+	return db.prepare("SELECT * FROM customers WHERE id = ?").get(id) as unknown as CustomerRow;
 }
 
 export function getCustomer(db: DatabaseSync, tenantId: string, key: string): CustomerRow | undefined {
-	return db.prepare("SELECT * FROM customers WHERE tenant_id = ? AND key = ?").get(tenantId, key) as CustomerRow | undefined;
+	return db.prepare("SELECT * FROM customers WHERE tenant_id = ? AND key = ?").get(tenantId, key) as unknown as CustomerRow | undefined;
 }
 
 export function requireTenant(db: DatabaseSync, tenantId: string, name = "未命名租户", slug?: string): void {

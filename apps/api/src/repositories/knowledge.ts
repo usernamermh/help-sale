@@ -61,7 +61,7 @@ export function searchKnowledge(db: DatabaseSync, tenantId: string, query: strin
 				 ORDER BY f.rank
 				 LIMIT ?`,
 			)
-			.all(tenantId, ftsQuery, limit) as KnowledgeHit[];
+			.all(tenantId, ftsQuery, limit) as unknown as KnowledgeHit[];
 		if (rows.length > 0) return rows;
 	}
 
@@ -75,5 +75,5 @@ export function searchKnowledge(db: DatabaseSync, tenantId: string, query: strin
 			 WHERE kc.tenant_id = ? AND kc.content LIKE ?
 			 LIMIT ?`,
 		)
-		.all(tenantId, `%${clean}%`, limit) as KnowledgeHit[];
+		.all(tenantId, `%${clean}%`, limit) as unknown as KnowledgeHit[];
 }

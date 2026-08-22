@@ -49,7 +49,7 @@ export function createAnalysis(db: DatabaseSync, input: CreateAnalysisInput): An
 }
 
 export function getAnalysis(db: DatabaseSync, tenantId: string, id: string): AnalysisRecord | undefined {
-	const row = db.prepare("SELECT * FROM analyses WHERE tenant_id = ? AND id = ?").get(tenantId, id) as
+	const row = db.prepare("SELECT * FROM analyses WHERE tenant_id = ? AND id = ?").get(tenantId, id) as unknown as
 		| {
 				id: string;
 				tenant_id: string;
@@ -83,6 +83,6 @@ export function getAnalysis(db: DatabaseSync, tenantId: string, id: string): Ana
 export function listAnalysesByCustomer(db: DatabaseSync, tenantId: string, customerId: string, limit = 20): AnalysisRecord[] {
 	const rows = db
 		.prepare("SELECT id FROM analyses WHERE tenant_id = ? AND customer_id = ? ORDER BY created_at DESC LIMIT ?")
-		.all(tenantId, customerId, limit) as { id: string }[];
+		.all(tenantId, customerId, limit) as unknown as { id: string }[];
 	return rows.map((r) => getAnalysis(db, tenantId, r.id)!);
 }
