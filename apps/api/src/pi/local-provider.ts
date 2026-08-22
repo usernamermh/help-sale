@@ -5,6 +5,8 @@ export interface LocalProviderOptions {
 	baseUrl: string;
 	modelId: string;
 	apiKey?: string;
+	contextWindow?: number;
+	maxTokens?: number;
 }
 
 export function createLocalProvider(options: LocalProviderOptions) {
@@ -17,8 +19,8 @@ export function createLocalProvider(options: LocalProviderOptions) {
 		headers: { Authorization: `Bearer ${options.apiKey ?? "local-key"}` },
 		reasoning: false,
 		input: ["text"],
-		contextWindow: 32768,
-		maxTokens: 8192,
+		contextWindow: options.contextWindow ?? 32768,
+		maxTokens: options.maxTokens ?? 8192,
 		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 	};
 

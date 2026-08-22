@@ -18,10 +18,13 @@ export interface ModelRegistryOptions {
 }
 
 export function createModelRegistry(options?: ModelRegistryOptions): ModelRuntime {
+	const appConfig = loadConfig();
 	const cfg = options ?? {
-		baseUrl: process.env.MODEL_BASE_URL ?? "http://10.252.60.39:31883/v1",
-		modelId: process.env.MODEL_ID ?? "u21-preview",
-		apiKey: process.env.MODEL_API_KEY ?? "local-key",
+		baseUrl: appConfig.modelBaseUrl,
+		modelId: appConfig.modelId,
+		apiKey: appConfig.modelApiKey,
+		contextWindow: appConfig.modelContextWindow,
+		maxTokens: appConfig.modelMaxTokens,
 	};
 	const providers: Record<string, Provider> = {
 		deepseek: deepseekProvider(),

@@ -7,6 +7,7 @@ import { searchKnowledge } from "../repositories/knowledge.js";
 export interface AgentDeps {
 	db: DatabaseSync;
 	tenantId: string;
+	searchLimit?: number;
 }
 
 export interface AnalysisDetails {
@@ -19,7 +20,7 @@ export interface AnalysisDetails {
 }
 
 export function createCopilotTools(deps: AgentDeps): Array<AgentTool<any, any>> {
-	const { db, tenantId } = deps;
+	const { db, tenantId, searchLimit = 5 } = deps;
 
 	return [
 		{

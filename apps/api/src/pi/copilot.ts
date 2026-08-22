@@ -48,8 +48,8 @@ export async function runCopilotAnalysis(deps: CopilotDeps, input: RunAnalysisIn
 	const model = runtime.models.getModel(config.modelProvider, config.modelId);
 	if (!model) throw new Error(`model not found: ${config.modelProvider}/${config.modelId}`);
 
-	const tools = createCopilotTools({ db, tenantId });
-	const systemPrompt = getCopilotSystemPrompt({ companyName: deps.companyName });
+	const tools = createCopilotTools({ db, tenantId, searchLimit: config.knowledgeSearchLimit });
+	const systemPrompt = getCopilotSystemPrompt({ companyName: deps.companyName ?? config.companyName, teamName: config.teamName });
 	const agent = makeAgent({ sessionId: conversationId, systemPrompt, tools, streamFn, model });
 
 	await agent.prompt(text);

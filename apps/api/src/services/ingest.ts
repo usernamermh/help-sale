@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { loadConfig } from "../env.js";
 import { findDocumentByTitle, insertKnowledgeDocument } from "../repositories/knowledge.js";
 import { splitText } from "./chunker.js";
 
@@ -15,11 +16,11 @@ export function ingestDocument(
 	if (findDocumentByTitle(db, input.tenantId, input.title)) {
 		return { skipped: true };
 	}
-	const chunks = splitText(input.content);
+	const config = loadConfig();
 	const { documentId, chunkIds } = insertKnowledgeDocument(db, {
 		tenantId: input.tenantId,
 		title: input.title,
-		chunks,
+		chunks: splitText(input.content, { size: config.chunkerSize, overlap: config.chunkerOverlap }),
 	});
 	return { skipped: false, documentId, chunkCount: chunkIds.length };
 }

@@ -1,0 +1,31 @@
+{
+	"server": {
+		"host": "0.0.0.0",
+		"port": 3000
+	},
+	"data": {
+		"dataDir": "apps/api/data"
+	},
+	"tenant": {
+		"defaultTenantId": "t_demo"
+	},
+	"model": {
+		"provider": "local-llm",
+		"modelId": "u21-preview",
+		"baseUrl": "http://10.252.60.39:31883/v1",
+		"apiKey": "local-key",
+		"contextWindow": 32768,
+		"maxTokens": 8192
+	},
+	"chunker": {
+		"size": 600,
+		"overlap": 80
+	},
+	"knowledge": {
+		"searchLimit": 5
+	},
+	"company": {
+		"name": "智造云",
+		"team": "销售团队"
+	}
+}
