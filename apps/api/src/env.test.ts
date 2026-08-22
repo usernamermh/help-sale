@@ -1,11 +1,11 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { loadConfig, loadConfigFile, locateConfigFile, stripJsonc } from "./env.js";
+import { describe, expect, it } from "vitest";
+import { loadConfig, loadConfigFile, locateConfigFile } from "./env.js";
 
 describe("config", () => {
-	it("定位到仓库顶层配置文件", () => {
+	it("定位到仓库顶层 YAML 配置文件", () => {
 		const file = locateConfigFile();
 		expect(file).toBeDefined();
-		expect(file!.endsWith("help-sale.config.json")).toBe(true);
+		expect(file!.endsWith("help-sale.config.yaml")).toBe(true);
 	});
 
 	it("读取顶层配置的默认值", () => {
@@ -16,6 +16,14 @@ describe("config", () => {
 		expect(cfg.knowledgeSearchLimit).toBeGreaterThan(0);
 		expect(cfg.chunkerSize).toBeGreaterThan(0);
 		expect(cfg.chunkerOverlap).toBeLessThan(cfg.chunkerSize);
+	});
+
+	it("YAML 配置含注释仍可解析", () => {
+		const file = loadConfigFile();
+		expect(file.server?.port).toBe(3000);
+		expect(file.model?.baseUrl).toBeTruthy();
+		expect(file.company?.name).toBeTruthy();
+		expect(file.model?.extraBody).toEqual({});
 	});
 
 	it("环境变量覆盖配置文件", () => {
@@ -44,25 +52,6 @@ describe("config", () => {
 			if (old === undefined) delete process.env.DATA_DIR;
 			else process.env.DATA_DIR = old;
 		}
-	});
-
-	it("配置文件结构完整", () => {
-		const file = loadConfigFile();
-		expect(file.server?.port).toBe(3000);
-		expect(file.model?.baseUrl).toBeTruthy();
-		expect(file.company?.name).toBeTruthy();
-	});
-});
-
-describe("stripJsonc", () => {
-	it("剥离行注释且保留字符串内的 //", () => {
-		const src = "{\n// 注释\n\"baseUrl\": \"http://x/v1\",\n\"a\": 1 // 尾部注释\n}";
-		expect(JSON.parse(stripJsonc(src))).toEqual({ baseUrl: "http://x/v1", a: 1 });
-	});
-
-	it("剥离块注释", () => {
-		const src = '{"a": /* 块 */ 1}';
-		expect(JSON.parse(stripJsonc(src))).toEqual({ a: 1 });
 	});
 });
 
