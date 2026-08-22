@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>销售军师 · 助销 Agent</title>
+<style>
+  :root { --bg:#f5f7fa; --card:#fff; --line:#e2e8f0; --text:#1e293b; --muted:#64748b; --brand:#2563eb; --ok:#16a34a; --warn:#d97706; --danger:#dc2626; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; background:var(--bg); color:var(--text); }
+  header { display:flex; align-items:center; gap:12px; padding:16px 24px; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:10; }
+  header h1 { font-size:18px; margin:0; }
+  #health { font-size:12px; color:var(--muted); margin-left:auto; display:flex; align-items:center; gap:6px; }
+  .dot { width:8px; height:8px; border-radius:50%; background:#94a3b8; }
+  .dot.ok { background:var(--ok); }
+  main { max-width:1080px; margin:24px auto; padding:0 16px; display:grid; grid-template-columns: 420px 1fr; gap:24px; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:18px; }
+  .card h2 { font-size:15px; margin:0 0 12px; }
+  label { display:block; font-size:13px; color:var(--muted); margin:12px 0 4px; }
+  textarea, input { width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:14px; font-family:inherit; background:#fff; }
+  textarea { resize:vertical; min-height:180px; }
+  button { border:0; border-radius:8px; padding:10px 18px; font-size:14px; cursor:pointer; background:var(--brand); color:#fff; }
+  button:disabled { opacity:.55; cursor:wait; }
+  button.secondary { background:#e2e8f0; color:var(--text); }
+  .row { display:flex; gap:12px; }
+  .row > * { flex:1; }
+  .badge { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; background:#eef2ff; color:var(--brand); }
+  .badge.warn { background:#fffbeb; color:var(--warn); }
+  .badge.danger { background:#fef2f2; color:var(--danger); }
+  .signal { border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:10px; }
+  .signal .quote { margin:4px 0; padding:6px 10px; background:#f8fafc; border-radius:6px; font-size:13px; color:#475569; }
+  .signal .note { font-size:13px; color:var(--muted); margin:0; }
+  .suggest { min-height:150px; }
+  .steps li { margin-bottom:6px; font-size:14px; }
+  .meta { font-size:12px; color:var(--muted); }
+  .error { background:#fef2f2; color:var(--danger); border:1px solid #fecaca; border-radius:8px; padding:10px 12px; margin-top:12px; font-size:13px; }
+  .hidden { display:none; }
+  .history-item { border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:8px; font-size:13px; }
+  .history-item .t { color:var(--muted); font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>销售军师</h1>
+  <span id="health"><span class="dot" id="healthDot"></span><span id="healthText">检查中…</span></span>
+</header>
+<main>
+  <div>
+    <div class="card">
+      <h2>客户对话分析</h2>
+      <label>粘贴客户沟通记录</label>
+      <textarea id="transcript" placeholder="客户:你们旗舰版一年多少钱?有点贵,我们预算一年1500。另一个供应商报了1200,你们贵在哪?"></textarea>
+      <label>客户标识(customerKey,留空自动生成)</label>
+      <input id="customerKey" placeholder="c_demo" value="c_demo">
+      <label>租户</label>
+      <input id="tenantId" placeholder="t_demo" value="t_demo">
+      <div style="margin-top:14px"><button id="analyzeBtn">开始分析</button></div>
+      <div id="analyzeError" class="error hidden"></div>
+    </div>
+
+    <div class="card">
+      <h2>知识库上传</h2>
+      <label>标题(同名重复上传会被跳过)</label>
+      <input id="docTitle" placeholder="价格政策">
+      <label>内容</label>
+      <textarea id="docContent" style="min-height:90px" placeholder="旗舰版 1999 元/年,政企客户可申请 9 折…"></textarea>
+      <div style="margin-top:14px"><button id="uploadBtn" class="secondary">上传知识</button></div>
+      <div id="uploadResult" class="meta" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <h2>历史分析</h2>
+      <div class="row">
+        <input id="historyKey" placeholder="c_demo">
+        <button id="historyBtn" class="secondary">查询</button>
+      </div>
+      <div id="historyList" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card hidden" id="resultCard">
+      <h2>分析结果 <span class="badge" id="intentBadge"></span></h2>
+      <p id="summary" style="font-size:14px"></p>
+      <h2 style="margin-top:18px">信号</h2>
+      <div id="signals"></div>
+      <h2 style="margin-top:18px">建议回复</h2>
+      <textarea class="suggest" id="suggestedReply" readonly></textarea>
+      <div style="margin-top:8px"><button id="copyBtn" class="secondary">复制话术</button></div>
+      <h2 style="margin-top:18px">下一步</h2>
+      <ol class="steps" id="nextSteps"></ol>
+      <p class="meta" id="followupAt"></p>
+      <p class="meta" id="resultMeta"></p>
+    </div>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const api = async (path, options = {}) => {
+  const res = await fetch(path, { headers: { "Content-Type": "application/json", "x-tenant-id": $("tenantId").value || "t_demo" }, ...options });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || body.message || ("HTTP " + res.status));
+  return body;
+};
+
+async function checkHealth() {
+  try {
+    const h = await fetch("/api/v1/health").then((r) => r.json());
+    $("healthDot").className = "dot ok";
+    $("healthText").textContent = "服务正常";
+  } catch {
+    $("healthDot").className = "dot";
+    $("healthText").textContent = "服务不可用";
+  }
+}
+
+$("analyzeBtn").addEventListener("click", async () => {
+  const btn = $("analyzeBtn");
+  const err = $("analyzeError");
+  err.classList.add("hidden");
+  const transcript = $("transcript").value.trim();
+  if (!transcript) { err.textContent = "请先粘贴对话内容"; err.classList.remove("hidden"); return; }
+  btn.disabled = true; btn.textContent = "分析中…";
+  try {
+    const result = await api("/api/v1/copilot/analyze", { method: "POST", body: JSON.stringify({ transcript, customerKey: $("customerKey").value.trim() || undefined }) });
+    renderResult(result.analysis);
+    $("historyKey").value = $("customerKey").value.trim() || "自动生成";
+  } catch (e) {
+    err.textContent = "分析失败:" + e.message;
+    err.classList.remove("hidden");
+  } finally {
+    btn.disabled = false; btn.textContent = "开始分析";
+  }
+});
+
+function renderResult(a) {
+  $("resultCard").classList.remove("hidden");
+  $("intentBadge").textContent = a.intent || "";
+  $("summary").textContent = a.summary || "";
+  const signals = $("signals");
+  signals.innerHTML = "";
+  for (const s of a.signals || []) {
+    const cls = s.kind === "risk" ? "danger" : s.kind === "buying_signal" ? "warn" : "";
+    const div = document.createElement("div");
+    div.className = "signal";
+    div.innerHTML = `<span class="badge ${cls}">${escapeHtml(s.kind || "")}</span><p class="quote">“${escapeHtml(s.quote || "")}”</p><p class="note">${escapeHtml(s.note || "")}</p>`;
+    signals.appendChild(div);
+  }
+  $("suggestedReply").value = a.suggestedReply || "";
+  const steps = $("nextSteps");
+  steps.innerHTML = "";
+  for (const step of a.nextSteps || []) {
+    const li = document.createElement("li");
+    li.textContent = step;
+    steps.appendChild(li);
+  }
+  $("followupAt").textContent = a.followupAt ? "建议跟进时间:" + a.followupAt : "";
+  $("resultMeta").textContent = "分析ID:" + a.id + " / 会话:" + a.conversationId;
+  window.scrollTo({ top: $("resultCard").offsetTop - 80, behavior: "smooth" });
+}
+
+$("copyBtn").addEventListener("click", async () => {
+  const v = $("suggestedReply").value;
+  if (!v) return;
+  try { await navigator.clipboard.writeText(v); $("copyBtn").textContent = "已复制"; setTimeout(() => ($("copyBtn").textContent = "复制话术"), 1500); }
+  catch { $("suggestedReply").select(); document.execCommand("copy"); }
+});
+
+$("uploadBtn").addEventListener("click", async () => {
+  const btn = $("uploadBtn");
+  const title = $("docTitle").value.trim();
+  const content = $("docContent").value.trim();
+  if (!title || !content) { $("uploadResult").textContent = "标题和内容都必填"; return; }
+  btn.disabled = true;
+  try {
+    const r = await api("/api/v1/knowledge", { method: "POST", body: JSON.stringify({ title, content }) });
+    $("uploadResult").textContent = r.skipped ? "已存在,跳过(幂等)" : ("上传成功,分块 " + (r.chunkCount ?? 0) + " 段");
+  } catch (e) {
+    $("uploadResult").textContent = "上传失败:" + e.message;
+  } finally { btn.disabled = false; }
+});
+
+$("historyBtn").addEventListener("click", async () => {
+  const key = $("historyKey").value.trim();
+  if (!key) return;
+  const list = $("historyList");
+  list.innerHTML = "查询中…";
+  try {
+    const r = await api("/api/v1/customers/" + encodeURIComponent(key) + "/analyses");
+    list.innerHTML = "";
+    if (!r.analyses || r.analyses.length === 0) { list.innerHTML = '<div class="meta">暂无分析记录</div>'; return; }
+    for (const a of r.analyses) {
+      const div = document.createElement("div");
+      div.className = "history-item";
+      div.innerHTML = `<div><b>${escapeHtml(a.intent || "")}</b> <span class="t">${escapeHtml(new Date(a.createdAt).toLocaleString())}</span></div><div class="t">${escapeHtml((a.summary || "").slice(0, 120))}</div>`;
+      div.style.cursor = "pointer";
+      div.addEventListener("click", () => renderResult(a));
+      list.appendChild(div);
+    }
+  } catch (e) {
+    list.innerHTML = '<div class="error" style="margin-top:0">' + escapeHtml(e.message) + "</div>";
+  }
+});
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+checkHealth();
+</script>
+</body>
+</html>

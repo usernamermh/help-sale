@@ -31,6 +31,16 @@ function fakeStreamFn(): StreamFn {
 }
 
 describe("api", () => {
+	it("GET / 返回前端工具页", async () => {
+		dir = tmpDataDir("api");
+		app = buildApp({ dataDir: dir });
+		const res = await app.inject({ method: "GET", url: "/" });
+		expect(res.statusCode).toBe(200);
+		expect(res.headers["content-type"]).toContain("text/html");
+		expect(res.body).toContain("销售军师");
+		expect(res.body).toContain("copilot/analyze");
+	});
+
 	it("health 可达", async () => {
 		dir = tmpDataDir("api");
 		app = buildApp({ dataDir: dir });

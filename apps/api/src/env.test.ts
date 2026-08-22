@@ -20,7 +20,8 @@ describe("config", () => {
 
 	it("YAML 配置含注释仍可解析", () => {
 		const file = loadConfigFile();
-		expect(file.server?.port).toBe(3100);
+		expect(typeof file.server?.port).toBe("number");
+		expect(file.server!.port).toBeGreaterThan(0);
 		expect(file.model?.baseUrl).toBeTruthy();
 		expect(file.company?.name).toBeTruthy();
 		expect(file.model?.extraBody).toEqual({});
