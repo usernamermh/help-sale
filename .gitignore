@@ -5,8 +5,8 @@ dist/
 apps/api/data/
 apps/api/.tmp/
 apps/api/apps/
-pi/
-pi/**/dist/
-.playwright-cli/
+/pi/
+/pi/**/dist/
+/.playwright-cli/
 *.log
 .DS_Store
