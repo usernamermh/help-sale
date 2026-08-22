@@ -30,7 +30,7 @@ export function createCopilotTools(deps: AgentDeps): Array<AgentTool<any, any>> 
 				query: Type.String({ description: "检索关键词,建议用客户原话或核心议题" }),
 				limit: Type.Optional(Type.Number({ default: 5, minimum: 1, maximum: 10 })),
 			}),
-			async execute(_toolCallId, params) {
+			async execute(_toolCallId, params: any) {
 				const hits = searchKnowledge(db, tenantId, params.query, params.limit ?? 5);
 				return {
 					content: [
@@ -52,7 +52,7 @@ export function createCopilotTools(deps: AgentDeps): Array<AgentTool<any, any>> 
 			parameters: Type.Object({
 				customerKey: Type.String({ description: "客户唯一标识,如 c_001" }),
 			}),
-			async execute(_toolCallId, params) {
+			async execute(_toolCallId, params: any) {
 				let row = getCustomer(db, tenantId, params.customerKey);
 				if (!row) {
 					row = upsertCustomer(db, { tenantId, key: params.customerKey });
@@ -92,7 +92,7 @@ export function createCopilotTools(deps: AgentDeps): Array<AgentTool<any, any>> 
 				nextSteps: Type.Array(Type.String(), { minItems: 1 }),
 				followupAt: Type.Optional(Type.String({ description: "建议跟进时间,ISO 8601" })),
 			}),
-			async execute(_toolCallId, params) {
+			async execute(_toolCallId, params: any) {
 				return {
 					content: [{ type: "text", text: `分析完成:${params.intent}` }],
 					details: params as AnalysisDetails,
