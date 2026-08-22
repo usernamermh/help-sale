@@ -61,3 +61,20 @@ export function tmpDataDir(prefix: string): string {
 export function cleanupDataDir(dir: string): void {
 	rmSync(dir, { recursive: true, force: true });
 }
+export async function fetchTranscript(
+	session: import("@earendil-works/pi-agent-core").Session<any>,
+	limit = 50,
+): Promise<ConversationMessage[]> {
+	const entries = await session.findEntries({ limit });
+	const out: ConversationMessage[] = [];
+	for (const entry of entries) {
+		if (entry.type !== "message") continue;
+		const message = (entry as { message: { role: string; content: string | { type: string; text: string }[] } }).message;
+		const role = message.role === "user" ? "customer" : message.role === "assistant" ? "sales" : "other";
+		const content = Array.isArray(message.content)
+			? message.content.map((c) => (c as { text?: string }).text ?? "").join(" ")
+			: message.content;
+		if (content.trim()) out.push({ role, content });
+	}
+	return out;
+}

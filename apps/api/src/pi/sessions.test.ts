@@ -40,3 +40,20 @@ describe("session store", () => {
 		expect(existsSync(dbPath)).toBe(true);
 	});
 });
+describe("fetchTranscript", () => {
+	it("从会话回读对话文本", async () => {
+		const s = tmpDataDir("transcript");
+		const st = openSessionStore(s);
+		try {
+			const { session } = await st.createConversation();
+			await import("./sessions.js").then((m) => m.appendUserMessage(session, "第一轮:客户提到的内容"));
+			const transcript = await import("./sessions.js").then((m) => m.fetchTranscript(session));
+			expect(transcript).toHaveLength(1);
+			expect(transcript[0].role).toBe("customer");
+			expect(transcript[0].content).toContain("客户提到的内容");
+		} finally {
+			await st.close();
+			cleanupDataDir(s);
+		}
+	});
+});
