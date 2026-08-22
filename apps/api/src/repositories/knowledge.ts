@@ -48,22 +48,50 @@ export function searchKnowledge(db: DatabaseSync, tenantId: string, query: strin
 	const clean = query.trim().replace(/[，。！？、；：,.!?;:""''()（）\s]+/g, " ").trim();
 	if (clean.length === 0) return [];
 
-	if (clean.replace(/\s/g, "").length >= 3) {
-		const ftsQuery = `"${clean.replace(/"/g, "")}"`;
-		const rows = db
-			.prepare(
-				`SELECT kc.id AS chunkId, kc.document_id AS documentId, kd.title, kc.chunk_index AS chunkIndex,
-				        kc.content, snippet(knowledge_chunks_fts, 2, '【', '】', '…', 20) AS snippet
-				 FROM knowledge_chunks_fts f
-				 JOIN knowledge_chunks kc ON kc.id = f.chunk_id
-				 JOIN knowledge_documents kd ON kd.id = kc.document_id
-				 WHERE f.tenant_id = ? AND knowledge_chunks_fts MATCH ?
-				 ORDER BY f.rank
-				 LIMIT ?`,
-			)
-			.all(tenantId, ftsQuery, limit) as unknown as KnowledgeHit[];
-		if (rows.length > 0) return rows;
+	const terms = clean.split(/\s+/).filter((term) => term.length > 0);
+	const hits = new Map<string, KnowledgeHit>();
+	const seenChunkIds = new Set<string>();
+
+	const collect = (rows: KnowledgeHit[]) => {
+		for (const row of rows) {
+			if (!seenChunkIds.has(row.chunkId)) {
+				seenChunkIds.add(row.chunkId);
+				hits.set(row.chunkId, row);
+			}
+		}
+	};
+
+	for (const term of terms) {
+		if (term.replace(/\s/g, "").length >= 3) {
+			const ftsQuery = `"${term.replace(/"/g, "")}"`;
+			const rows = db
+				.prepare(
+					`SELECT kc.id AS chunkId, kc.document_id AS documentId, kd.title, kc.chunk_index AS chunkIndex,
+					        kc.content, snippet(knowledge_chunks_fts, 2, '【', '】', '…', 20) AS snippet
+					 FROM knowledge_chunks_fts f
+					 JOIN knowledge_chunks kc ON kc.id = f.chunk_id
+					 JOIN knowledge_documents kd ON kd.id = kc.document_id
+					 WHERE f.tenant_id = ? AND knowledge_chunks_fts MATCH ?
+					 ORDER BY f.rank`,
+				)
+				.all(tenantId, ftsQuery) as unknown as KnowledgeHit[];
+			collect(rows);
+		} else {
+			const rows = db
+				.prepare(
+					`SELECT kc.id AS chunkId, kc.document_id AS documentId, kd.title, kc.chunk_index AS chunkIndex,
+					        kc.content, substr(kc.content, 1, 80) || '…' AS snippet
+					 FROM knowledge_chunks kc
+					 JOIN knowledge_documents kd ON kd.id = kc.document_id
+					 WHERE kc.tenant_id = ? AND kc.content LIKE ?
+					 LIMIT ?`,
+				)
+				.all(tenantId, `%${term}%`, limit) as unknown as KnowledgeHit[];
+			collect(rows);
+		}
 	}
+
+	if (hits.size > 0) return [...hits.values()].slice(0, limit);
 
 	// 短词或 FTS 无命中:回退到 LIKE
 	return db

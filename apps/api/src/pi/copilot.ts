@@ -1,8 +1,10 @@
 import type { DatabaseSync } from "node:sqlite";
 import { Agent, type StreamFn } from "@earendil-works/pi-agent-core";
+import type { Model } from "@earendil-works/pi-ai";
 import { createModelRegistry, type ModelRuntime } from "./models.js";
 import { getCopilotSystemPrompt } from "../prompts/sales-copilot.js";
 import { createCopilotTools, type AnalysisDetails } from "./tools.js";
+import { loadConfig } from "../env.js";
 import { appendUserMessage, buildConversationText, type SessionStore } from "./sessions.js";
 
 export interface CopilotDeps {
@@ -25,11 +27,11 @@ export interface RunAnalysisResult {
 	messages: unknown[];
 }
 
-export function makeAgent(options: { sessionId?: string; systemPrompt: string; tools: unknown[]; streamFn: StreamFn }) {
+export function makeAgent(options: { sessionId?: string; systemPrompt: string; tools: unknown[]; streamFn: StreamFn; model: Model<any> }) {
 	return new Agent({
 		sessionId: options.sessionId,
 		streamFn: options.streamFn,
-		initialState: { systemPrompt: options.systemPrompt, tools: options.tools as never },
+		initialState: { systemPrompt: options.systemPrompt, tools: options.tools as never, model: options.model },
 	});
 }
 
@@ -42,9 +44,13 @@ export async function runCopilotAnalysis(deps: CopilotDeps, input: RunAnalysisIn
 	const text = buildConversationText([{ role: "customer", content: input.transcript }]);
 	await appendUserMessage(session, text);
 
+	const config = loadConfig();
+	const model = runtime.models.getModel(config.modelProvider, config.modelId);
+	if (!model) throw new Error(`model not found: ${config.modelProvider}/${config.modelId}`);
+
 	const tools = createCopilotTools({ db, tenantId });
 	const systemPrompt = getCopilotSystemPrompt({ companyName: deps.companyName });
-	const agent = makeAgent({ sessionId: conversationId, systemPrompt, tools, streamFn });
+	const agent = makeAgent({ sessionId: conversationId, systemPrompt, tools, streamFn, model });
 
 	await agent.prompt(text);
 

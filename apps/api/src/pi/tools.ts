@@ -25,7 +25,7 @@ export function createCopilotTools(deps: AgentDeps): Array<AgentTool<any, any>> 
 		{
 			name: "search_playbook",
 			label: "检索团队话术库",
-			description: "在团队知识库中检索与客户问题相关的话术、竞品资料、价格政策。返回前若干条命中片段;无命中时如实返回。",
+			description: "在团队知识库中检索与客户问题相关的话术、竞品资料、价格政策。检索纪律:优先使用客户原话与文档中可能出现的具体词(产品名、价格数字、功能名),可拆成多个词分别检索;返回前若干条命中片段;无命中时如实返回。",
 			parameters: Type.Object({
 				query: Type.String({ description: "检索关键词,建议用客户原话或核心议题" }),
 				limit: Type.Optional(Type.Number({ default: 5, minimum: 1, maximum: 10 })),

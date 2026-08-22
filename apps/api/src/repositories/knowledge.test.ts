@@ -35,4 +35,15 @@ describe("knowledge", () => {
 		const hits = searchKnowledge(db, "t1", "9999", 5);
 		expect(hits.length).toBe(1);
 	});
+
+	it("多词查询按词拆解命中", () => {
+		insertKnowledgeDocument(db, {
+			tenantId: "t1",
+			title: "价格政策",
+			chunks: ["旗舰版 1999 元/年,包含私有化部署与专属客服", "标准版 999 元/年"],
+		});
+		const hits = searchKnowledge(db, "t1", "旗舰版 价格 预算", 5);
+		expect(hits.length).toBeGreaterThan(0);
+		expect(hits[0].title).toBe("价格政策");
+	});
 });
