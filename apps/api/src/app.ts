@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import { openDatabase } from "./db/database.js";
@@ -24,7 +25,9 @@ export interface AppOptions {
 export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const app = Fastify({ logger: options.logger ?? false });
 	const config = loadConfig();
-	const dataDir = path.resolve(options.dataDir ?? config.dataDir);
+	const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+	const configured = options.dataDir ?? config.dataDir;
+	const dataDir = path.isAbsolute(configured) ? configured : path.join(repoRoot, configured);
 	mkdirSync(dataDir, { recursive: true });
 
 	const businessDbPath = path.join(dataDir, "business.db");
