@@ -10,7 +10,7 @@ describe("model registry", () => {
 	});
 
 	it("未知模型返回 undefined", () => {
-		const model = createModelRegistry().getModel("deepseek", "no-such-model");
+		const model = createModelRegistry().models.getModel("deepseek", "no-such-model");
 		expect(model).toBeUndefined();
 	});
 });
