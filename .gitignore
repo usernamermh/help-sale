@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+apps/api/data/
+pi/**/dist/
+*.log
+.DS_Store
