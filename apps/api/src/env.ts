@@ -1,6 +1,10 @@
 export function loadEnv(): void {
 	if (typeof process.loadEnvFile === "function") {
-		process.loadEnvFile?.();
+		try {
+			process.loadEnvFile?.();
+		} catch {
+			// 没有 .env 文件时忽略,使用系统环境变量
+		}
 	} else if (process.env.NODE_ENV !== "test") {
 		console.warn("[env] loadEnvFile 不可用,请手动注入环境变量");
 	}
