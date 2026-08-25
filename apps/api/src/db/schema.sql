@@ -70,3 +70,18 @@ CREATE TABLE IF NOT EXISTS analyses (
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_analyses_customer ON analyses (tenant_id, customer_id, created_at DESC);
+
+-- v2:跟进任务(loop F3:分析产出 nextSteps 自动生成任务,到期提醒)
+CREATE TABLE IF NOT EXISTS next_step_tasks (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+	analysis_id TEXT,
+	action TEXT NOT NULL,
+	due_at TEXT,
+	status TEXT NOT NULL DEFAULT 'pending',
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	completed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_tasks_due ON next_step_tasks (tenant_id, status, due_at);
+CREATE INDEX IF NOT EXISTS idx_tasks_customer ON next_step_tasks (tenant_id, customer_id, created_at DESC);
