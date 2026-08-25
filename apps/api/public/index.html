@@ -70,6 +70,10 @@
     </div>
 
     <div class="card">
+    <div class="card">
+      <h2>跟进任务</h2>
+      <div id="taskList" style="margin-top:12px"></div>
+    </div>
       <h2>历史分析</h2>
       <div class="row">
         <input id="historyKey" placeholder="c_demo">
@@ -126,6 +130,7 @@ $("analyzeBtn").addEventListener("click", async () => {
     const result = await api("/api/v1/copilot/analyze", { method: "POST", body: JSON.stringify({ transcript, customerKey: $("customerKey").value.trim() || undefined }) });
     renderResult(result.analysis);
     $("historyKey").value = $("customerKey").value.trim() || "自动生成";
+    loadTasks();
   } catch (e) {
     err.textContent = "分析失败:" + e.message;
     err.classList.remove("hidden");
@@ -181,6 +186,27 @@ $("uploadBtn").addEventListener("click", async () => {
   } finally { btn.disabled = false; }
 });
 
+async function loadTasks() {
+  const box = $("taskList");
+  box.innerHTML = "加载中…";
+  try {
+    const r = await api("/api/v1/tasks?status=pending&limit=50");
+    box.innerHTML = "";
+    if (!r.tasks || r.tasks.length === 0) { box.innerHTML = '<div class="meta">暂无待办任务(对话分析后自动生成)</div>'; return; }
+    for (const t of r.tasks) {
+      const who = t.customerName || t.customerKey || "未知客户";
+      const due = t.dueAt ? ' <span class="t">到期:' + new Date(t.dueAt).toLocaleString() + "</span>" : "";
+      const div = document.createElement("div");
+      div.className = "history-item";
+      div.innerHTML = '<div><b>' + escapeHtml(who) + "</b>" + due + '</div><div class="t">' + escapeHtml(t.action) + '</div><div style="margin-top:6px"><button class="secondary" style="padding:4px 10px;font-size:12px">完成</button></div>';
+      div.querySelector("button").addEventListener("click", async () => {
+        try { await api("/api/v1/tasks/" + t.id + "/done", { method: "PATCH" }); } catch (e) { alert("操作失败:" + e.message); }
+        loadTasks();
+      });
+      box.appendChild(div);
+    }
+  } catch (e) { box.innerHTML = '<div class="error" style="margin-top:0">' + escapeHtml(e.message) + "</div>"; }
+}
 $("historyBtn").addEventListener("click", async () => {
   const key = $("historyKey").value.trim();
   if (!key) return;
@@ -208,6 +234,7 @@ function escapeHtml(s) {
 }
 
 checkHealth();
+loadTasks();
 </script>
 </body>
 </html>
