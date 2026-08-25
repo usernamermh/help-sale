@@ -68,7 +68,34 @@ describe("api", () => {
 		expect(again.json().skipped).toBe(true);
 	});
 
-	it("analyze 全链路:分析落库并可查", async () => {
+
+	it("analyze 自动生成跟进任务,且任务可查询与完成", async () => {
+		dir = tmpDataDir("api-tasks");
+		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn() });
+		const headers = { "x-tenant-id": "t1" };
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/copilot/analyze",
+			payload: { transcript: "客户:价格多少?", customerKey: "c_task" },
+			headers,
+		});
+		expect(res.statusCode).toBe(200);
+
+		const list = await app.inject({ method: "GET", url: "/api/v1/tasks?status=pending", headers });
+		expect(list.statusCode).toBe(200);
+		expect(list.json().tasks).toHaveLength(1);
+		expect(list.json().tasks[0].action).toBe("发送方案");
+		expect(list.json().tasks[0].customerKey).toBe("c_task");
+
+		const taskId = list.json().tasks[0].id;
+		const done = await app.inject({ method: "PATCH", url: `/api/v1/tasks/${taskId}/done`, headers });
+		expect(done.statusCode).toBe(200);
+		expect(done.json().task.status).toBe("done");
+
+		const after = await app.inject({ method: "GET", url: "/api/v1/tasks?status=pending", headers });
+		expect(after.json().tasks).toHaveLength(0);
+	});
+		it("analyze 全链路:分析落库并可查", async () => {
 		dir = tmpDataDir("api-analyze");
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn() });
 		const res = await app.inject({
