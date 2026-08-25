@@ -13,6 +13,7 @@ export interface AppConfig {
 	modelId: string;
 	modelBaseUrl: string;
 	modelApiKey: string;
+	modelProxy: string;
 	modelContextWindow: number;
 	modelMaxTokens: number;
 	modelExtraBody: Record<string, unknown>;
@@ -33,6 +34,7 @@ export interface FileConfig {
 		modelId?: string;
 		baseUrl?: string;
 		apiKey?: string;
+		proxy?: string;
 		contextWindow?: number;
 		maxTokens?: number;
 		extraBody?: Record<string, unknown>;
@@ -90,7 +92,8 @@ const defaults: AppConfig = {
 	modelProvider: "local-llm",
 	modelId: "u21-preview",
 	modelBaseUrl: "http://10.252.60.39:31883/v1",
-	modelApiKey: "local-key",
+	modelApiKey: "sk-1234",
+	modelProxy: "http://10.252.60.14:3128",
 	modelContextWindow: 32768,
 	modelMaxTokens: 8192,
 	modelExtraBody: {},
@@ -129,6 +132,7 @@ export function loadConfig(): AppConfig {
 		modelId: env.MODEL_ID ?? file.model?.modelId ?? defaults.modelId,
 		modelBaseUrl: env.MODEL_BASE_URL ?? file.model?.baseUrl ?? defaults.modelBaseUrl,
 		modelApiKey: env.MODEL_API_KEY ?? file.model?.apiKey ?? defaults.modelApiKey,
+		modelProxy: env.MODEL_PROXY ?? file.model?.proxy ?? defaults.modelProxy,
 		modelContextWindow: num(env.MODEL_CONTEXT_WINDOW ?? file.model?.contextWindow, defaults.modelContextWindow),
 		modelMaxTokens: num(env.MODEL_MAX_TOKENS ?? file.model?.maxTokens, defaults.modelMaxTokens),
 		modelExtraBody:

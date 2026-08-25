@@ -4,6 +4,7 @@ import type { StreamFn } from "@earendil-works/pi-agent-core";
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai";
 import { deepseekProvider } from "@earendil-works/pi-ai/providers/deepseek";
 import { createLocalProvider } from "./local-provider.js";
+import { ProxyAgent, fetch as undiciFetch } from "undici";
 import { loadConfig, type AppConfig } from "../env.js";
 
 export interface ModelRuntime {
@@ -15,6 +16,7 @@ export interface ModelRegistryOptions {
 	baseUrl: string;
 	modelId: string;
 	apiKey: string;
+	proxy?: string;
 	contextWindow?: number;
 	maxTokens?: number;
 	extraBody?: Record<string, unknown>;
@@ -26,6 +28,7 @@ export function createModelRegistry(options?: ModelRegistryOptions): ModelRuntim
 		baseUrl: appConfig.modelBaseUrl,
 		modelId: appConfig.modelId,
 		apiKey: appConfig.modelApiKey,
+		proxy: appConfig.modelProxy,
 		contextWindow: appConfig.modelContextWindow,
 		maxTokens: appConfig.modelMaxTokens,
 	};
@@ -38,27 +41,37 @@ export function createModelRegistry(options?: ModelRegistryOptions): ModelRuntim
 	for (const provider of Object.values(providers)) models.setProvider(provider);
 
 	const extraBody = cfg.extraBody ?? appConfig.modelExtraBody;
+	const proxy = cfg.proxy ?? appConfig.modelProxy;
 
-	// 自定义 fetch:把额外参数统一塞进请求体 body 的 extra_body 字段,
-	// 不与标准 OpenAI 参数平级;仅对 JSON body 生效,失败时原样透传。
-	const fetchWithExtraBody: typeof fetch = (input, init) => {
-		const bodyText = typeof init?.body === "string" ? init.body : null;
-		if (bodyText) {
-			try {
-				const nextBody = injectExtraBody(bodyText, extraBody);
-				return globalThis.fetch(input, { ...init, body: nextBody });
-			} catch {
-				// 非 JSON body,原样透传
-			}
-		}
-		return globalThis.fetch(input, init);
-	};
+	// 基础 fetch:需要代理时走 undici ProxyAgent,否则用全局 fetch。
+	let baseFetch: typeof fetch = globalThis.fetch;
+	let proxyAgent: ProxyAgent | undefined;
+	if (proxy) {
+		proxyAgent = new ProxyAgent(proxy);
+		baseFetch = ((input: Parameters<typeof undiciFetch>[0], init?: Parameters<typeof undiciFetch>[1]) =>
+			undiciFetch(input, { ...init, dispatcher: proxyAgent })) as typeof fetch;
+	}
 
 	const streamFn: StreamFn = async (model, context, options) => {
-		if (Object.keys(extraBody).length > 0) {
-			return models.stream(model, context, { ...(options ?? {}), fetch: fetchWithExtraBody });
-		}
-		return models.stream(model, context, options);
+		const useCustomFetch = proxyAgent !== undefined || Object.keys(extraBody).length > 0;
+		if (!useCustomFetch) return models.stream(model, context, options);
+
+		// 自定义 fetch:额外参数统一塞进请求体 body 的 extra_body 字段,
+		// 不与标准 OpenAI 参数平级;仅对 JSON body 生效,失败时原样透传。
+		const fetchWithExtraBody: typeof fetch = (input, init) => {
+			const bodyText = typeof init?.body === "string" ? init.body : null;
+			if (bodyText) {
+				try {
+					const nextBody = injectExtraBody(bodyText, extraBody);
+					return baseFetch(input, { ...init, body: nextBody });
+				} catch {
+					// 非 JSON body,原样透传
+				}
+			}
+			return baseFetch(input, init);
+		};
+
+		return models.stream(model, context, { ...(options ?? {}), fetch: fetchWithExtraBody });
 	};
 
 	return { models, streamFn };

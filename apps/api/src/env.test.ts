@@ -12,8 +12,9 @@ describe("config", () => {
 		const cfg = loadConfig();
 		expect(cfg.modelProvider).toBe("local-llm");
 		expect(cfg.modelId).toBe("u21-preview");
-		expect(cfg.modelBaseUrl).toContain("10.252.60.39");
+		expect(cfg.modelBaseUrl).toContain("llm.jz.yunzhisheng.cn");
 		expect(cfg.knowledgeSearchLimit).toBeGreaterThan(0);
+		expect(cfg.modelProxy).toBeTruthy();
 		expect(cfg.chunkerSize).toBeGreaterThan(0);
 		expect(cfg.chunkerOverlap).toBeLessThan(cfg.chunkerSize);
 	});
@@ -44,7 +45,18 @@ describe("config", () => {
 		}
 	});
 
-	it("路径配置可被环境变量覆盖", () => {
+
+	it("MODEL_PROXY 环境变量覆盖", () => {
+		const old = process.env.MODEL_PROXY;
+		process.env.MODEL_PROXY = "http://127.0.0.1:8123";
+		try {
+			expect(loadConfig().modelProxy).toBe("http://127.0.0.1:8123");
+		} finally {
+			if (old === undefined) delete process.env.MODEL_PROXY;
+			else process.env.MODEL_PROXY = old;
+		}
+	});
+		it("路径配置可被环境变量覆盖", () => {
 		const old = process.env.DATA_DIR;
 		process.env.DATA_DIR = "/tmp/custom-data";
 		try {
