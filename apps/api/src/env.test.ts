@@ -11,8 +11,8 @@ describe("config", () => {
 	it("读取顶层配置的默认值", () => {
 		const cfg = loadConfig();
 		expect(cfg.modelProvider).toBe("local-llm");
-		expect(cfg.modelId).toBe("u21-preview");
-		expect(cfg.modelBaseUrl).toContain("llm.jz.yunzhisheng.cn");
+		expect(cfg.modelId).toBe("deepseek-v4-pro-0813");
+		expect(cfg.modelBaseUrl).toContain("10.10.20.34");
 		expect(cfg.knowledgeSearchLimit).toBeGreaterThan(0);
 		expect(cfg.modelProxy).toBeTruthy();
 		expect(cfg.chunkerSize).toBeGreaterThan(0);
