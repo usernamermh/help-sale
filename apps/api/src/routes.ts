@@ -8,6 +8,8 @@ import { requireTenant, upsertCustomer } from "./repositories/customers.js";
 import { createAnalysis, listAnalysesByCustomer } from "./repositories/analyses.js";
 import { createTask, getTask, listTasks, setTaskStatus } from "./repositories/tasks.js";
 import { createVehiclePlan, listVehiclePlansByCustomer } from "./repositories/vehicle-plans.js";
+import { createDigest, getDigestByDate, listDigests } from "./repositories/digests.js";
+import { collectDigest } from "./services/digest.js";
 import { runVehicleMatch } from "./pi/vehicle-advisor.js";
 import type { MysqlSink } from "./integrations/mysql-sink.js";
 import type { ReminderQueue } from "./integrations/reminder-queue.js";
@@ -191,6 +193,43 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 				createdAt: r.createdAt,
 				requirement: JSON.parse(r.requirement) as unknown,
 				plan: JSON.parse(r.planJson) as unknown,
+			})),
+		};
+	});
+
+	app.post("/api/v1/assistant/digest", async (request, reply) => {
+		const output = collectDigest(deps.db, { tenantId: request.tenantId });
+		const existing = getDigestByDate(deps.db, request.tenantId, output.stats.date);
+		if (existing) {
+			return {
+				digestId: existing.id,
+				reused: true,
+				title: existing.title,
+				content: existing.content,
+				stats: JSON.parse(existing.statsJson) as unknown,
+				createdAt: existing.createdAt,
+			};
+		}
+		const record = createDigest(deps.db, {
+			tenantId: request.tenantId,
+			digestDate: output.stats.date,
+			title: output.title,
+			content: output.content,
+			statsJson: JSON.stringify(output.stats),
+		});
+		return { digestId: record.id, reused: false, title: output.title, content: output.content, stats: output.stats, createdAt: record.createdAt };
+	});
+
+	app.get("/api/v1/assistant/digests", async (request, reply) => {
+		const rows = listDigests(deps.db, request.tenantId);
+		return {
+			digests: rows.map((r) => ({
+				id: r.id,
+				digestDate: r.digestDate,
+				title: r.title,
+				content: r.content,
+				stats: JSON.parse(r.statsJson) as unknown,
+				createdAt: r.createdAt,
 			})),
 		};
 	});

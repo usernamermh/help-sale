@@ -174,7 +174,26 @@ describe("api", () => {
 		expect(tracker.analysis).toBe(1);
 	});
 
-	it("提醒闭环:到期任务出现在 overdue,完成后出队", async () => {
+
+	it("军师晨报:生成(当日幂等)并列出历史", async () => {
+		dir = tmpDataDir("api-digest");
+		app = buildApp({ dataDir: dir, mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+
+		const first = await app.inject({ method: "POST", url: "/api/v1/assistant/digest", headers });
+		expect(first.statusCode).toBe(200);
+		expect(first.json().reused).toBe(false);
+		expect(first.json().title).toContain("销售军师晨报");
+		expect(first.json().stats.pendingTasks).toBe(0);
+
+		const second = await app.inject({ method: "POST", url: "/api/v1/assistant/digest", headers });
+		expect(second.json().reused).toBe(true);
+
+		const list = await app.inject({ method: "GET", url: "/api/v1/assistant/digests", headers });
+		expect(list.statusCode).toBe(200);
+		expect(list.json().digests).toHaveLength(1);
+	});
+		it("提醒闭环:到期任务出现在 overdue,完成后出队", async () => {
 		dir = tmpDataDir("api-remind");
 		const queue = createMemoryReminderQueue();
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: queue });
