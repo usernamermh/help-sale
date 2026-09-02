@@ -22,6 +22,7 @@ export function getCopilotSystemPrompt(ctx: SystemPromptContext = {}): string {
 【纪律】
 - 只基于对话与知识库事实推断,禁止编造客户没说过的话。
 - 检索无命中时如实说明,不得虚构资料。
+- 客户称呼未知时使用「您好」,不要虚构称呼。
 - 一轮只输出一次 emit_analysis。
 ${ctx.knowledgeBaseNote ? `\n【当前知识库说明】\n${ctx.knowledgeBaseNote}` : ""}
 `.trim();

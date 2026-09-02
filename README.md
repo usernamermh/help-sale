@@ -39,6 +39,8 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 | GET | /api/v1/health | 健康检查 |
 | POST | /api/v1/knowledge | 上传知识文档 { title, content }(同名幂等跳过) |
 | POST | /api/v1/copilot/analyze | 粘贴对话分析 { transcript, customerKey? },返回 analysisId |
+| POST | /api/v1/copilot/vehicle-match | 车型优选 { customerKey?, requirements } ,返回 planId + plan |
+| GET | /api/v1/customers/:key/vehicle-plans | 客户车型优选历史 |
 | GET | /api/v1/customers/:key/analyses | 客户分析历史 |
 
 请求头 `x-tenant-id` 指定租户(默认见配置 tenant.defaultTenantId)。

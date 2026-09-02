@@ -60,6 +60,22 @@
     </div>
 
     <div class="card">
+    <div class="card">
+      <h2>车型优选</h2>
+      <label>预算区间(万元)</label>
+      <div class="row">
+        <input id="vBudgetMin" type="number" placeholder="最低" value="15">
+        <input id="vBudgetMax" type="number" placeholder="最高" value="30">
+      </div>
+      <div class="row">
+        <div><label>座位数</label><input id="vSeats" type="number" placeholder="5" value="5"></div>
+        <div><label>能源类型</label><input id="vEnergy" placeholder="纯电/混动/不限"></div>
+      </div>
+      <label>用车场景</label>
+      <input id="vUsage" placeholder="商务接待 / 家庭通勤 / 城市代步…">
+      <div style="margin-top:14px"><button id="vehicleBtn">生成优选方案</button></div>
+      <div id="vehicleError" class="error hidden"></div>
+    </div>
       <h2>知识库上传</h2>
       <label>标题(同名重复上传会被跳过)</label>
       <input id="docTitle" placeholder="价格政策">
@@ -84,6 +100,18 @@
   </div>
 
   <div>
+    <div class="card hidden" id="vehicleResultCard">
+      <h2>优选方案 <span class="badge" id="vProfile"></span></h2>
+      <div id="vehicleList"></div>
+      <h2 style="margin-top:18px">关键差异</h2>
+      <ul class="steps" id="vDifferences"></ul>
+      <h2 style="margin-top:18px">建议话术</h2>
+      <textarea class="suggest" id="vReply" readonly></textarea>
+      <div style="margin-top:8px"><button id="vCopyBtn" class="secondary">复制话术</button></div>
+      <h2 style="margin-top:18px">下一步</h2>
+      <ol class="steps" id="vNextSteps"></ol>
+      <p class="meta" id="vMeta"></p>
+    </div>
     <div class="card hidden" id="resultCard">
       <h2>分析结果 <span class="badge" id="intentBadge"></span></h2>
       <p id="summary" style="font-size:14px"></p>
@@ -172,6 +200,65 @@ $("copyBtn").addEventListener("click", async () => {
   catch { $("suggestedReply").select(); document.execCommand("copy"); }
 });
 
+$("vehicleBtn").addEventListener("click", async () => {
+  const btn = $("vehicleBtn");
+  const err = $("vehicleError");
+  err.classList.add("hidden");
+  const requirements = {
+    budgetMin: Number($("vBudgetMin").value) || undefined,
+    budgetMax: Number($("vBudgetMax").value) || undefined,
+    seats: Number($("vSeats").value) || undefined,
+    energyType: $("vEnergy").value.trim() || undefined,
+    usage: $("vUsage").value.trim() || undefined,
+  };
+  if (!requirements.budgetMin && !requirements.budgetMax && !requirements.usage) {
+    err.textContent = "请至少填写预算或用车场景"; err.classList.remove("hidden"); return;
+  }
+  btn.disabled = true; btn.textContent = "优选中…";
+  try {
+    const result = await api("/api/v1/copilot/vehicle-match", {
+      method: "POST",
+      body: JSON.stringify({ customerKey: $("customerKey").value.trim() || "c_car", requirements }),
+    });
+    renderVehiclePlan(result.plan, result.planId, result.conversationId);
+  } catch (e) {
+    err.textContent = "优选失败:" + e.message; err.classList.remove("hidden");
+  } finally {
+    btn.disabled = false; btn.textContent = "生成优选方案";
+  }
+});
+
+function renderVehiclePlan(plan, planId, conversationId) {
+  $("vehicleResultCard").classList.remove("hidden");
+  $("vProfile").textContent = plan.profile || "";
+  const list = $("vehicleList");
+  list.innerHTML = "";
+  for (const v of plan.recommendations || []) {
+    const div = document.createElement("div");
+    div.className = "signal";
+    const score = v.fitScore != null ? ' <span class="badge">匹配度 ' + v.fitScore + "</span>" : "";
+    div.innerHTML = "<div><b>" + escapeHtml(v.brand + " " + v.series + " " + v.modelName) + "</b>" + score + "</div>" +
+      '<div class="t" style="font-size:12px;color:#64748b;margin:4px 0">' + escapeHtml(v.priceText + " / " + v.energyType + " / " + v.bodyType + " / " + v.seats + "座") + "</div>" +
+      '<p class="note" style="margin:0">' + escapeHtml(v.reason || "") + "</p>";
+    list.appendChild(div);
+  }
+  const diff = $("vDifferences");
+  diff.innerHTML = "";
+  for (const d of plan.keyDifferences || []) { const li = document.createElement("li"); li.textContent = d; diff.appendChild(li); }
+  $("vReply").value = plan.suggestedReply || "";
+  const steps = $("vNextSteps");
+  steps.innerHTML = "";
+  for (const s of plan.nextSteps || []) { const li = document.createElement("li"); li.textContent = s; steps.appendChild(li); }
+  $("vMeta").textContent = "方案ID:" + (planId || "") + " / 会话:" + (conversationId || "");
+  window.scrollTo({ top: $("vehicleResultCard").offsetTop - 80, behavior: "smooth" });
+}
+
+$("vCopyBtn").addEventListener("click", async () => {
+  const v = $("vReply").value;
+  if (!v) return;
+  try { await navigator.clipboard.writeText(v); $("vCopyBtn").textContent = "已复制"; setTimeout(() => ($("vCopyBtn").textContent = "复制话术"), 1500); }
+  catch { $("vReply").select(); document.execCommand("copy"); }
+});
 $("uploadBtn").addEventListener("click", async () => {
   const btn = $("uploadBtn");
   const title = $("docTitle").value.trim();

@@ -5,7 +5,8 @@
 ## 项目状态(2026-08-25)
 
 - MVP 后端 Task 1-20 完成,Task 21(真实模型冒烟)已使用内网 U21-Preview 端点完成,Task 22-23(文档/验收)完成。
-- 前端工具页已上线(Fastify 根路由 /,单页 HTML,无构建链):对话分析、知识上传、历史查询。
+- 前端工具页已上线(Fastify 根路由 /,单页 HTML,无构建链):对话分析、车型优选、知识上传、跟进任务、历史查询。
+- 车型优选:db v3 vehicles/vehicle_match_plans 表 + vehicles 仓库(预算/座位/能源/级别/关键词筛选)+ 示例种子(services/seed.ts,启动对默认租户播种 8 款)+ vehicle-advisor agent(search_vehicles/get_customer_profile/emit_vehicle_plan)+ POST /api/v1/copilot/vehicle-match + 前端优选卡片。
 - 测试 44/44 + typecheck 零错误;服务默认端口 3101(help-sale.config.yaml 配置驱动,避开 VS Code 对 127.0.0.1:3000 的转发占用)。
 - 当前推进:第 13 章 loop 设计第二阶段 T24(T 跟进任务表与到期提醒)起。
 

@@ -16,6 +16,7 @@ export function getVehicleAdvisorPrompt(ctx: { companyName?: string } = {}): str
 
 【纪律】
 - 只使用车型库中存在的车型与价格;无匹配时如实说明缺口,禁止编造车型或价格。
+- 客户称呼未知时使用「您好」,不要虚构称呼。
 - 一轮只输出一次 emit_vehicle_plan。
 `.trim();
 }
