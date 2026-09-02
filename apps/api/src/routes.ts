@@ -18,6 +18,9 @@ import { refreshCustomerTags } from "./services/customer-tags.js";
 import { listCustomerTags } from "./repositories/customer-tags.js";
 import { runResponseEvaluation } from "./pi/evaluator.js";
 import { runVoiceDigest } from "./pi/voice-digest.js";
+import { notifyOverdue } from "./services/notifications.js";
+import { listNotificationLogs } from "./repositories/notification-logs.js";
+import { loadConfig } from "./env.js";
 import { approveCandidate, createCandidate, listCandidates, rejectCandidate } from "./repositories/knowledge-candidates.js";
 import { listAgentEvents } from "./repositories/agent-events.js";
 import { runVehicleMatch } from "./pi/vehicle-advisor.js";
@@ -329,6 +332,21 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		);
 		if (!result.details) return reply.code(502).send({ error: "agent produced no digest" });
 		return { conversationId: result.conversationId, digest: result.details };
+	});
+
+
+	app.post("/api/v1/notifications/trigger", async (request, reply) => {
+		const config = loadConfig();
+		const result = await notifyOverdue(deps.db, {
+			tenantId: request.tenantId,
+			reminders: deps.reminders,
+			webhookUrl: config.notificationEnabled ? config.notificationWebhookUrl : undefined,
+		});
+		return reply.send(result);
+	});
+
+	app.get("/api/v1/notifications", async (request) => {
+		return { logs: listNotificationLogs(deps.db, request.tenantId) };
 	});
 
 	app.get<{ Params: { conversationId: string } }>("/api/v1/conversations/:conversationId/timeline", async (request) => {

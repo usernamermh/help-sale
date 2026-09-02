@@ -30,6 +30,8 @@ export interface AppConfig {
 	redisPassword: string;
 	chunkerSize: number;
 	chunkerOverlap: number;
+	notificationEnabled: boolean;
+	notificationWebhookUrl: string;
 	companyName: string;
 	teamName: string;
 	tenantId: string; // MVP:固定演示租户,后续迁移到认证
@@ -53,6 +55,7 @@ export interface FileConfig {
 	knowledge?: { searchLimit?: number };
 	mysql?: { enabled?: boolean; host?: string; port?: number; user?: string; password?: string; database?: string };
 	redis?: { enabled?: boolean; host?: string; port?: number; password?: string };
+	notification?: { enabled?: boolean; webhookUrl?: string };
 	company?: { name?: string; team?: string };
 }
 
@@ -122,6 +125,8 @@ const defaults: AppConfig = {
 	redisPassword: "rmh_redis_2026",
 	chunkerSize: 600,
 	chunkerOverlap: 80,
+	notificationEnabled: true,
+	notificationWebhookUrl: "",
 	companyName: "智造云",
 	teamName: "销售团队",
 	tenantId: "t_demo",
@@ -179,6 +184,8 @@ export function loadConfig(): AppConfig {
 		redisPassword: env.REDIS_PASSWORD ?? file.redis?.password ?? defaults.redisPassword,
 		chunkerSize: num(env.CHUNKER_SIZE ?? file.chunker?.size, defaults.chunkerSize),
 		chunkerOverlap: num(env.CHUNKER_OVERLAP ?? file.chunker?.overlap, defaults.chunkerOverlap),
+		notificationEnabled: bool(env.NOTIFICATION_ENABLED ?? file.notification?.enabled, defaults.notificationEnabled),
+		notificationWebhookUrl: env.NOTIFICATION_WEBHOOK_URL ?? file.notification?.webhookUrl ?? defaults.notificationWebhookUrl,
 		companyName: env.COMPANY_NAME ?? file.company?.name ?? defaults.companyName,
 		teamName: env.TEAM_NAME ?? file.company?.team ?? defaults.teamName,
 		tenantId: env.TENANT_ID ?? file.tenant?.defaultTenantId ?? defaults.tenantId,

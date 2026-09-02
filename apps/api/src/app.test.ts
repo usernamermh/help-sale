@@ -322,6 +322,25 @@ describe("api", () => {
 	});
 
 
+
+	it("通知推送:到期任务触发记录,重复触发去重", async () => {
+		dir = tmpDataDir("api-notify");
+		const queue = createMemoryReminderQueue();
+		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: queue });
+		const headers = { "x-tenant-id": "t1" };
+		await app.inject({ method: "POST", url: "/api/v1/copilot/analyze", payload: { transcript: "客户:价格多少?", customerKey: "c_notify" }, headers });
+		const first = await app.inject({ method: "POST", url: "/api/v1/notifications/trigger", headers });
+		expect(first.statusCode).toBe(200);
+		expect(first.json().newlyNotified.length).toBe(1);
+		expect(first.json().pushed).toBe(false);
+		const logs = await app.inject({ method: "GET", url: "/api/v1/notifications", headers });
+		expect(logs.json().logs.length).toBe(1);
+		expect(logs.json().logs[0].status).toBe("sent");
+		const second = await app.inject({ method: "POST", url: "/api/v1/notifications/trigger", headers });
+		expect(second.json().newlyNotified).toEqual([]);
+	});
+
+
 	it("时间线:分析后的事件序列可回放", async () => {
 		dir = tmpDataDir("api-timeline");
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
