@@ -171,3 +171,15 @@ CREATE TABLE IF NOT EXISTS customer_tags (
 	UNIQUE (tenant_id, customer_id, tag)
 );
 CREATE INDEX IF NOT EXISTS idx_ct_customer ON customer_tags (tenant_id, customer_id, weight DESC);
+
+-- v9:通知发送日志(到期提醒推送记录)
+CREATE TABLE IF NOT EXISTS notification_logs (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	channel TEXT NOT NULL DEFAULT 'webhook',
+	title TEXT NOT NULL,
+	content_json TEXT NOT NULL DEFAULT '{}',
+	status TEXT NOT NULL DEFAULT 'sent',
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_nl_tenant ON notification_logs (tenant_id, created_at DESC);
