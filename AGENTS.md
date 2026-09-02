@@ -6,6 +6,7 @@
 
 - MVP 后端 Task 1-20 完成,Task 21(真实模型冒烟)已使用内网 U21-Preview 端点完成,Task 22-23(文档/验收)完成。
 - 前端工具页已上线(Fastify 根路由 /,单页 HTML,无构建链):对话分析、车型优选、知识上传、跟进任务、历史查询。
+- T26 知识沉淀完成(knowledge_candidates + analyze 自动候选 + approve 入库 + 前端卡片 + search 路由)。
 - 军师晨报:T25 完成(digests 表 + /assistant/digest 幂等生成 + 前端卡片)。
 - 中间件:MySQL 归档(analyses/vehicle_match_plans 双写,降级优先)+ Redis 到期提醒(ZSET + /api/v1/reminders/overdue + 前端「已到期」标记);连接在 help-sale.config.yaml。
 - 车型优选:db v3 vehicles/vehicle_match_plans 表 + vehicles 仓库(预算/座位/能源/级别/关键词筛选)+ 示例种子(services/seed.ts,启动对默认租户播种 8 款)+ vehicle-advisor agent(search_vehicles/get_customer_profile/emit_vehicle_plan)+ POST /api/v1/copilot/vehicle-match + 前端优选卡片。

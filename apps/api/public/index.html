@@ -77,6 +77,10 @@
       <div style="margin-top:14px"><button id="vehicleBtn">生成优选方案</button></div>
       <div id="vehicleError" class="error hidden"></div>
     </div>
+    <div class="card">
+      <h2>知识沉淀</h2>
+      <div id="candidateList" style="margin-top:8px"></div>
+    </div>
       <h2>知识库上传</h2>
       <label>标题(同名重复上传会被跳过)</label>
       <input id="docTitle" placeholder="价格政策">
@@ -166,6 +170,7 @@ $("analyzeBtn").addEventListener("click", async () => {
     $("historyKey").value = $("customerKey").value.trim() || "自动生成";
     loadTasks();
 loadDigests();
+loadCandidates();
   } catch (e) {
     err.textContent = "分析失败:" + e.message;
     err.classList.remove("hidden");
@@ -280,6 +285,33 @@ $("uploadBtn").addEventListener("click", async () => {
   } finally { btn.disabled = false; }
 });
 
+async function loadCandidates() {
+  const box = $("candidateList");
+  try {
+    const r = await api("/api/v1/knowledge/candidates?status=pending").catch(() => null);
+    if (!r || !r.candidates || r.candidates.length === 0) { box.innerHTML = '<div class="meta">暂无待沉淀话术(分析后自动生成)</div>'; return; }
+    box.innerHTML = "";
+    for (const c of r.candidates) {
+      const div = document.createElement("div");
+      div.className = "history-item";
+      div.innerHTML = '<div><span class="badge">' + escapeHtml(c.intent) + "</span></div>" +
+        '<div class="t" style="margin:4px 0">' + escapeHtml(c.draftContent.slice(0, 140)) + "</div>" +
+        '<div style="display:flex;gap:8px"><button class="secondary" data-act="approve" style="padding:4px 10px;font-size:12px">确认入库</button>' +
+        '<button class="secondary" data-act="reject" style="padding:4px 10px;font-size:12px">拒绝</button></div>';
+      const act = div.querySelector("[data-act=approve]");
+      const rej = div.querySelector("[data-act=reject]");
+      act.addEventListener("click", async () => {
+        try { const a = await api("/api/v1/knowledge/candidates/" + c.id + "/approve", { method: "POST" }); alert("已入库:" + a.candidate.draftTitle); } catch (e) { alert("入库失败:" + e.message); }
+        loadCandidates();
+      });
+      rej.addEventListener("click", async () => {
+        try { await api("/api/v1/knowledge/candidates/" + c.id + "/reject", { method: "POST" }); } catch (e) { alert("操作失败:" + e.message); }
+        loadCandidates();
+      });
+      box.appendChild(div);
+    }
+  } catch { box.innerHTML = '<div class="meta">候选加载失败</div>'; }
+}
 async function loadDigests() {
   const box = $("digestList");
   try {
@@ -302,6 +334,7 @@ $("digestBtn").addEventListener("click", async () => {
   try {
     await api("/api/v1/assistant/digest", { method: "POST" });
     await loadDigests();
+loadCandidates();
   } catch (e) { alert("晨报生成失败:" + e.message); }
   finally { btn.disabled = false; btn.textContent = "生成今日晨报"; }
 });
@@ -327,6 +360,7 @@ async function loadTasks() {
         try { await api("/api/v1/tasks/" + t.id + "/done", { method: "PATCH" }); } catch (e) { alert("操作失败:" + e.message); }
         loadTasks();
 loadDigests();
+loadCandidates();
       });
       box.appendChild(div);
     }
@@ -361,6 +395,7 @@ function escapeHtml(s) {
 checkHealth();
 loadTasks();
 loadDigests();
+loadCandidates();
 </script>
 </body>
 </html>
