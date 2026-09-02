@@ -159,6 +159,9 @@
       <ol class="steps" id="nextSteps"></ol>
       <p class="meta" id="followupAt"></p>
       <p class="meta" id="resultMeta"></p>
+      <h2 style="margin-top:18px">过程回放</h2>
+      <div id="timelineBox" class="meta" style="font-size:12px"></div>
+
     </div>
   </div>
 </main>
@@ -228,6 +231,7 @@ function renderResult(a) {
   }
   $("followupAt").textContent = a.followupAt ? "建议跟进时间:" + a.followupAt : "";
   $("resultMeta").textContent = "分析ID:" + a.id + " / 会话:" + a.conversationId;
+    loadTimeline(a.conversationId);
   window.scrollTo({ top: $("resultCard").offsetTop - 80, behavior: "smooth" });
 }
 
@@ -324,6 +328,22 @@ async function loadInsights() {
       '热门意图:' + escapeHtml(intents) + '<br>' +
       '热门品牌:' + escapeHtml(brands) + '</div>';
   } catch { box.innerHTML = '<div class="meta">洞察加载失败</div>'; }
+}
+
+async function loadTimeline(conversationId) {
+  const box = $("timelineBox");
+  if (!conversationId) { box.textContent = ""; return; }
+  try {
+    const r = await api("/api/v1/conversations/" + conversationId + "/timeline");
+    const steps = [];
+    for (const e of r.events || []) {
+      if (e.type === "agent_start") steps.push("🚀 开始");
+      else if (e.type === "tool_start") steps.push("调用:" + e.toolName);
+      else if (e.type === "tool_end") steps.push("完成:" + e.toolName);
+      else if (e.type === "agent_end") steps.push("收尾");
+    }
+    box.textContent = steps.join(" → ");
+  } catch { box.textContent = ""; }
 }
 
 function renderEvaluation(d) {
