@@ -25,7 +25,7 @@
 
 ## 模型接入
 
-- 默认 local-llm 指向新网关 http://10.10.20.34:3004/v1(key sk-l50…),默认模型 deepseek-v4-pro-0813;网关聚合 25 个模型(deepseek-v4/glm-5.x/kimi-qwen3.8/MiniMax/xiaomi/Claude 4.x-5/gpt-5.x/qwen3.7-plus 等),模型 id 见 /v1/models。代理经 undici ProxyAgent 注入(models.ts);历史弱模型端点 http://llm.jz.yunzhisheng.cn:30080/u21-preview/v1(u21-preview)仍可用,切回只需改配置文件 model 段。
+- 默认 local-llm 指向弱模型端点 http://llm.jz.yunzhisheng.cn:30080/u21-preview/v1(u21-preview,key sk-1234),走代理 10.252.60.14:3128;代理经 undici ProxyAgent 注入(models.ts)。备选:新网关 http://10.10.20.34:3004/v1(key sk-l50…,聚合 25 个模型,默认可用 deepseek-v4-pro-0813 等,模型 id 见 /v1/models),切回只需改配置文件 model 段。
 - 额外请求参数统一进请求体 body 的 extra_body 字段(配置 model.extraBody / 环境变量 MODEL_EXTRA_BODY),不与标准参数平级。
 - 离线测试用 pi 内置 faux provider;真实链路用 smoke 脚本 apps/api/.tmp/smoke-real.ts(该目录已被 gitignore)。
 
