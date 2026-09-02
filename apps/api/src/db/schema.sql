@@ -143,3 +143,16 @@ CREATE TABLE IF NOT EXISTS knowledge_candidates (
 	approved_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_kc_status ON knowledge_candidates (tenant_id, status, created_at DESC);
+
+-- v6:分析时间线(loop T28:agent 事件序列,供回放与可观测)
+CREATE TABLE IF NOT EXISTS agent_events (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	conversation_id TEXT NOT NULL,
+	seq INTEGER NOT NULL,
+	event_type TEXT NOT NULL,
+	tool_name TEXT,
+	payload_json TEXT,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_agent_events_conv ON agent_events (tenant_id, conversation_id, seq);
