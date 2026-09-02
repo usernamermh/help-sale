@@ -6,9 +6,11 @@ import type { ModelRuntime } from "./pi/models.js";
 import { ingestDocument } from "./services/ingest.js";
 import { requireTenant, upsertCustomer } from "./repositories/customers.js";
 import { createAnalysis, listAnalysesByCustomer } from "./repositories/analyses.js";
-import { createTask, listTasks, setTaskStatus } from "./repositories/tasks.js";
+import { createTask, getTask, listTasks, setTaskStatus } from "./repositories/tasks.js";
 import { createVehiclePlan, listVehiclePlansByCustomer } from "./repositories/vehicle-plans.js";
 import { runVehicleMatch } from "./pi/vehicle-advisor.js";
+import type { MysqlSink } from "./integrations/mysql-sink.js";
+import type { ReminderQueue } from "./integrations/reminder-queue.js";
 import { runCopilotAnalysis } from "./pi/copilot.js";
 import type { SessionStore } from "./pi/sessions.js";
 
@@ -17,6 +19,8 @@ export interface RouteDeps {
 	store: SessionStore;
 	runtime?: ModelRuntime;
 	streamFn?: StreamFn;
+	mysqlSink?: MysqlSink;
+	reminders: ReminderQueue;
 }
 
 
@@ -82,15 +86,34 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 			followupAt: result.details.followupAt,
 		});
 
-		// loop F3:分析完成后自动生成跟进任务
+		// loop F3:分析完成后自动生成跟进任务,并进入 Redis 到期提醒队列
 		const firstStep = result.details.nextSteps[0];
 		if (result.details.followupAt || firstStep) {
-			createTask(deps.db, {
+			const task = createTask(deps.db, {
 				tenantId: request.tenantId,
 				customerId: customer.id,
 				analysisId: saved.id,
 				action: firstStep ?? "跟进客户",
 				dueAt: result.details.followupAt,
+			});
+			const dueMs = task.dueAt ? Date.parse(task.dueAt) : Number.NaN;
+			void deps.reminders.add(task.id, Number.isFinite(dueMs) ? dueMs : null);
+		}
+
+		// 归档到远程 MySQL(失败自动降级)
+		if (deps.mysqlSink) {
+			void deps.mysqlSink.appendAnalysis({
+				id: saved.id,
+				tenantId: request.tenantId,
+				customerId: customer.id,
+				conversationId: saved.conversationId,
+				intent: saved.intent,
+				summary: saved.summary,
+				signalsJson: JSON.stringify(saved.signals),
+				suggestedReply: saved.suggestedReply,
+				nextStepsJson: JSON.stringify(saved.nextSteps),
+				followupAt: saved.followupAt,
+				createdAt: saved.createdAt,
 			});
 		}
 
@@ -115,7 +138,16 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	app.patch<{ Params: { id: string } }>("/api/v1/tasks/:id/done", async (request, reply) => {
 		const task = setTaskStatus(deps.db, request.tenantId, request.params.id, "done");
 		if (!task) return reply.code(404).send({ error: "task_not_found", message: "任务不存在" });
+		void deps.reminders.remove(task.id);
 		return { task };
+	});
+
+	app.get("/api/v1/reminders/overdue", async (request) => {
+		const ids = await deps.reminders.due(Date.now(), 100);
+		const overdue = ids
+			.map((id) => getTask(deps.db, request.tenantId, id))
+			.filter((task): task is NonNullable<typeof task> => !!task && task.status === "pending");
+		return { overdue, generatedAt: new Date().toISOString() };
 	});
 
 	app.post<{ Body: { customerKey?: string; requirements?: VehicleRequirements } }>("/api/v1/copilot/vehicle-match", async (request, reply) => {
@@ -136,6 +168,17 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 			requirement: JSON.stringify(req),
 			planJson: JSON.stringify(result.details),
 		});
+		if (deps.mysqlSink) {
+			void deps.mysqlSink.appendVehiclePlan({
+				id: plan.id,
+				tenantId: request.tenantId,
+				customerId: customer.id,
+				conversationId: plan.conversationId,
+				requirement: JSON.stringify(req),
+				planJson: JSON.stringify(result.details),
+				createdAt: plan.createdAt,
+			});
+		}
 		return { planId: plan.id, conversationId: result.conversationId, plan: result.details };
 	});
 

@@ -4,6 +4,26 @@ import type { StreamFn } from "@earendil-works/pi-agent-core";
 import { fauxProvider, fauxToolCall, fauxAssistantMessage } from "@earendil-works/pi-ai/providers/faux";
 import { buildApp } from "./app.js";
 import { cleanupDataDir, tmpDataDir } from "./pi/sessions.js";
+import type { MysqlSink } from "./integrations/mysql-sink.js";
+import { createMemoryReminderQueue } from "./integrations/reminder-queue.js";
+
+const NOOP_MYSQL: MysqlSink = {
+	appendAnalysis: async () => undefined,
+	appendVehiclePlan: async () => undefined,
+	close: async () => undefined,
+};
+
+function trackingMysqlSink(tracker: { analysis: number; vehicle: number }): MysqlSink {
+	return {
+		appendAnalysis: async () => {
+			tracker.analysis++;
+		},
+		appendVehiclePlan: async () => {
+			tracker.vehicle++;
+		},
+		close: async () => undefined,
+	};
+}
 
 let app: FastifyInstance | undefined;
 let dir: string | undefined;
@@ -24,6 +44,7 @@ function fakeStreamFn(): StreamFn {
 				signals: [{ kind: "budget", quote: "超出预算", note: "预算有限" }],
 				suggestedReply: "先共情再讲 ROI",
 				nextSteps: ["发送方案"],
+				followupAt: "2020-01-01T00:00:00.000Z",
 			}),
 		]),
 	]);
@@ -53,7 +74,7 @@ function fakeVehicleStreamFn(): StreamFn {
 describe("api", () => {
 	it("GET / 返回前端工具页", async () => {
 		dir = tmpDataDir("api");
-		app = buildApp({ dataDir: dir });
+		app = buildApp({ dataDir: dir, mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const res = await app.inject({ method: "GET", url: "/" });
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
@@ -63,7 +84,7 @@ describe("api", () => {
 
 	it("health 可达", async () => {
 		dir = tmpDataDir("api");
-		app = buildApp({ dataDir: dir });
+		app = buildApp({ dataDir: dir, mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const res = await app.inject({ method: "GET", url: "/api/v1/health" });
 		expect(res.statusCode).toBe(200);
 		expect(res.json().status).toBe("ok");
@@ -71,7 +92,7 @@ describe("api", () => {
 
 	it("知识库上传可检索且幂等", async () => {
 		dir = tmpDataDir("api-upload");
-		app = buildApp({ dataDir: dir });
+		app = buildApp({ dataDir: dir, mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const first = await app.inject({
 			method: "POST",
 			url: "/api/v1/knowledge",
@@ -91,7 +112,7 @@ describe("api", () => {
 
 	it("analyze 自动生成跟进任务,且任务可查询与完成", async () => {
 		dir = tmpDataDir("api-tasks");
-		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn() });
+		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const headers = { "x-tenant-id": "t1" };
 		const res = await app.inject({
 			method: "POST",
@@ -118,7 +139,7 @@ describe("api", () => {
 	
 	it("车型优选:生成方案并落库可查", async () => {
 		dir = tmpDataDir("api-vehicle");
-		app = buildApp({ dataDir: dir, streamFn: fakeVehicleStreamFn(), seedVehiclesFor: ["t1"] });
+		app = buildApp({ dataDir: dir, streamFn: fakeVehicleStreamFn(), seedVehiclesFor: ["t1"], mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const headers = { "x-tenant-id": "t1" };
 		const res = await app.inject({
 			method: "POST",
@@ -138,9 +159,48 @@ describe("api", () => {
 		expect(list.json().plans).toHaveLength(1);
 		expect(list.json().plans[0].plan.recommendations[0].brand).toBe("比亚迪");
 	});
+	
+	it("analyze 后分析归档到 mysql sink", async () => {
+		dir = tmpDataDir("api-mysql");
+		const tracker = { analysis: 0, vehicle: 0 };
+		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: trackingMysqlSink(tracker), reminders: createMemoryReminderQueue() });
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/copilot/analyze",
+			payload: { transcript: "客户:价格多少?", customerKey: "c_mysql" },
+			headers: { "x-tenant-id": "t1" },
+		});
+		expect(res.statusCode).toBe(200);
+		expect(tracker.analysis).toBe(1);
+	});
+
+	it("提醒闭环:到期任务出现在 overdue,完成后出队", async () => {
+		dir = tmpDataDir("api-remind");
+		const queue = createMemoryReminderQueue();
+		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: queue });
+		const headers = { "x-tenant-id": "t1" };
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/copilot/analyze",
+			payload: { transcript: "客户:价格多少?", customerKey: "c_remind" },
+			headers,
+		});
+		expect(res.statusCode).toBe(200);
+
+		const overdue = await app.inject({ method: "GET", url: "/api/v1/reminders/overdue", headers });
+		expect(overdue.statusCode).toBe(200);
+		expect(overdue.json().overdue).toHaveLength(1);
+		expect(overdue.json().overdue[0].customerKey).toBe("c_remind");
+		const taskId = overdue.json().overdue[0].id;
+
+		const done = await app.inject({ method: "PATCH", url: `/api/v1/tasks/${taskId}/done`, headers });
+		expect(done.statusCode).toBe(200);
+		const after = await app.inject({ method: "GET", url: "/api/v1/reminders/overdue", headers });
+		expect(after.json().overdue).toHaveLength(0);
+	});
 		it("analyze 全链路:分析落库并可查", async () => {
 		dir = tmpDataDir("api-analyze");
-		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn() });
+		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const res = await app.inject({
 			method: "POST",
 			url: "/api/v1/copilot/analyze",

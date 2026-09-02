@@ -9,6 +9,8 @@ import { openSessionStore } from "./pi/sessions.js";
 import { requireTenant } from "./repositories/customers.js";
 import type { ModelRuntime } from "./pi/models.js";
 import { registerRoutes } from "./routes.js";
+import { createMysqlSink, type MysqlSink } from "./integrations/mysql-sink.js";
+import { createReminderQueue, type ReminderQueue } from "./integrations/reminder-queue.js";
 import { seedVehicles } from "./services/seed.js";
 
 declare module "fastify" {
@@ -23,6 +25,8 @@ export interface AppOptions {
 	runtime?: ModelRuntime;
 	streamFn?: StreamFn;
 	seedVehiclesFor?: string[] | false;
+	mysqlSink?: MysqlSink;
+	reminders?: ReminderQueue;
 }
 
 export function buildApp(options: AppOptions = {}): FastifyInstance {
@@ -51,7 +55,22 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		request.tenantId = (request.headers["x-tenant-id"] as string | undefined) ?? config.tenantId;
 	});
 
-	registerRoutes(app, { db, store, runtime: options.runtime, streamFn: options.streamFn });
+	const mysqlSink = options.mysqlSink ?? createMysqlSink({
+		enabled: config.mysqlEnabled,
+		host: config.mysqlHost,
+		port: config.mysqlPort,
+		user: config.mysqlUser,
+		password: config.mysqlPassword,
+		database: config.mysqlDatabase,
+	});
+	const reminders = options.reminders ?? createReminderQueue({
+		enabled: config.redisEnabled,
+		host: config.redisHost,
+		port: config.redisPort,
+		password: config.redisPassword,
+	});
+
+	registerRoutes(app, { db, store, runtime: options.runtime, streamFn: options.streamFn, mysqlSink, reminders });
 
 	// 前端单页工具:根路径返回内嵌页面
 	const pagePath = path.join(apiRoot, "public", "index.html");
@@ -60,7 +79,8 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	});
 
 	app.addHook("onClose", async () => {
-		await store.close();
+		const closeTasks: Promise<void>[] = [store.close(), mysqlSink.close(), reminders.close()];
+		await Promise.allSettled(closeTasks);
 		db.close();
 	});
 

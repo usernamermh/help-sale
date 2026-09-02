@@ -18,6 +18,16 @@ export interface AppConfig {
 	modelMaxTokens: number;
 	modelExtraBody: Record<string, unknown>;
 	knowledgeSearchLimit: number;
+	mysqlEnabled: boolean;
+	mysqlHost: string;
+	mysqlPort: number;
+	mysqlUser: string;
+	mysqlPassword: string;
+	mysqlDatabase: string;
+	redisEnabled: boolean;
+	redisHost: string;
+	redisPort: number;
+	redisPassword: string;
 	chunkerSize: number;
 	chunkerOverlap: number;
 	companyName: string;
@@ -41,6 +51,8 @@ export interface FileConfig {
 	};
 	chunker?: { size?: number; overlap?: number };
 	knowledge?: { searchLimit?: number };
+	mysql?: { enabled?: boolean; host?: string; port?: number; user?: string; password?: string; database?: string };
+	redis?: { enabled?: boolean; host?: string; port?: number; password?: string };
 	company?: { name?: string; team?: string };
 }
 
@@ -98,6 +110,16 @@ const defaults: AppConfig = {
 	modelMaxTokens: 8192,
 	modelExtraBody: {},
 	knowledgeSearchLimit: 5,
+	mysqlEnabled: true,
+	mysqlHost: "10.10.20.53",
+	mysqlPort: 3306,
+	mysqlUser: "root",
+	mysqlPassword: "rmh_mysql_2026",
+	mysqlDatabase: "help_sale",
+	redisEnabled: true,
+	redisHost: "10.10.20.53",
+	redisPort: 6379,
+	redisPassword: "rmh_redis_2026",
 	chunkerSize: 600,
 	chunkerOverlap: 80,
 	companyName: "智造云",
@@ -112,6 +134,13 @@ function safeParseJson(raw: string): Record<string, unknown> | undefined {
 	} catch {
 		return undefined;
 	}
+}
+
+
+function bool(value: unknown, fallback: boolean): boolean {
+	if (value === undefined || value === null || value === "") return fallback;
+	if (typeof value === "boolean") return value;
+	return String(value).toLowerCase() === "true" || String(value) === "1";
 }
 
 function num(value: unknown, fallback: number): number {
@@ -138,6 +167,16 @@ export function loadConfig(): AppConfig {
 		modelExtraBody:
 			env.MODEL_EXTRA_BODY !== undefined ? (safeParseJson(env.MODEL_EXTRA_BODY) ?? {}) : (file.model?.extraBody ?? defaults.modelExtraBody),
 		knowledgeSearchLimit: num(env.KNOWLEDGE_SEARCH_LIMIT ?? file.knowledge?.searchLimit, defaults.knowledgeSearchLimit),
+		mysqlEnabled: bool(env.MYSQL_ENABLED ?? file.mysql?.enabled, defaults.mysqlEnabled),
+		mysqlHost: env.MYSQL_HOST ?? file.mysql?.host ?? defaults.mysqlHost,
+		mysqlPort: num(env.MYSQL_PORT ?? file.mysql?.port, defaults.mysqlPort),
+		mysqlUser: env.MYSQL_USER ?? file.mysql?.user ?? defaults.mysqlUser,
+		mysqlPassword: env.MYSQL_PASSWORD ?? file.mysql?.password ?? defaults.mysqlPassword,
+		mysqlDatabase: env.MYSQL_DATABASE ?? file.mysql?.database ?? defaults.mysqlDatabase,
+		redisEnabled: bool(env.REDIS_ENABLED ?? file.redis?.enabled, defaults.redisEnabled),
+		redisHost: env.REDIS_HOST ?? file.redis?.host ?? defaults.redisHost,
+		redisPort: num(env.REDIS_PORT ?? file.redis?.port, defaults.redisPort),
+		redisPassword: env.REDIS_PASSWORD ?? file.redis?.password ?? defaults.redisPassword,
 		chunkerSize: num(env.CHUNKER_SIZE ?? file.chunker?.size, defaults.chunkerSize),
 		chunkerOverlap: num(env.CHUNKER_OVERLAP ?? file.chunker?.overlap, defaults.chunkerOverlap),
 		companyName: env.COMPANY_NAME ?? file.company?.name ?? defaults.companyName,

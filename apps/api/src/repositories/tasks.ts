@@ -42,9 +42,14 @@ export function createTask(db: DatabaseSync, input: CreateTaskInput): TaskRecord
 }
 
 export function getTask(db: DatabaseSync, tenantId: string, id: string): TaskRecord | undefined {
-	const row = db.prepare("SELECT * FROM next_step_tasks WHERE tenant_id = ? AND id = ?").get(tenantId, id) as
-		| Record<string, unknown>
-		| undefined;
+	const row = db
+		.prepare(
+			`SELECT t.*, c.key AS customer_key, c.name AS customer_name
+			 FROM next_step_tasks t
+			 LEFT JOIN customers c ON c.id = t.customer_id
+			 WHERE t.tenant_id = ? AND t.id = ?`,
+		)
+		.get(tenantId, id) as Record<string, unknown> | undefined;
 	return row ? mapRow(row) : undefined;
 }
 
