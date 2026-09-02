@@ -67,6 +67,23 @@ function fakeEvaluatorStreamFn(): StreamFn {
 	return async (model, context, options) => fa.provider.stream(model as never, context, options);
 }
 
+function fakeVoiceDigestStreamFn(): StreamFn {
+	const fa = fauxProvider();
+	fa.setResponses([
+		fauxAssistantMessage([
+			fauxToolCall("emit_digest", {
+				customerProfile: "预算 15-30 万,5 座,商务兼家庭,对新能源接受度高",
+				concerns: ["价格偏高", "担心售后网点少"],
+				progress: "试驾后比价阶段,存在竞品低价吸引,推进阻力中等",
+				suggestedActions: ["发出配置单", "预约二次试驾", "约 3 日内回访"],
+				summary: "客户试驾体验良好,主要在价格与售后上犹豫。",
+			}),
+		]),
+	]);
+	return async (model, context, options) => fa.provider.stream(model as never, context, options);
+}
+
+
 function fakeVehicleStreamFn(): StreamFn {
 	const fa = fauxProvider();
 	fa.setResponses([
@@ -270,6 +287,38 @@ describe("api", () => {
 		const list = tags.json().tags;
 		expect(list.some((x: { tag: string }) => x.tag === "价格敏感")).toBe(true);
 		expect(list.some((x: { tag: string }) => x.tag === "高意向")).toBe(true);
+	});
+
+
+
+	it("规则改进:聚合风险场景与候选流失,输出建议", async () => {
+		dir = tmpDataDir("api-improve");
+		app = buildApp({ dataDir: dir, mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+		const res = await app.inject({ method: "GET", url: "/api/v1/assistant/improvements?days=30", headers });
+		expect(res.statusCode).toBe(200);
+		expect(Array.isArray(res.json().suggestions)).toBe(true);
+		expect(typeof res.json().analyses).toBe("number");
+	});
+
+	it("试驾/通话文字稿摘要:结构化 digest", async () => {
+		dir = tmpDataDir("api-digest-voice");
+		app = buildApp({ dataDir: dir, streamFn: fakeVoiceDigestStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/copilot/voice-digest",
+			payload: { transcript: "客户试驾汉EV,说空间不错,但价格有点高,问售后网点多不多" },
+			headers,
+		});
+		expect(res.statusCode).toBe(200);
+		const body = res.json();
+		expect(body.conversationId).toBeTruthy();
+		expect(body.digest.concerns).toContain("价格偏高");
+		expect(body.digest.suggestedActions.length).toBeGreaterThanOrEqual(3);
+
+		const bad = await app.inject({ method: "POST", url: "/api/v1/copilot/voice-digest", payload: { transcript: "  " }, headers });
+		expect(bad.statusCode).toBe(400);
 	});
 
 

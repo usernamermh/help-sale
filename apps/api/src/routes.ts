@@ -13,9 +13,11 @@ import { createVehiclePlan, listVehiclePlansByCustomer } from "./repositories/ve
 import { createDigest, getDigestByDate, listDigests } from "./repositories/digests.js";
 import { collectDigest } from "./services/digest.js";
 import { collectInsights } from "./services/insights.js";
+import { collectImprovements } from "./services/improvements.js";
 import { refreshCustomerTags } from "./services/customer-tags.js";
 import { listCustomerTags } from "./repositories/customer-tags.js";
 import { runResponseEvaluation } from "./pi/evaluator.js";
+import { runVoiceDigest } from "./pi/voice-digest.js";
 import { approveCandidate, createCandidate, listCandidates, rejectCandidate } from "./repositories/knowledge-candidates.js";
 import { listAgentEvents } from "./repositories/agent-events.js";
 import { runVehicleMatch } from "./pi/vehicle-advisor.js";
@@ -238,6 +240,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	});
 
 
+
+	app.get<{ Querystring: { days?: string } }>("/api/v1/assistant/improvements", async (request) => {
+		const days = Number(request.query.days ?? 30) || 30;
+		return collectImprovements(deps.db, { tenantId: request.tenantId, days });
+	});
 	app.get<{ Querystring: { days?: string } }>("/api/v1/assistant/insights", async (request) => {
 		const days = Number(request.query.days ?? 7) || 7;
 		return collectInsights(deps.db, { tenantId: request.tenantId, days });
@@ -310,6 +317,18 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		);
 		if (!result.details) return reply.code(502).send({ error: "agent produced no evaluation" });
 		return { conversationId: result.conversationId, evaluation: result.details };
+	});
+
+
+	app.post<{ Body: { transcript?: string } }>("/api/v1/copilot/voice-digest", async (request, reply) => {
+		const text = String(request.body?.transcript ?? "").trim();
+		if (!text) return reply.code(400).send({ error: "transcript is required" });
+		const result = await runVoiceDigest(
+			{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
+			{ text },
+		);
+		if (!result.details) return reply.code(502).send({ error: "agent produced no digest" });
+		return { conversationId: result.conversationId, digest: result.details };
 	});
 
 	app.get<{ Params: { conversationId: string } }>("/api/v1/conversations/:conversationId/timeline", async (request) => {
