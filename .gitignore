@@ -10,3 +10,4 @@ apps/api/apps/
 /.playwright-cli/
 *.log
 .DS_Store
+reference/llm-agent-workflow/

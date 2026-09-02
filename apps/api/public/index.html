@@ -62,6 +62,15 @@
 
     <div class="card">
     <div class="card">
+<div class="card">
+      <h2>话术评估</h2>
+      <label>客户对话</label>
+      <textarea id="evalConversation" style="min-height:70px" placeholder="客户:太贵了…"></textarea>
+      <label>你的回复</label>
+      <textarea id="evalReply" style="min-height:70px" placeholder="粘贴你的回复话术"></textarea>
+      <div style="margin-top:14px"><button id="evalBtn" class="secondary">评估并改进</button></div>
+      <div id="evalError" class="error hidden"></div>
+    </div>
       <h2>车型优选</h2>
       <label>预算区间(万元)</label>
       <div class="row">
@@ -96,6 +105,10 @@
       <div id="taskList" style="margin-top:12px"></div>
     </div>
     <div class="card">
+<div class="card">
+      <h2>经营洞察(近 7 天)</h2>
+      <div id="insightBox" style="font-size:13px"></div>
+    </div>
       <h2>军师晨报</h2>
       <div style="margin-bottom:8px"><button id="digestBtn" class="secondary">生成今日晨报</button></div>
       <div id="digestList"></div>
@@ -110,6 +123,18 @@
   </div>
 
   <div>
+<div class="card hidden" id="evalResultCard">
+      <h2>评估结果 <span class="badge" id="evalScore"></span></h2>
+      <div id="evalDims" style="font-size:13px"></div>
+      <div style="margin-top:10px"><b>做得好的</b></div>
+      <ul class="steps" id="evalStrengths"></ul>
+      <div style="margin-top:10px"><b>可改进</b></div>
+      <ul class="steps" id="evalImprovements"></ul>
+      <div style="margin-top:10px"><b>建议回复</b></div>
+      <textarea class="suggest" id="evalSuggested" readonly></textarea>
+      <div style="margin-top:8px"><button id="evalCopyBtn" class="secondary">复制建议话术</button></div>
+      <p class="meta" id="evalMeta"></p>
+    </div>
     <div class="card hidden" id="vehicleResultCard">
       <h2>优选方案 <span class="badge" id="vProfile"></span></h2>
       <div id="vehicleList"></div>
@@ -171,6 +196,7 @@ $("analyzeBtn").addEventListener("click", async () => {
     loadTasks();
 loadDigests();
 loadCandidates();
+loadInsights();
   } catch (e) {
     err.textContent = "分析失败:" + e.message;
     err.classList.remove("hidden");
@@ -283,6 +309,69 @@ $("uploadBtn").addEventListener("click", async () => {
   } catch (e) {
     $("uploadResult").textContent = "上传失败:" + e.message;
   } finally { btn.disabled = false; }
+});
+
+async function loadInsights() {
+  const box = $("insightBox");
+  try {
+    const r = await api("/api/v1/assistant/insights?days=7").catch(() => null);
+    if (!r) { box.innerHTML = '<div class="meta">洞察加载失败</div>'; return; }
+    const intents = (r.topIntents || []).map((i) => i.intent + " ×" + i.count).join("、") || "暂无";
+    const brands = (r.topBrands || []).map((b) => b.brand + " ×" + b.count).join("、") || "暂无";
+    box.innerHTML = '<div class="t" style="color:#334155;line-height:1.8">' +
+      '分析 ' + r.analyses + " 次 / 待办 " + r.pendingTasks + " / 到期 " + r.overdueTasks + '<br>' +
+      '任务完成率 ' + Math.round(r.taskCompletionRate * 100) + "% / 方案 " + r.vehiclePlans + '<br>' +
+      '热门意图:' + escapeHtml(intents) + '<br>' +
+      '热门品牌:' + escapeHtml(brands) + '</div>';
+  } catch { box.innerHTML = '<div class="meta">洞察加载失败</div>'; }
+}
+
+function renderEvaluation(d) {
+  $("evalResultCard").classList.remove("hidden");
+  $("evalScore").textContent = d.score + " 分";
+  const dims = $("evalDims");
+  dims.innerHTML = "";
+  const labels = { empathy: "共情", structure: "结构", value: "价值传达", compliance: "合规", close: "转化引导" };
+  for (const k of Object.keys(d.dimensions || {})) {
+    const row = document.createElement("div");
+    row.style.margin = "4px 0";
+    row.innerHTML = "<b>" + labels[k] + ":</b> " + d.dimensions[k] + " / 100";
+    dims.appendChild(row);
+  }
+  fillList("evalStrengths", d.strengths);
+  fillList("evalImprovements", d.improvements);
+  $("evalSuggested").value = d.suggestedReply || "";
+  $("evalMeta").textContent = "会话:" + (window.__evalConversationId || "");
+  window.scrollTo({ top: $("evalResultCard").offsetTop - 80, behavior: "smooth" });
+}
+
+function fillList(id, items) {
+  const box = $(id);
+  box.innerHTML = "";
+  for (const item of items || []) { const li = document.createElement("li"); li.textContent = item; box.appendChild(li); }
+}
+
+$("evalBtn").addEventListener("click", async () => {
+  const conversation = $("evalConversation").value.trim();
+  const reply = $("evalReply").value.trim();
+  const err = $("evalError");
+  err.classList.add("hidden");
+  if (!conversation || !reply) { err.textContent = "客户对话与回复都必填"; err.classList.remove("hidden"); return; }
+  const btn = $("evalBtn");
+  btn.disabled = true; btn.textContent = "评估中…";
+  try {
+    const r = await api("/api/v1/copilot/evaluate-response", { method: "POST", body: JSON.stringify({ conversation, reply }) });
+    window.__evalConversationId = r.conversationId;
+    renderEvaluation(r.evaluation);
+  } catch (e) { err.textContent = "评估失败:" + e.message; err.classList.remove("hidden"); }
+  finally { btn.disabled = false; btn.textContent = "评估并改进"; }
+});
+
+$("evalCopyBtn").addEventListener("click", async () => {
+  const v = $("evalSuggested").value;
+  if (!v) return;
+  try { await navigator.clipboard.writeText(v); $("evalCopyBtn").textContent = "已复制"; setTimeout(() => ($("evalCopyBtn").textContent = "复制建议话术"), 1500); }
+  catch { $("evalSuggested").select(); document.execCommand("copy"); }
 });
 
 async function loadCandidates() {

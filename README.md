@@ -40,6 +40,9 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 | POST | /api/v1/knowledge | 上传知识文档 { title, content }(同名幂等跳过) |
 | POST | /api/v1/copilot/analyze | 粘贴对话分析 { transcript, customerKey? },返回 analysisId |
 | POST | /api/v1/copilot/vehicle-match | 车型优选 { customerKey?, requirements } ,返回 planId + plan |
+| POST | /api/v1/copilot/evaluate-response | 话术评估 { conversation, reply },返回评分/维度/改进建议 |
+| GET | /api/v1/assistant/insights?days=7 | 经营洞察(分析量/意图/任务完成率/车型偏好) |
+| GET | /api/v1/conversations/:id/timeline | 分析过程时间线回放 |
 | GET | /api/v1/customers/:key/vehicle-plans | 客户车型优选历史 |
 | GET | /api/v1/customers/:key/analyses | 客户分析历史 |
 
@@ -50,6 +53,10 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 - **MySQL**(`rmh_mysql`,3306,root/rmh_mysql_2026,库 help_sale):分析(analyses)与车型优选方案(vehicle_match_plans)自动归档,失败自动降级不影响主流程;可用于后续报表/BI。
 - **Redis**(`rmh_redis`,6379,密码 rmh_redis_2026):跟进任务到期提醒队列(ZSET rmh:tasks:due);`GET /api/v1/reminders/overdue` 返回已到期待办,前端「跟进任务」卡片显示「已到期」标记,完成即出队。
 - 连接信息与开关都在 help-sale.config.yaml(mysql/redis 段);环境变量 MYSQL_* / REDIS_* 可覆盖;`enabled: false` 关闭(Redis 自动退化为内存队列)。
+
+## 参考
+
+- `reference/FEATURE-MAPPING.md` — 云知声「汽车销售智慧工牌」(llm-agent-workflow)功能盘点与本项目映射;源码压缩包已解压在 `reference/llm-agent-workflow/`(gitignore,不入库)。
 
 ## 目录结构
 
