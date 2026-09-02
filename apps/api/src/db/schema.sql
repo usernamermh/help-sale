@@ -168,6 +168,6 @@ CREATE TABLE IF NOT EXISTS customer_tags (
 	weight INTEGER NOT NULL DEFAULT 1,
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	updated_at TEXT,
-	UNIQUE (tenant_id, customer_id, tag, source)
+	UNIQUE (tenant_id, customer_id, tag)
 );
 CREATE INDEX IF NOT EXISTS idx_ct_customer ON customer_tags (tenant_id, customer_id, weight DESC);

@@ -41,7 +41,7 @@ function fakeStreamFn(): StreamFn {
 			fauxToolCall("emit_analysis", {
 				intent: "价格异议",
 				summary: "客户对价格有疑虑",
-				signals: [{ kind: "budget", quote: "超出预算", note: "预算有限" }],
+				signals: [{ kind: "budget", quote: "超出预算", note: "预算有限" }, { kind: "buying_signal", quote: "想买", note: "意向明确" }],
 				suggestedReply: "理解您的顾虑,预算把控确实重要。我先跟您坦诚说明旗舰版与低价方案的差异,再结合您的核心需求匹配方案,您最看重哪一块我优先对比。",
 				nextSteps: ["发送方案"],
 				followupAt: "2020-01-01T00:00:00.000Z",
@@ -258,6 +258,20 @@ describe("api", () => {
 		const bad2 = await app.inject({ method: "POST", url: "/api/v1/copilot/evaluate-response", payload: { conversation: "x" }, headers });
 		expect(bad2.statusCode).toBe(400);
 	});
+
+
+	it("客户画像标签:分析后自动聚合,可查询", async () => {
+		dir = tmpDataDir("api-tags");
+		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+		await app.inject({ method: "POST", url: "/api/v1/copilot/analyze", payload: { transcript: "客户:价格多少?", customerKey: "c_tag" }, headers });
+		const tags = await app.inject({ method: "GET", url: "/api/v1/customers/c_tag/tags", headers });
+		expect(tags.statusCode).toBe(200);
+		const list = tags.json().tags;
+		expect(list.some((x: { tag: string }) => x.tag === "价格敏感")).toBe(true);
+		expect(list.some((x: { tag: string }) => x.tag === "高意向")).toBe(true);
+	});
+
 
 	it("时间线:分析后的事件序列可回放", async () => {
 		dir = tmpDataDir("api-timeline");

@@ -13,6 +13,8 @@ import { createVehiclePlan, listVehiclePlansByCustomer } from "./repositories/ve
 import { createDigest, getDigestByDate, listDigests } from "./repositories/digests.js";
 import { collectDigest } from "./services/digest.js";
 import { collectInsights } from "./services/insights.js";
+import { refreshCustomerTags } from "./services/customer-tags.js";
+import { listCustomerTags } from "./repositories/customer-tags.js";
 import { runResponseEvaluation } from "./pi/evaluator.js";
 import { approveCandidate, createCandidate, listCandidates, rejectCandidate } from "./repositories/knowledge-candidates.js";
 import { listAgentEvents } from "./repositories/agent-events.js";
@@ -113,6 +115,15 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 			void deps.reminders.add(task.id, Number.isFinite(dueMs) ? dueMs : null);
 		}
 
+		// 客户画像标签(zhiji 语义标签):按意图+信号自动聚合
+		refreshCustomerTags(deps.db, {
+			tenantId: request.tenantId,
+			customerId: customer.id,
+			analysisId: saved.id,
+			intent: saved.intent,
+			signals: (saved.signals as Array<{ kind?: string; quote?: string; note?: string }>) ?? [],
+		});
+
 		// loop F6:高质量话术自动生成知识沉淀候选
 		if (result.details.suggestedReply && result.details.suggestedReply.length >= 40) {
 			const intent = (saved.intent ?? "通用").slice(0, 40);
@@ -205,6 +216,12 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 			});
 		}
 		return { planId: plan.id, conversationId: result.conversationId, plan: result.details };
+	});
+
+
+	app.get<{ Params: { key: string } }>("/api/v1/customers/:key/tags", async (request) => {
+		const customer = upsertCustomer(deps.db, { tenantId: request.tenantId, key: request.params.key });
+		return { customerKey: request.params.key, tags: listCustomerTags(deps.db, request.tenantId, customer.id) };
 	});
 
 	app.get<{ Params: { key: string } }>("/api/v1/customers/:key/vehicle-plans", async (request) => {
