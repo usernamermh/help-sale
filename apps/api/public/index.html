@@ -480,6 +480,13 @@ $("historyBtn").addEventListener("click", async () => {
   if (!key) return;
   const list = $("historyList");
   list.innerHTML = "查询中…";
+  const tagsR = await api("/api/v1/customers/" + encodeURIComponent(key) + "/tags").catch(() => null);
+  if (tagsR && tagsR.tags && tagsR.tags.length > 0) {
+    const badgeRow = document.createElement("div");
+    badgeRow.style.marginBottom = "8px";
+    badgeRow.innerHTML = "标签: " + tagsR.tags.map((x) => "<span class=\"badge\">" + escapeHtml(x.tag) + "(x" + x.weight + ")</span>").join(" ");
+    list.appendChild(badgeRow);
+  }
   try {
     const r = await api("/api/v1/customers/" + encodeURIComponent(key) + "/analyses");
     list.innerHTML = "";

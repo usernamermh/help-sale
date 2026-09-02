@@ -6,6 +6,7 @@
 
 - MVP 后端 Task 1-20 完成,Task 21(真实模型冒烟)已使用内网 U21-Preview 端点完成,Task 22-23(文档/验收)完成。
 - 前端工具页已上线(Fastify 根路由 /,单页 HTML,无构建链):对话分析、车型优选、知识上传、跟进任务、历史查询。
+- 客户画像标签完成(customer_tags v7→v8 聚合,analyze 自动打标,GET /customers/:key/tags,前端历史查询 badge)。
 - 参考包:汽车销售智慧工牌(reference/llm-agent-workflow)已解压并盘点,映射见 reference/FEATURE-MAPPING.md;已落地经营洞察(/assistant/insights)与话术评估(/copilot/evaluate-response)。
 - T28 时间线完成:agent 事件序列落库 + /conversations/:id/timeline 回放。
 - T27 多轮对话完成(conversation.ts 发言人识别 + messages/transcript 入参)。

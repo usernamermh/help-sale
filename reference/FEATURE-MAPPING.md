@@ -15,7 +15,7 @@
 | 5 | discover-frequent-agent | 高频话题/问题挖掘 | 晨报意图分布 + 计划中的「经营洞察」(/assistant/insights) | 🔶 本轮实现 |
 | 6 | discover-case-agent | 销售案例挖掘 | T26 知识沉淀(话术候选/入库) | ✅ 已实现(直接对应) |
 | 7 | analysis-response-agent | 应答质量评估(评分+改进) | 计划中的「话术评估」模式(/copilot/evaluate-response) | 🔶 本轮实现 |
-| 8 | zhiji-semantic-tag-extract | 语义标签抽取(客户画像标签) | 客户 360(customers 表)+ signals 标签化 | 🔶 后续:客户标签聚合 |
+| 8 | zhiji-semantic-tag-extract | 语义标签抽取(客户画像标签) | customer_tags v7-8 + analyze 自动聚合标签(价格敏感/竞品对比/高意向/流失风险…)+ GET /customers/:key/tags + 前端 badge | ✅ 已实现 |
 | 9 | rule-improvement-sop | 质检规则改进标准流程 | 知识沉淀的候选入库机制可承载"规则改进建议" | 🔶 后续增强 |
 
 ## 参考项目的价值点(我们可借鉴的工程特征)

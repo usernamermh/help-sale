@@ -43,6 +43,7 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 | POST | /api/v1/copilot/evaluate-response | 话术评估 { conversation, reply },返回评分/维度/改进建议 |
 | GET | /api/v1/assistant/insights?days=7 | 经营洞察(分析量/意图/任务完成率/车型偏好) |
 | GET | /api/v1/conversations/:id/timeline | 分析过程时间线回放 |
+| GET | /api/v1/customers/:key/tags | 客户画像标签(自动聚合) |
 | GET | /api/v1/customers/:key/vehicle-plans | 客户车型优选历史 |
 | GET | /api/v1/customers/:key/analyses | 客户分析历史 |
 
