@@ -156,3 +156,18 @@ CREATE TABLE IF NOT EXISTS agent_events (
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_agent_events_conv ON agent_events (tenant_id, conversation_id, seq);
+
+-- v7:客户画像标签(loop zhiji 语义标签:由分析自动聚合)
+CREATE TABLE IF NOT EXISTS customer_tags (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+	tag TEXT NOT NULL,
+	kind TEXT NOT NULL DEFAULT 'auto',
+	source TEXT,
+	weight INTEGER NOT NULL DEFAULT 1,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	updated_at TEXT,
+	UNIQUE (tenant_id, customer_id, tag, source)
+);
+CREATE INDEX IF NOT EXISTS idx_ct_customer ON customer_tags (tenant_id, customer_id, weight DESC);
