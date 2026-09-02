@@ -117,3 +117,15 @@ CREATE TABLE IF NOT EXISTS vehicle_match_plans (
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_vehicle_plans_customer ON vehicle_match_plans (tenant_id, customer_id, created_at DESC);
+
+-- v4:军师晨报(loop F4:每日巡检简报)
+CREATE TABLE IF NOT EXISTS digests (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	digest_date TEXT NOT NULL,
+	title TEXT NOT NULL,
+	content TEXT NOT NULL,
+	stats_json TEXT NOT NULL DEFAULT '{}',
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	UNIQUE (tenant_id, digest_date)
+);
