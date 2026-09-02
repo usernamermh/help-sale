@@ -13,6 +13,7 @@
 - T27 多轮对话完成(conversation.ts 发言人识别 + messages/transcript 入参)。
 - T26 知识沉淀完成(knowledge_candidates + analyze 自动候选 + approve 入库 + 前端卡片 + search 路由)。
 - 军师晨报:T25 完成(digests 表 + /assistant/digest 幂等生成 + 前端卡片)。
+- 通知推送完成(notification 配置段 /notifications/trigger + 日志;Webhook 可配,去重防重复;100/100 测试)。
 - 中间件:MySQL 归档(analyses/vehicle_match_plans 双写,降级优先)+ Redis 到期提醒(ZSET + /api/v1/reminders/overdue + 前端「已到期」标记);连接在 help-sale.config.yaml。
 - 车型优选:db v3 vehicles/vehicle_match_plans 表 + vehicles 仓库(预算/座位/能源/级别/关键词筛选)+ 示例种子(services/seed.ts,启动对默认租户播种 8 款)+ vehicle-advisor agent(search_vehicles/get_customer_profile/emit_vehicle_plan)+ POST /api/v1/copilot/vehicle-match + 前端优选卡片。
 - 测试 44/44 + typecheck 零错误;服务默认端口 3101(help-sale.config.yaml 配置驱动,避开 VS Code 对 127.0.0.1:3000 的转发占用)。

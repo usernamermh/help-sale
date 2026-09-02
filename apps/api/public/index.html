@@ -109,7 +109,8 @@
 
     <div class="card">
     <div class="card">
-      <h2>跟进任务</h2>
+      <h2>跟进任务 <button id="notifyBtn" class="secondary" style="padding:4px 10px;font-size:12px;float:right">推送到期提醒</button></h2>
+      <div id="notifyResult" class="meta" style="font-size:12px;margin-bottom:6px"></div>
       <div id="taskList" style="margin-top:12px"></div>
     </div>
     <div class="card">
@@ -205,6 +206,7 @@ $("analyzeBtn").addEventListener("click", async () => {
     renderResult(result.analysis);
     $("historyKey").value = $("customerKey").value.trim() || "自动生成";
     loadTasks();
+loadNotifications();
 loadDigests();
 loadCandidates();
 loadInsights();
@@ -488,6 +490,29 @@ loadCandidates();
   } catch (e) { alert("晨报生成失败:" + e.message); }
   finally { btn.disabled = false; btn.textContent = "生成今日晨报"; }
 });
+async function loadNotifications() {
+  const box = $("notifyResult");
+  try {
+    const r = await api("/api/v1/notifications").catch(() => null);
+    if (!r || !r.logs || r.logs.length === 0) { box.textContent = ""; return; }
+    const last = r.logs[0];
+    box.innerHTML = "最近推送: " + escapeHtml(last.title) + " · " + escapeHtml(new Date(last.createdAt).toLocaleTimeString()) + " · " + escapeHtml(last.status);
+  } catch { box.textContent = ""; }
+}
+
+$("notifyBtn").addEventListener("click", async () => {
+  const box = $("notifyResult");
+  const btn = $("notifyBtn");
+  btn.disabled = true;
+  try {
+    const r = await api("/api/v1/notifications/trigger", { method: "POST" });
+    if (r.newlyNotified.length > 0) box.innerHTML = "已推送 " + r.newlyNotified.length + " 条到期任务" + (r.pushed ? " (webhook)" : " (记录)") + (r.status === "failed" ? " · 失败:" + escapeHtml(r.reason || "") : "");
+    else box.innerHTML = "无新到期任务(已通知去重)";
+    loadNotifications();
+  } catch (e) { box.innerHTML = "推送失败:" + escapeHtml(e.message); }
+  finally { btn.disabled = false; }
+});
+
 async function loadTasks() {
   const box = $("taskList");
   box.innerHTML = "加载中…";
