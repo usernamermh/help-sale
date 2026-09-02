@@ -176,7 +176,43 @@ describe("api", () => {
 
 
 
-	it("知识沉淀:分析后生成话术候选,确认入库后可检索", async () => {
+
+	it("多轮 transcript:自动识别发言人完成分析", async () => {
+		dir = tmpDataDir("api-multiturn");
+		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+		const res1 = await app.inject({
+			method: "POST",
+			url: "/api/v1/copilot/analyze",
+			payload: { transcript: "客户:旗舰版多少钱?\n销售:您好,聊聊预算?\n客户:预算1500", customerKey: "c_turn" },
+			headers,
+		});
+		expect(res1.statusCode).toBe(200);
+		expect(res1.json().analysis.intent).toBe("价格异议");
+	});
+
+	it("messages 数组入参与空会话 400", async () => {
+		dir = tmpDataDir("api-msgs");
+		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+
+		const bad = await app.inject({
+			method: "POST",
+			url: "/api/v1/copilot/analyze",
+			payload: { transcript: "   ", customerKey: "c_bad" },
+			headers,
+		});
+		expect(bad.statusCode).toBe(400);
+
+		const res2 = await app.inject({
+			method: "POST",
+			url: "/api/v1/copilot/analyze",
+			payload: { messages: [{ role: "sales", content: "您好" }, { role: "customer", content: "有没有现车" }], customerKey: "c_turn2" },
+			headers,
+		});
+		expect(res2.statusCode).toBe(200);
+	});
+		it("知识沉淀:分析后生成话术候选,确认入库后可检索", async () => {
 		dir = tmpDataDir("api-candidates");
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const headers = { "x-tenant-id": "t1" };

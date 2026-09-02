@@ -5,6 +5,7 @@ import type { StreamFn } from "@earendil-works/pi-agent-core";
 import type { ModelRuntime } from "./pi/models.js";
 import { ingestDocument } from "./services/ingest.js";
 import { searchKnowledge } from "./repositories/knowledge.js";
+import { normalizeAnalyzeMessages } from "./services/conversation.js";
 import { requireTenant, upsertCustomer } from "./repositories/customers.js";
 import { createAnalysis, listAnalysesByCustomer } from "./repositories/analyses.js";
 import { createTask, getTask, listTasks, setTaskStatus } from "./repositories/tasks.js";
@@ -69,13 +70,13 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		return { query, hits: searchKnowledge(deps.db, request.tenantId, query, limit) };
 	});
 
-	app.post<{ Body: { transcript?: string; customerKey?: string } }>("/api/v1/copilot/analyze", async (request, reply) => {
-		const transcript = request.body?.transcript;
-		if (!transcript) return reply.code(400).send({ error: "transcript is required" });
+	app.post<{ Body: { transcript?: string; messages?: Array<{ role?: string; content: string }>; customerKey?: string } }>("/api/v1/copilot/analyze", async (request, reply) => {
+		const messages = normalizeAnalyzeMessages({ transcript: request.body?.transcript, messages: request.body?.messages });
+		if (messages.length === 0) return reply.code(400).send({ error: "conversation is required", message: "transcript 或 messages 至少提供一个" });
 
 		const result = await runCopilotAnalysis(
 			{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
-			{ transcript, customerKey: request.body.customerKey },
+			{ messages, customerKey: request.body.customerKey },
 		);
 		if (!result.details) return reply.code(502).send({ error: "agent produced no analysis" });
 

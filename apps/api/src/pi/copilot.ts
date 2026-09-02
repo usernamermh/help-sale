@@ -6,6 +6,7 @@ import { getCopilotSystemPrompt } from "../prompts/sales-copilot.js";
 import { createCopilotTools, type AnalysisDetails } from "./tools.js";
 import { loadConfig } from "../env.js";
 import { appendUserMessage, buildConversationText, type SessionStore } from "./sessions.js";
+import { parseTranscript, type ConversationMessage } from "../services/conversation.js";
 
 export interface CopilotDeps {
 	db: DatabaseSync;
@@ -17,7 +18,8 @@ export interface CopilotDeps {
 }
 
 export interface RunAnalysisInput {
-	transcript: string;
+	transcript?: string;
+	messages?: ConversationMessage[];
 	customerKey?: string;
 }
 
@@ -41,7 +43,9 @@ export async function runCopilotAnalysis(deps: CopilotDeps, input: RunAnalysisIn
 	const streamFn = deps.streamFn ?? runtime.streamFn;
 
 	const { session, conversationId } = await store.createConversation();
-	const text = buildConversationText([{ role: "customer", content: input.transcript }]);
+	const convo = input.messages && input.messages.length > 0 ? input.messages : parseTranscript(input.transcript ?? "");
+	if (convo.length === 0) throw new Error("conversation is empty");
+	const text = buildConversationText(convo);
 	await appendUserMessage(session, text);
 
 	const config = loadConfig();
