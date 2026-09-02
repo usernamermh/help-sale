@@ -12,6 +12,8 @@ import { createTask, getTask, listTasks, setTaskStatus } from "./repositories/ta
 import { createVehiclePlan, listVehiclePlansByCustomer } from "./repositories/vehicle-plans.js";
 import { createDigest, getDigestByDate, listDigests } from "./repositories/digests.js";
 import { collectDigest } from "./services/digest.js";
+import { collectInsights } from "./services/insights.js";
+import { runResponseEvaluation } from "./pi/evaluator.js";
 import { approveCandidate, createCandidate, listCandidates, rejectCandidate } from "./repositories/knowledge-candidates.js";
 import { listAgentEvents } from "./repositories/agent-events.js";
 import { runVehicleMatch } from "./pi/vehicle-advisor.js";
@@ -218,6 +220,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		};
 	});
 
+
+	app.get<{ Querystring: { days?: string } }>("/api/v1/assistant/insights", async (request) => {
+		const days = Number(request.query.days ?? 7) || 7;
+		return collectInsights(deps.db, { tenantId: request.tenantId, days });
+	});
 	app.post("/api/v1/assistant/digest", async (request, reply) => {
 		const output = collectDigest(deps.db, { tenantId: request.tenantId });
 		const existing = getDigestByDate(deps.db, request.tenantId, output.stats.date);
@@ -271,6 +278,21 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		const candidate = rejectCandidate(deps.db, request.tenantId, request.params.id);
 		if (!candidate) return reply.code(404).send({ error: "candidate_not_found", message: "候选不存在" });
 		return { candidate };
+	});
+
+
+	app.post<{ Body: { conversation?: string; reply?: string } }>("/api/v1/copilot/evaluate-response", async (request, reply) => {
+		const conversation = String(request.body?.conversation ?? "").trim();
+		const replyText = String(request.body?.reply ?? "").trim();
+		if (!conversation || !replyText) {
+			return reply.code(400).send({ error: "conversation and reply are required" });
+		}
+		const result = await runResponseEvaluation(
+			{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
+			{ text: `【客户对话】\n${conversation}\n\n【销售回复】\n${replyText}` },
+		);
+		if (!result.details) return reply.code(502).send({ error: "agent produced no evaluation" });
+		return { conversationId: result.conversationId, evaluation: result.details };
 	});
 
 	app.get<{ Params: { conversationId: string } }>("/api/v1/conversations/:conversationId/timeline", async (request) => {

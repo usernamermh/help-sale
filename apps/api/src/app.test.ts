@@ -51,6 +51,22 @@ function fakeStreamFn(): StreamFn {
 	return async (model, context, options) => fa.provider.stream(model as never, context, options);
 }
 
+function fakeEvaluatorStreamFn(): StreamFn {
+	const fa = fauxProvider();
+	fa.setResponses([
+		fauxAssistantMessage([
+			fauxToolCall("emit_evaluation", {
+				score: 82,
+				dimensions: { empathy: 90, structure: 80, value: 75, compliance: 95, close: 70 },
+				strengths: ["共情到位"],
+				improvements: ["缺少约试驾的引导"],
+				suggestedReply: "理解您的顾虑,约个时间给您做一次演示?",
+			}),
+		]),
+	]);
+	return async (model, context, options) => fa.provider.stream(model as never, context, options);
+}
+
 function fakeVehicleStreamFn(): StreamFn {
 	const fa = fauxProvider();
 	fa.setResponses([
@@ -108,7 +124,6 @@ describe("api", () => {
 		});
 		expect(again.json().skipped).toBe(true);
 	});
-
 
 	it("analyze 自动生成跟进任务,且任务可查询与完成", async () => {
 		dir = tmpDataDir("api-tasks");
@@ -174,9 +189,6 @@ describe("api", () => {
 		expect(tracker.analysis).toBe(1);
 	});
 
-
-
-
 	it("多轮 transcript:自动识别发言人完成分析", async () => {
 		dir = tmpDataDir("api-multiturn");
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
@@ -213,6 +225,40 @@ describe("api", () => {
 		expect(res2.statusCode).toBe(200);
 	});
 	
+
+	it("经营洞察:聚合分析/任务/车型数据", async () => {
+		dir = tmpDataDir("api-insights");
+		app = buildApp({ dataDir: dir, mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+		const res = await app.inject({ method: "GET", url: "/api/v1/assistant/insights?days=7", headers });
+		expect(res.statusCode).toBe(200);
+		expect(res.json().days).toBe(7);
+		expect(typeof res.json().taskCompletionRate).toBe("number");
+		expect(Array.isArray(res.json().topIntents)).toBe(true);
+	});
+
+	it("话术评估:返回评分与改进建议", async () => {
+		dir = tmpDataDir("api-eval");
+		app = buildApp({ dataDir: dir, streamFn: fakeEvaluatorStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/copilot/evaluate-response",
+			payload: { conversation: "客户:太贵了", reply: "不贵啊" },
+			headers,
+		});
+		expect(res.statusCode).toBe(200);
+		const body = res.json();
+		expect(body.conversationId).toBeTruthy();
+		expect(body.evaluation.score).toBe(82);
+		expect(body.evaluation.dimensions.empathy).toBe(90);
+		expect(body.evaluation.improvements.length).toBeGreaterThan(0);
+		expect(body.evaluation.suggestedReply).toContain("演示");
+
+		const bad2 = await app.inject({ method: "POST", url: "/api/v1/copilot/evaluate-response", payload: { conversation: "x" }, headers });
+		expect(bad2.statusCode).toBe(400);
+	});
+
 	it("时间线:分析后的事件序列可回放", async () => {
 		dir = tmpDataDir("api-timeline");
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
