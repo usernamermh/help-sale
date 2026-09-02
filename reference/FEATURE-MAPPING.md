@@ -11,12 +11,12 @@
 | 1 | uni-dialog-analysis | 通用质检:对话分析(店员/客户角色、合并对话、think) | /copilot/analyze(对话分析,意图/信号/话术/下一步)+ 多轮发言人识别 | ✅ 已实现(等价) |
 | 2 | rolecheck-agent | 角色识别:判断店员/客户并打语义标签 | T27 conversation.ts(客户/销售识别:前缀标注 + 交替启发式) | ✅ 已实现(简化版) |
 | 3 | general-keywords-extract | 关键词/语义标签抽取 | analyze 的 signals(带 kind/quote/note)+ intent | ✅ 已实现(弱化版) |
-| 4 | auto-eval-voice-digest | 试驾场景录音自动总结 | 对话分析模式已覆盖文字稿;录音转写(ASR)为后续 T30 生态 | 🔶 待做(ASR) |
+| 4 | auto-eval-voice-digest | 试驾场景录音自动总结 | /copilot/voice-digest(通话/试驾文字稿版:画像/关注点/阶段/建议动作/摘要,复用 agent 栈) | ✅ 已实现(文字稿版;ASR 可后接) |
 | 5 | discover-frequent-agent | 高频话题/问题挖掘 | 晨报意图分布 + 计划中的「经营洞察」(/assistant/insights) | 🔶 本轮实现 |
 | 6 | discover-case-agent | 销售案例挖掘 | T26 知识沉淀(话术候选/入库) | ✅ 已实现(直接对应) |
 | 7 | analysis-response-agent | 应答质量评估(评分+改进) | 计划中的「话术评估」模式(/copilot/evaluate-response) | 🔶 本轮实现 |
 | 8 | zhiji-semantic-tag-extract | 语义标签抽取(客户画像标签) | customer_tags v7-8 + analyze 自动聚合标签(价格敏感/竞品对比/高意向/流失风险…)+ GET /customers/:key/tags + 前端 badge | ✅ 已实现 |
-| 9 | rule-improvement-sop | 质检规则改进标准流程 | 知识沉淀的候选入库机制可承载"规则改进建议" | 🔶 后续增强 |
+| 9 | rule-improvement-sop | 质检规则改进标准流程 | /assistant/improvements:聚合流失风险场景 + 被拒候选,输出改进建议 | ✅ 已实现 |
 
 ## 参考项目的价值点(我们可借鉴的工程特征)
 
@@ -27,6 +27,7 @@
 ## 落地顺序建议
 
 1. ✅ 对话分析 / 角色识别 / 关键词 / 案例沉淀(已实现)
-2. 🔶 经营洞察看板(高频意图 + 任务完成率 + 车型偏好)— 本轮
-3. 🔶 话术评估模式(应答评分 + 改进点)— 本轮
-4. 后续:客户标签聚合、录音总结(ASR)、规则改进 SOP
+2. ✅ 经营洞察看板 — 已实现
+3. ✅ 话术评估模式 — 已实现
+4. ✅ 客户标签聚合 / 录音总结(文字稿)/ 规则改进 SOP — 已实现(ASR 转写可后接)
+**结论:参考包 9 个 workflow 已 9/9 全部落地到本项目 agent 栈。**

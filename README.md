@@ -41,6 +41,8 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 | POST | /api/v1/copilot/analyze | 粘贴对话分析 { transcript, customerKey? },返回 analysisId |
 | POST | /api/v1/copilot/vehicle-match | 车型优选 { customerKey?, requirements } ,返回 planId + plan |
 | POST | /api/v1/copilot/evaluate-response | 话术评估 { conversation, reply },返回评分/维度/改进建议 |
+| POST | /api/v1/copilot/voice-digest | 通话/试驾文字稿总结 { transcript } |
+| GET | /api/v1/assistant/improvements?days=30 | 规则改进建议(优化流失风险/候选流失) |
 | GET | /api/v1/assistant/insights?days=7 | 经营洞察(分析量/意图/任务完成率/车型偏好) |
 | GET | /api/v1/conversations/:id/timeline | 分析过程时间线回放 |
 | GET | /api/v1/customers/:key/tags | 客户画像标签(自动聚合) |

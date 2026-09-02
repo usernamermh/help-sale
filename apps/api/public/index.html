@@ -71,6 +71,14 @@
       <div style="margin-top:14px"><button id="evalBtn" class="secondary">评估并改进</button></div>
       <div id="evalError" class="error hidden"></div>
     </div>
+<div class="card">
+      <h2>通话/试驾总结</h2>
+      <label>粘贴试驾、电话或到店沟通文字稿</label>
+      <textarea id="digestText" style="min-height:90px" placeholder="客户试驾了汉EV,说空间不错,但价格有点高…"></textarea>
+      <div style="margin-top:14px"><button id="digestBtn" class="secondary">生成总结</button></div>
+      <div id="digestError" class="error hidden"></div>
+      <div id="digestBox" style="font-size:13px;margin-top:8px"></div>
+    </div>
       <h2>车型优选</h2>
       <label>预算区间(万元)</label>
       <div class="row">
@@ -315,6 +323,38 @@ $("uploadBtn").addEventListener("click", async () => {
   } finally { btn.disabled = false; }
 });
 
+$("digestBtn").addEventListener("click", async () => {
+  const text = $("digestText").value.trim();
+  const err = $("digestError");
+  err.classList.add("hidden");
+  if (!text) { err.textContent = "请粘贴文字稿"; err.classList.remove("hidden"); return; }
+  const btn = $("digestBtn");
+  btn.disabled = true; btn.textContent = "生成中…";
+  try {
+    const r = await api("/api/v1/copilot/voice-digest", { method: "POST", body: JSON.stringify({ transcript: text }) });
+    const d = r.digest;
+    const box = $("digestBox");
+    box.innerHTML = "<div><b>画像:</b> " + escapeHtml(d.customerProfile || "") + "</div>" +
+      "<div style=\"margin-top:6px\"><b>关注点:</b> " + escapeHtml((d.concerns || []).join("、")) + "</div>" +
+      "<div style=\"margin-top:6px\"><b>阶段:</b> " + escapeHtml(d.progress || "") + "</div>" +
+      "<div style=\"margin-top:6px\"><b>建议动作:</b> " + escapeHtml((d.suggestedActions || []).join("; ")) + "</div>" +
+      "<div style=\"margin-top:6px\" class=\"meta\">" + escapeHtml(d.summary || "") + "</div>";
+  } catch (e) { err.textContent = "总结失败:" + e.message; err.classList.remove("hidden"); }
+  finally { btn.disabled = false; btn.textContent = "生成总结"; }
+});
+
+async function loadImprovements(box) {
+  try {
+    const r = await api("/api/v1/assistant/improvements?days=30").catch(() => null);
+    if (!r || !r.suggestions || r.suggestions.length === 0) return;
+    const div = document.createElement("div");
+    div.innerHTML = "<div style=\"margin-top:10px\"><b>规则改进建议</b></div><ul class=\"steps\" style=\"font-size:12px\"></ul>";
+    const ul = div.querySelector("ul");
+    for (const s of r.suggestions.slice(0, 5)) { const li = document.createElement("li"); li.textContent = s.topic + "(" + s.count + ")·" + s.suggestion; ul.appendChild(li); }
+    box.appendChild(div);
+  } catch {}
+}
+
 async function loadInsights() {
   const box = $("insightBox");
   try {
@@ -327,6 +367,7 @@ async function loadInsights() {
       '任务完成率 ' + Math.round(r.taskCompletionRate * 100) + "% / 方案 " + r.vehiclePlans + '<br>' +
       '热门意图:' + escapeHtml(intents) + '<br>' +
       '热门品牌:' + escapeHtml(brands) + '</div>';
+      loadImprovements(box);
   } catch { box.innerHTML = '<div class="meta">洞察加载失败</div>'; }
 }
 
