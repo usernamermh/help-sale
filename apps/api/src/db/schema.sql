@@ -129,3 +129,17 @@ CREATE TABLE IF NOT EXISTS digests (
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	UNIQUE (tenant_id, digest_date)
 );
+
+-- v5:知识沉淀候选(loop F6:分析产出话术候选,一键确认入库)
+CREATE TABLE IF NOT EXISTS knowledge_candidates (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	analysis_id TEXT NOT NULL,
+	intent TEXT NOT NULL,
+	draft_title TEXT NOT NULL,
+	draft_content TEXT NOT NULL,
+	status TEXT NOT NULL DEFAULT 'pending',
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	approved_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_kc_status ON knowledge_candidates (tenant_id, status, created_at DESC);

@@ -15,7 +15,7 @@ afterEach(() => {
 describe("database migrations", () => {
 	it("user_version 达到 v1", () => {
 		const row = db.prepare("PRAGMA user_version").get() as { user_version: number };
-		expect(row.user_version).toBe(4);
+		expect(row.user_version).toBe(5);
 	});
 
 	it("v1 核心表齐全", () => {
@@ -33,6 +33,7 @@ describe("database migrations", () => {
 		expect(tables).toContain("vehicles");
 		expect(tables).toContain("vehicle_match_plans");
 		expect(tables).toContain("digests");
+		expect(tables).toContain("knowledge_candidates");
 	});
 
 	it("重复迁移幂等", () => {
