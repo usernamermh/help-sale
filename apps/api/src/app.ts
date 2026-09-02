@@ -6,8 +6,10 @@ import type { StreamFn } from "@earendil-works/pi-agent-core";
 import { openDatabase } from "./db/database.js";
 import { loadConfig } from "./env.js";
 import { openSessionStore } from "./pi/sessions.js";
+import { requireTenant } from "./repositories/customers.js";
 import type { ModelRuntime } from "./pi/models.js";
 import { registerRoutes } from "./routes.js";
+import { seedVehicles } from "./services/seed.js";
 
 declare module "fastify" {
 	interface FastifyRequest {
@@ -20,6 +22,7 @@ export interface AppOptions {
 	dataDir?: string;
 	runtime?: ModelRuntime;
 	streamFn?: StreamFn;
+	seedVehiclesFor?: string[] | false;
 }
 
 export function buildApp(options: AppOptions = {}): FastifyInstance {
@@ -35,6 +38,13 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const sessionDbPath = path.join(dataDir, "pi-sessions.db");
 	const db = openDatabase(businessDbPath);
 	const store = openSessionStore(dataDir, sessionDbPath);
+
+	// 为默认租户播种示例车型(车型优选开箱即用;测试/定制可传 false 或指定租户)
+	if (options.seedVehiclesFor !== false) {
+		const targets = options.seedVehiclesFor ?? [config.tenantId];
+		for (const tenantId of targets) requireTenant(db, tenantId, "示例租户");
+		seedVehicles(db, targets);
+	}
 
 	app.decorateRequest("tenantId", "");
 	app.addHook("preHandler", async (request) => {

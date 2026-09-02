@@ -30,6 +30,26 @@ function fakeStreamFn(): StreamFn {
 	return async (model, context, options) => fa.provider.stream(model as never, context, options);
 }
 
+function fakeVehicleStreamFn(): StreamFn {
+	const fa = fauxProvider();
+	fa.setResponses([
+		fauxAssistantMessage([fauxToolCall("search_vehicles", { budgetMin: 15, budgetMax: 30, seats: 5 })]),
+		fauxAssistantMessage([
+			fauxToolCall("emit_vehicle_plan", {
+				profile: "预算 15-30 万,5 座,商务兼家用",
+				recommendations: [
+					{ brand: "比亚迪", series: "汉", modelName: "汉EV 冠军版", priceText: "19.98-25.98 万", energyType: "纯电", bodyType: "轿车", seats: 5, fitScore: 92, reason: "商务舒适且预算匹配" },
+					{ brand: "特斯拉", series: "Model Y", modelName: "Model Y 后驱版", priceText: "24.99-27.99 万", energyType: "纯电", bodyType: "SUV", seats: 5, fitScore: 88, reason: "科技智能,适合通勤" },
+				],
+				keyDifferences: ["汉EV 轿车商务质感好,Model Y SUV 空间与智驾更强"],
+				suggestedReply: "根据您的预算和用途,建议先看汉EV 和 Model Y…",
+				nextSteps: ["约试驾", "出配置单"],
+			}),
+		]),
+	]);
+	return async (model, context, options) => fa.provider.stream(model as never, context, options);
+}
+
 describe("api", () => {
 	it("GET / 返回前端工具页", async () => {
 		dir = tmpDataDir("api");
@@ -94,6 +114,29 @@ describe("api", () => {
 
 		const after = await app.inject({ method: "GET", url: "/api/v1/tasks?status=pending", headers });
 		expect(after.json().tasks).toHaveLength(0);
+	});
+	
+	it("车型优选:生成方案并落库可查", async () => {
+		dir = tmpDataDir("api-vehicle");
+		app = buildApp({ dataDir: dir, streamFn: fakeVehicleStreamFn(), seedVehiclesFor: ["t1"] });
+		const headers = { "x-tenant-id": "t1" };
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/copilot/vehicle-match",
+			payload: { customerKey: "c_car", requirements: { budgetMin: 15, budgetMax: 30, seats: 5, usage: "商务兼家用" } },
+			headers,
+		});
+		expect(res.statusCode).toBe(200);
+		const body = res.json();
+		expect(body.planId).toBeTruthy();
+		expect(body.plan.recommendations).toHaveLength(2);
+		expect(body.plan.recommendations[0].series).toBe("汉");
+		expect(body.plan.nextSteps).toContain("约试驾");
+
+		const list = await app.inject({ method: "GET", url: "/api/v1/customers/c_car/vehicle-plans", headers });
+		expect(list.statusCode).toBe(200);
+		expect(list.json().plans).toHaveLength(1);
+		expect(list.json().plans[0].plan.recommendations[0].brand).toBe("比亚迪");
 	});
 		it("analyze 全链路:分析落库并可查", async () => {
 		dir = tmpDataDir("api-analyze");

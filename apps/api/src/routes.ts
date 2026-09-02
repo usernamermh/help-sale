@@ -7,6 +7,8 @@ import { ingestDocument } from "./services/ingest.js";
 import { requireTenant, upsertCustomer } from "./repositories/customers.js";
 import { createAnalysis, listAnalysesByCustomer } from "./repositories/analyses.js";
 import { createTask, listTasks, setTaskStatus } from "./repositories/tasks.js";
+import { createVehiclePlan, listVehiclePlansByCustomer } from "./repositories/vehicle-plans.js";
+import { runVehicleMatch } from "./pi/vehicle-advisor.js";
 import { runCopilotAnalysis } from "./pi/copilot.js";
 import type { SessionStore } from "./pi/sessions.js";
 
@@ -15,6 +17,30 @@ export interface RouteDeps {
 	store: SessionStore;
 	runtime?: ModelRuntime;
 	streamFn?: StreamFn;
+}
+
+
+export interface VehicleRequirements {
+	budgetMin?: number;
+	budgetMax?: number;
+	seats?: number;
+	energyType?: string;
+	bodyType?: string;
+	usage?: string;
+	notes?: string;
+}
+
+function buildVehicleRequirementsText(r: VehicleRequirements): string {
+	const parts: string[] = ["客户购车需求:"];
+	if (r.budgetMin !== undefined || r.budgetMax !== undefined) {
+		parts.push(`预算 ${r.budgetMin ?? "不限"}-${r.budgetMax ?? "不限"} 万元`);
+	}
+	if (r.seats) parts.push(`座位数 ${r.seats}`);
+	if (r.energyType) parts.push(`能源类型 ${r.energyType}`);
+	if (r.bodyType) parts.push(`级别 ${r.bodyType}`);
+	if (r.usage) parts.push(`主要用途 ${r.usage}`);
+	if (r.notes) parts.push(`补充说明 ${r.notes}`);
+	return parts.join(";");
 }
 
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
@@ -90,5 +116,39 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		const task = setTaskStatus(deps.db, request.tenantId, request.params.id, "done");
 		if (!task) return reply.code(404).send({ error: "task_not_found", message: "任务不存在" });
 		return { task };
+	});
+
+	app.post<{ Body: { customerKey?: string; requirements?: VehicleRequirements } }>("/api/v1/copilot/vehicle-match", async (request, reply) => {
+		const req = request.body?.requirements;
+		if (!req) return reply.code(400).send({ error: "invalid_request", message: "requirements is required" });
+		const customerKey = request.body?.customerKey ?? `v_${randomUUID().slice(0, 8)}`;
+		const customer = upsertCustomer(deps.db, { tenantId: request.tenantId, key: customerKey });
+		const requirementsText = buildVehicleRequirementsText(req);
+		const result = await runVehicleMatch(
+			{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
+			{ requirementsText, customerKey },
+		);
+		if (!result.details) return reply.code(502).send({ error: "agent produced no plan" });
+		const plan = createVehiclePlan(deps.db, {
+			tenantId: request.tenantId,
+			customerId: customer.id,
+			conversationId: result.conversationId,
+			requirement: JSON.stringify(req),
+			planJson: JSON.stringify(result.details),
+		});
+		return { planId: plan.id, conversationId: result.conversationId, plan: result.details };
+	});
+
+	app.get<{ Params: { key: string } }>("/api/v1/customers/:key/vehicle-plans", async (request) => {
+		const customer = upsertCustomer(deps.db, { tenantId: request.tenantId, key: request.params.key });
+		const rows = listVehiclePlansByCustomer(deps.db, request.tenantId, customer.id);
+		return {
+			plans: rows.map((r) => ({
+				id: r.id,
+				createdAt: r.createdAt,
+				requirement: JSON.parse(r.requirement) as unknown,
+				plan: JSON.parse(r.planJson) as unknown,
+			})),
+		};
 	});
 }
