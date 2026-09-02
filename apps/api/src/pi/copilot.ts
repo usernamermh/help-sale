@@ -7,6 +7,7 @@ import { createCopilotTools, type AnalysisDetails } from "./tools.js";
 import { loadConfig } from "../env.js";
 import { appendUserMessage, buildConversationText, type SessionStore } from "./sessions.js";
 import { parseTranscript, type ConversationMessage } from "../services/conversation.js";
+import { createTimelineRecorder } from "../services/timeline.js";
 
 export interface CopilotDeps {
 	db: DatabaseSync;
@@ -55,6 +56,8 @@ export async function runCopilotAnalysis(deps: CopilotDeps, input: RunAnalysisIn
 	const tools = createCopilotTools({ db, tenantId, searchLimit: config.knowledgeSearchLimit });
 	const systemPrompt = getCopilotSystemPrompt({ companyName: deps.companyName ?? config.companyName, teamName: config.teamName });
 	const agent = makeAgent({ sessionId: conversationId, systemPrompt, tools, streamFn, model });
+	const recorder = createTimelineRecorder(db, { tenantId, conversationId });
+	agent.subscribe((event) => recorder.listen(event));
 
 	await agent.prompt(text);
 
@@ -70,6 +73,8 @@ export async function runCopilotAnalysis(deps: CopilotDeps, input: RunAnalysisIn
 			details = (message as { details?: AnalysisDetails }).details;
 		}
 	}
+
+	await recorder.flush();
 
 	return { conversationId, details, messages: result };
 }

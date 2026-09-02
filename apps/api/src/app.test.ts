@@ -212,6 +212,31 @@ describe("api", () => {
 		});
 		expect(res2.statusCode).toBe(200);
 	});
+	
+	it("时间线:分析后的事件序列可回放", async () => {
+		dir = tmpDataDir("api-timeline");
+		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/copilot/analyze",
+			payload: { transcript: "客户:价格多少?", customerKey: "c_tl" },
+			headers,
+		});
+		expect(res.statusCode).toBe(200);
+		const conversationId = res.json().conversationId;
+
+		const tl = await app.inject({ method: "GET", url: `/api/v1/conversations/${conversationId}/timeline`, headers });
+		expect(tl.statusCode).toBe(200);
+		const types = tl.json().events.map((e: { type: string }) => e.type);
+		expect(types).toContain("agent_start");
+		expect(types).toContain("tool_start");
+		expect(types).toContain("tool_end");
+		expect(tl.json().events.some((e: { type: string; toolName?: string }) => e.type === "tool_end" && e.toolName === "emit_analysis")).toBe(true);
+		// 按序递增
+		const seqs = tl.json().events.map((e: { seq: number }) => e.seq);
+		expect([...seqs].sort((a, b) => a - b)).toEqual(seqs);
+	});
 		it("知识沉淀:分析后生成话术候选,确认入库后可检索", async () => {
 		dir = tmpDataDir("api-candidates");
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });

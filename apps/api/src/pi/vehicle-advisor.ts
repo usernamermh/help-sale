@@ -6,6 +6,7 @@ import { getVehicleAdvisorPrompt } from "../prompts/vehicle-advisor.js";
 import { createVehicleTools, type VehiclePlanDetails } from "./vehicle-tools.js";
 import { appendUserMessage, type SessionStore } from "./sessions.js";
 import { makeAgent } from "./copilot.js";
+import { createTimelineRecorder } from "../services/timeline.js";
 
 export interface VehicleAdvisorDeps {
 	db: DatabaseSync;
@@ -41,6 +42,8 @@ export async function runVehicleMatch(deps: VehicleAdvisorDeps, input: VehicleMa
 	const tools = createVehicleTools({ db, tenantId });
 	const systemPrompt = getVehicleAdvisorPrompt({ companyName: deps.companyName ?? config.companyName });
 	const agent = makeAgent({ sessionId: conversationId, systemPrompt, tools, streamFn, model });
+	const recorder = createTimelineRecorder(db, { tenantId, conversationId });
+	agent.subscribe((event) => recorder.listen(event));
 
 	await agent.prompt(input.requirementsText);
 	const messages = agent.state.messages;
@@ -56,6 +59,8 @@ export async function runVehicleMatch(deps: VehicleAdvisorDeps, input: VehicleMa
 			details = (message as { details?: VehiclePlanDetails }).details;
 		}
 	}
+
+	await recorder.flush();
 
 	return { conversationId, details, messages };
 }

@@ -13,6 +13,7 @@ import { createVehiclePlan, listVehiclePlansByCustomer } from "./repositories/ve
 import { createDigest, getDigestByDate, listDigests } from "./repositories/digests.js";
 import { collectDigest } from "./services/digest.js";
 import { approveCandidate, createCandidate, listCandidates, rejectCandidate } from "./repositories/knowledge-candidates.js";
+import { listAgentEvents } from "./repositories/agent-events.js";
 import { runVehicleMatch } from "./pi/vehicle-advisor.js";
 import type { MysqlSink } from "./integrations/mysql-sink.js";
 import type { ReminderQueue } from "./integrations/reminder-queue.js";
@@ -254,6 +255,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		};
 	});
 
+
 	app.get<{ Querystring: { status?: string } }>("/api/v1/knowledge/candidates", async (request) => {
 		const status = request.query.status as "pending" | "approved" | "rejected" | undefined;
 		return { candidates: listCandidates(deps.db, request.tenantId, status) };
@@ -269,5 +271,19 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		const candidate = rejectCandidate(deps.db, request.tenantId, request.params.id);
 		if (!candidate) return reply.code(404).send({ error: "candidate_not_found", message: "候选不存在" });
 		return { candidate };
+	});
+
+	app.get<{ Params: { conversationId: string } }>("/api/v1/conversations/:conversationId/timeline", async (request) => {
+		const events = listAgentEvents(deps.db, request.tenantId, request.params.conversationId);
+		return {
+			conversationId: request.params.conversationId,
+			events: events.map((e) => ({
+				seq: e.seq,
+				type: e.eventType,
+				toolName: e.toolName,
+				payload: e.payloadJson ? (JSON.parse(e.payloadJson) as unknown) : null,
+				createdAt: e.createdAt,
+			})),
+		};
 	});
 }
