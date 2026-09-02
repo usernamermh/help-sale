@@ -85,3 +85,35 @@ CREATE TABLE IF NOT EXISTS next_step_tasks (
 );
 CREATE INDEX IF NOT EXISTS idx_tasks_due ON next_step_tasks (tenant_id, status, due_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_customer ON next_step_tasks (tenant_id, customer_id, created_at DESC);
+
+-- v3:车型库与优选方案(车型优选)
+CREATE TABLE IF NOT EXISTS vehicles (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	brand TEXT NOT NULL,
+	series TEXT NOT NULL,
+	model_name TEXT NOT NULL,
+	energy_type TEXT NOT NULL,
+	body_type TEXT NOT NULL,
+	price_min REAL NOT NULL,
+	price_max REAL NOT NULL,
+	seats INTEGER NOT NULL,
+	positioning TEXT,
+	highlights TEXT,
+	scenarios TEXT,
+	specs_json TEXT NOT NULL DEFAULT '{}',
+	UNIQUE (tenant_id, brand, series, model_name)
+);
+CREATE INDEX IF NOT EXISTS idx_vehicles_price ON vehicles (tenant_id, price_min, price_max);
+CREATE INDEX IF NOT EXISTS idx_vehicles_energy_seats ON vehicles (tenant_id, energy_type, seats);
+
+CREATE TABLE IF NOT EXISTS vehicle_match_plans (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+	conversation_id TEXT NOT NULL,
+	requirement TEXT NOT NULL,
+	plan_json TEXT NOT NULL,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_vehicle_plans_customer ON vehicle_match_plans (tenant_id, customer_id, created_at DESC);
