@@ -38,6 +38,7 @@
   .hidden { display:none; }
   .history-item { border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:8px; font-size:13px; }
   .history-item .t { color:var(--muted); font-size:12px; }
+  .digest-content { white-space:pre-wrap; font-size:13px; color:#334155; background:#f8fafc; border-radius:8px; padding:10px 12px; }
 </style>
 </head>
 <body>
@@ -89,6 +90,11 @@
     <div class="card">
       <h2>跟进任务</h2>
       <div id="taskList" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h2>军师晨报</h2>
+      <div style="margin-bottom:8px"><button id="digestBtn" class="secondary">生成今日晨报</button></div>
+      <div id="digestList"></div>
     </div>
       <h2>历史分析</h2>
       <div class="row">
@@ -159,6 +165,7 @@ $("analyzeBtn").addEventListener("click", async () => {
     renderResult(result.analysis);
     $("historyKey").value = $("customerKey").value.trim() || "自动生成";
     loadTasks();
+loadDigests();
   } catch (e) {
     err.textContent = "分析失败:" + e.message;
     err.classList.remove("hidden");
@@ -273,6 +280,31 @@ $("uploadBtn").addEventListener("click", async () => {
   } finally { btn.disabled = false; }
 });
 
+async function loadDigests() {
+  const box = $("digestList");
+  try {
+    const r = await api("/api/v1/assistant/digests?limit=5").catch(() => null);
+    if (!r || !r.digests || r.digests.length === 0) { box.innerHTML = '<div class="meta">尚未生成晨报</div>'; return; }
+    box.innerHTML = "";
+    for (const d of r.digests) {
+      const meta = '<div class="t" style="color:#64748b;font-size:12px">' + escapeHtml(d.digestDate) + " · 生成于 " + escapeHtml(new Date(d.createdAt).toLocaleString()) + "</div>";
+      const div = document.createElement("div");
+      div.className = "history-item";
+      div.innerHTML = '<div><b>' + escapeHtml(d.title) + "</b></div>" + meta + '<div class="digest-content">' + escapeHtml(d.content) + "</div>";
+      box.appendChild(div);
+    }
+  } catch { box.innerHTML = '<div class="meta">晨报加载失败</div>'; }
+}
+
+$("digestBtn").addEventListener("click", async () => {
+  const btn = $("digestBtn");
+  btn.disabled = true; btn.textContent = "生成中…";
+  try {
+    await api("/api/v1/assistant/digest", { method: "POST" });
+    await loadDigests();
+  } catch (e) { alert("晨报生成失败:" + e.message); }
+  finally { btn.disabled = false; btn.textContent = "生成今日晨报"; }
+});
 async function loadTasks() {
   const box = $("taskList");
   box.innerHTML = "加载中…";
@@ -294,6 +326,7 @@ async function loadTasks() {
       div.querySelector("button").addEventListener("click", async () => {
         try { await api("/api/v1/tasks/" + t.id + "/done", { method: "PATCH" }); } catch (e) { alert("操作失败:" + e.message); }
         loadTasks();
+loadDigests();
       });
       box.appendChild(div);
     }
@@ -327,6 +360,7 @@ function escapeHtml(s) {
 
 checkHealth();
 loadTasks();
+loadDigests();
 </script>
 </body>
 </html>
