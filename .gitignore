@@ -11,3 +11,4 @@ apps/api/apps/
 *.log
 .DS_Store
 reference/llm-agent-workflow/
+llm-agent-workflow-master.zip
