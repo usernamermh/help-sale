@@ -33,39 +33,47 @@ export interface VehiclePlanSinkRecord {
 	createdAt: string;
 }
 
+function mysqlDatetime(iso: string): string {
+	try {
+		return new Date(iso).toISOString().slice(0, 23).replace("T", " ");
+	} catch {
+		return iso;
+	}
+}
+
 export interface MysqlSink {
 	appendAnalysis(record: AnalysisSinkRecord): Promise<void>;
 	appendVehiclePlan(record: VehiclePlanSinkRecord): Promise<void>;
 	close(): Promise<void>;
 }
 
-const DDL = `
-CREATE TABLE IF NOT EXISTS analyses (
-  id VARCHAR(64) PRIMARY KEY,
-  tenant_id VARCHAR(64) NOT NULL,
-  customer_id VARCHAR(64) NOT NULL,
-  conversation_id VARCHAR(64) NOT NULL,
-  intent VARCHAR(255) NOT NULL,
-  summary TEXT NOT NULL,
-  signals_json JSON,
-  suggested_reply LONGTEXT,
-  next_steps_json JSON,
-  followup_at VARCHAR(64),
-  created_at DATETIME(3) NOT NULL,
-  KEY idx_an_tenant (tenant_id, customer_id, created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS vehicle_match_plans (
-  id VARCHAR(64) PRIMARY KEY,
-  tenant_id VARCHAR(64) NOT NULL,
-  customer_id VARCHAR(64) NOT NULL,
-  conversation_id VARCHAR(64) NOT NULL,
-  requirement JSON,
-  plan_json JSON,
-  created_at DATETIME(3) NOT NULL,
-  KEY idx_vp_tenant (tenant_id, customer_id, created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-`;
+/** mysql2 默认不支持多语句,因此逐条执行。 */
+const DDL_STATEMENTS: string[] = [
+	`CREATE TABLE IF NOT EXISTS analyses (
+	  id VARCHAR(64) PRIMARY KEY,
+	  tenant_id VARCHAR(64) NOT NULL,
+	  customer_id VARCHAR(64) NOT NULL,
+	  conversation_id VARCHAR(64) NOT NULL,
+	  intent VARCHAR(255) NOT NULL,
+	  summary TEXT NOT NULL,
+	  signals_json JSON,
+	  suggested_reply LONGTEXT,
+	  next_steps_json JSON,
+	  followup_at VARCHAR(64),
+	  created_at DATETIME(3) NOT NULL,
+	  KEY idx_an_tenant (tenant_id, customer_id, created_at)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+	`CREATE TABLE IF NOT EXISTS vehicle_match_plans (
+	  id VARCHAR(64) PRIMARY KEY,
+	  tenant_id VARCHAR(64) NOT NULL,
+	  customer_id VARCHAR(64) NOT NULL,
+	  conversation_id VARCHAR(64) NOT NULL,
+	  requirement JSON,
+	  plan_json JSON,
+	  created_at DATETIME(3) NOT NULL,
+	  KEY idx_vp_tenant (tenant_id, customer_id, created_at)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+];
 
 /** 追加写入的归档 sink:失败只降级跳过,绝不阻断主流程。 */
 export function createMysqlSink(config: MysqlConfig): MysqlSink {
@@ -88,7 +96,9 @@ export function createMysqlSink(config: MysqlConfig): MysqlSink {
 			});
 			const conn = await p.getConnection();
 			try {
-				await conn.query(DDL);
+				for (const statement of DDL_STATEMENTS) {
+					await conn.query(statement);
+				}
 			} finally {
 				conn.release();
 			}
@@ -110,8 +120,9 @@ export function createMysqlSink(config: MysqlConfig): MysqlSink {
 		try {
 			const p = await ensure();
 			await fn(p);
-		} catch {
-			// 降级:忽略
+		} catch (error) {
+			const detail = error instanceof Error ? error.message : String(error);
+			console.warn(`[mysql-sink] 写入降级跳过: ${detail}`);
 		}
 	}
 
@@ -134,7 +145,7 @@ export function createMysqlSink(config: MysqlConfig): MysqlSink {
 						record.suggestedReply ?? null,
 						record.nextStepsJson ?? null,
 						record.followupAt ?? null,
-						record.createdAt,
+						mysqlDatetime(record.createdAt),
 					],
 				),
 			);
@@ -146,7 +157,7 @@ export function createMysqlSink(config: MysqlConfig): MysqlSink {
 					`INSERT INTO vehicle_match_plans
 					 (id, tenant_id, customer_id, conversation_id, requirement, plan_json, created_at)
 					 VALUES (?,?,?,?,?,?,?)`,
-					[record.id, record.tenantId, record.customerId, record.conversationId, record.requirement, record.planJson, record.createdAt],
+					[record.id, record.tenantId, record.customerId, record.conversationId, record.requirement, record.planJson, mysqlDatetime(record.createdAt)],
 				),
 			);
 		},

@@ -277,15 +277,20 @@ async function loadTasks() {
   const box = $("taskList");
   box.innerHTML = "加载中…";
   try {
-    const r = await api("/api/v1/tasks?status=pending&limit=50");
+    const [r, rem] = await Promise.all([
+      api("/api/v1/tasks?status=pending&limit=50"),
+      api("/api/v1/reminders/overdue").catch(() => ({ overdue: [] })),
+    ]);
+    const overdueIds = new Set((rem.overdue || []).map((t) => t.id));
     box.innerHTML = "";
     if (!r.tasks || r.tasks.length === 0) { box.innerHTML = '<div class="meta">暂无待办任务(对话分析后自动生成)</div>'; return; }
     for (const t of r.tasks) {
       const who = t.customerName || t.customerKey || "未知客户";
       const due = t.dueAt ? ' <span class="t">到期:' + new Date(t.dueAt).toLocaleString() + "</span>" : "";
+      const dueBadge = overdueIds.has(t.id) ? ' <span class="badge danger">已到期</span>' : "";
       const div = document.createElement("div");
       div.className = "history-item";
-      div.innerHTML = '<div><b>' + escapeHtml(who) + "</b>" + due + '</div><div class="t">' + escapeHtml(t.action) + '</div><div style="margin-top:6px"><button class="secondary" style="padding:4px 10px;font-size:12px">完成</button></div>';
+      div.innerHTML = '<div><b>' + escapeHtml(who) + "</b>" + dueBadge + due + '</div><div class="t">' + escapeHtml(t.action) + '</div><div style="margin-top:6px"><button class="secondary" style="padding:4px 10px;font-size:12px">完成</button></div>';
       div.querySelector("button").addEventListener("click", async () => {
         try { await api("/api/v1/tasks/" + t.id + "/done", { method: "PATCH" }); } catch (e) { alert("操作失败:" + e.message); }
         loadTasks();
