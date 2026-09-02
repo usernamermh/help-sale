@@ -4,12 +4,14 @@ import type { DatabaseSync } from "node:sqlite";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import type { ModelRuntime } from "./pi/models.js";
 import { ingestDocument } from "./services/ingest.js";
+import { searchKnowledge } from "./repositories/knowledge.js";
 import { requireTenant, upsertCustomer } from "./repositories/customers.js";
 import { createAnalysis, listAnalysesByCustomer } from "./repositories/analyses.js";
 import { createTask, getTask, listTasks, setTaskStatus } from "./repositories/tasks.js";
 import { createVehiclePlan, listVehiclePlansByCustomer } from "./repositories/vehicle-plans.js";
 import { createDigest, getDigestByDate, listDigests } from "./repositories/digests.js";
 import { collectDigest } from "./services/digest.js";
+import { approveCandidate, createCandidate, listCandidates, rejectCandidate } from "./repositories/knowledge-candidates.js";
 import { runVehicleMatch } from "./pi/vehicle-advisor.js";
 import type { MysqlSink } from "./integrations/mysql-sink.js";
 import type { ReminderQueue } from "./integrations/reminder-queue.js";
@@ -61,6 +63,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		if (!title || !content) return reply.code(400).send({ error: "title and content are required" });
 		return ingestDocument(deps.db, { tenantId: request.tenantId, title, content });
 	});
+	app.get<{ Querystring: { q?: string; limit?: string } }>("/api/v1/knowledge/search", async (request) => {
+		const query = String(request.query.q ?? "").trim();
+		const limit = Math.min(Number(request.query.limit ?? 5) || 5, 20);
+		return { query, hits: searchKnowledge(deps.db, request.tenantId, query, limit) };
+	});
 
 	app.post<{ Body: { transcript?: string; customerKey?: string } }>("/api/v1/copilot/analyze", async (request, reply) => {
 		const transcript = request.body?.transcript;
@@ -100,6 +107,18 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 			});
 			const dueMs = task.dueAt ? Date.parse(task.dueAt) : Number.NaN;
 			void deps.reminders.add(task.id, Number.isFinite(dueMs) ? dueMs : null);
+		}
+
+		// loop F6:高质量话术自动生成知识沉淀候选
+		if (result.details.suggestedReply && result.details.suggestedReply.length >= 40) {
+			const intent = (saved.intent ?? "通用").slice(0, 40);
+			createCandidate(deps.db, {
+				tenantId: request.tenantId,
+				analysisId: saved.id,
+				intent,
+				draftTitle: `话术·${intent}`.slice(0, 120),
+				draftContent: `【适用场景】${saved.summary.slice(0, 120)}\n【话术】${result.details.suggestedReply}`,
+			});
 		}
 
 		// 归档到远程 MySQL(失败自动降级)
@@ -232,5 +251,22 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 				createdAt: r.createdAt,
 			})),
 		};
+	});
+
+	app.get<{ Querystring: { status?: string } }>("/api/v1/knowledge/candidates", async (request) => {
+		const status = request.query.status as "pending" | "approved" | "rejected" | undefined;
+		return { candidates: listCandidates(deps.db, request.tenantId, status) };
+	});
+
+	app.post<{ Params: { id: string } }>("/api/v1/knowledge/candidates/:id/approve", async (request, reply) => {
+		const candidate = approveCandidate(deps.db, request.tenantId, request.params.id);
+		if (!candidate) return reply.code(404).send({ error: "candidate_not_found", message: "候选不存在" });
+		return { candidate };
+	});
+
+	app.post<{ Params: { id: string } }>("/api/v1/knowledge/candidates/:id/reject", async (request, reply) => {
+		const candidate = rejectCandidate(deps.db, request.tenantId, request.params.id);
+		if (!candidate) return reply.code(404).send({ error: "candidate_not_found", message: "候选不存在" });
+		return { candidate };
 	});
 }

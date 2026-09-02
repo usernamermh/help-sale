@@ -42,7 +42,7 @@ function fakeStreamFn(): StreamFn {
 				intent: "价格异议",
 				summary: "客户对价格有疑虑",
 				signals: [{ kind: "budget", quote: "超出预算", note: "预算有限" }],
-				suggestedReply: "先共情再讲 ROI",
+				suggestedReply: "理解您的顾虑,预算把控确实重要。我先跟您坦诚说明旗舰版与低价方案的差异,再结合您的核心需求匹配方案,您最看重哪一块我优先对比。",
 				nextSteps: ["发送方案"],
 				followupAt: "2020-01-01T00:00:00.000Z",
 			}),
@@ -175,7 +175,39 @@ describe("api", () => {
 	});
 
 
-	it("军师晨报:生成(当日幂等)并列出历史", async () => {
+
+	it("知识沉淀:分析后生成话术候选,确认入库后可检索", async () => {
+		dir = tmpDataDir("api-candidates");
+		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/copilot/analyze",
+			payload: { transcript: "客户:价格多少?", customerKey: "c_mem" },
+			headers,
+		});
+		expect(res.statusCode).toBe(200);
+
+		const list = await app.inject({ method: "GET", url: "/api/v1/knowledge/candidates?status=pending", headers });
+		expect(list.statusCode).toBe(200);
+		expect(list.json().candidates).toHaveLength(1);
+		const candidate = list.json().candidates[0];
+		expect(candidate.intent).toBe("价格异议");
+		expect(candidate.draftContent).toContain("预算把控");
+
+		const approve = await app.inject({ method: "POST", url: `/api/v1/knowledge/candidates/${candidate.id}/approve`, headers });
+		expect(approve.statusCode).toBe(200);
+		expect(approve.json().candidate.status).toBe("approved");
+		expect(approve.json().candidate.documentId).toBeTruthy();
+
+		const search = await app.inject({ method: "GET", url: "/api/v1/knowledge/search?q=差异", headers });
+		expect(search.statusCode).toBe(200);
+		expect(search.json().hits.length).toBeGreaterThan(0);
+
+		const after = await app.inject({ method: "GET", url: "/api/v1/knowledge/candidates?status=pending", headers });
+		expect(after.json().candidates).toHaveLength(0);
+	});
+		it("军师晨报:生成(当日幂等)并列出历史", async () => {
 		dir = tmpDataDir("api-digest");
 		app = buildApp({ dataDir: dir, mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const headers = { "x-tenant-id": "t1" };
