@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS knowledge_documents (
 	title TEXT NOT NULL,
 	source_type TEXT NOT NULL DEFAULT 'text',
 	content TEXT NOT NULL,
+	category TEXT,
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
@@ -183,3 +184,18 @@ CREATE TABLE IF NOT EXISTS notification_logs (
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_nl_tenant ON notification_logs (tenant_id, created_at DESC);
+
+-- v10:会话业务元数据(界面列表:时间/ID/销售/客户;对话原文仍在 pi 会话库)
+CREATE TABLE IF NOT EXISTS conversations (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
+	sales_name TEXT NOT NULL DEFAULT '默认销售',
+	channel TEXT NOT NULL DEFAULT 'chat',
+	message_count INTEGER NOT NULL DEFAULT 0,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_conv_tenant ON conversations (tenant_id, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_kd_category ON knowledge_documents (tenant_id, category);

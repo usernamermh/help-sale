@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 9;
+export const MIGRATION_VERSION = 10;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -29,6 +29,13 @@ export function migrate(db: DatabaseSync): void {
 				UNIQUE (tenant_id, customer_id, tag)
 			);`,
 		);
+	}
+	// v10:knowledge_documents 增加分类列(旧库补列,新库 CREATE 已含,按列存在性判断)
+	if (current.user_version < 10) {
+		const kdCols = db.prepare("PRAGMA table_info(knowledge_documents)").all() as Array<{ name: string }>;
+		if (!kdCols.some((col) => col.name === "category")) {
+			db.exec("ALTER TABLE knowledge_documents ADD COLUMN category TEXT;");
+		}
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }
