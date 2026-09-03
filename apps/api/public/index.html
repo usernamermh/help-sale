@@ -5,44 +5,55 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>销售军师 · 助销 Agent</title>
 <style>
-:root { --bg:#f5f7fa; --card:#fff; --line:#e2e8f0; --text:#1e293b; --muted:#64748b; --brand:#2563eb; --ok:#16a34a; --warn:#d97706; --danger:#dc2626; }
+:root { --bg:#f4f6fa; --card:#fff; --line:#e2e8f0; --text:#1e293b; --muted:#64748b; --brand:#2563eb; --brand2:#3b82f6; --ok:#16a34a; --warn:#d97706; --danger:#dc2626; }
 * { box-sizing:border-box; }
 body { margin:0; font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; background:var(--bg); color:var(--text); }
-header { display:flex; align-items:center; gap:12px; padding:12px 24px; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20; }
-header h1 { font-size:17px; margin:0; }
-#health { font-size:12px; color:var(--muted); margin-left:auto; display:flex; align-items:center; gap:6px; }
-.dot { width:8px; height:8px; border-radius:50%; background:#94a3b8; } .dot.ok { background:var(--ok); }
-.tabs { display:flex; gap:4px; padding:0 24px; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:56px; z-index:15; }
-.tab { padding:10px 16px; cursor:pointer; font-size:14px; color:var(--muted); border-bottom:2px solid transparent; }
+header { display:flex; align-items:center; gap:14px; padding:14px 28px; background:linear-gradient(90deg,#1d4ed8,#2563eb); color:#fff; position:sticky; top:0; z-index:20; box-shadow:0 1px 4px rgba(15,23,42,.12); }
+header h1 { font-size:18px; margin:0; letter-spacing:.5px; }
+header .sub { font-size:12px; opacity:.8; }
+#health { font-size:12px; margin-left:auto; display:flex; align-items:center; gap:6px; opacity:.95; }
+.dot { width:8px; height:8px; border-radius:50%; background:#cbd5e1; } .dot.ok { background:#4ade80; }
+.tabs { display:flex; gap:6px; padding:10px 28px 0; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:54px; z-index:15; }
+.tab { padding:10px 20px; cursor:pointer; font-size:14px; color:var(--muted); border-radius:10px 10px 0 0; border-bottom:2px solid transparent; }
+.tab:hover { color:var(--text); background:#f1f5f9; }
 .tab.active { color:var(--brand); border-bottom-color:var(--brand); font-weight:600; }
-main { max-width:1200px; margin:16px auto; padding:0 16px; }
-.panel { display:none; gap:16px; } .panel.active { display:grid; grid-template-columns:380px 1fr; }
-@media (max-width:860px){ .panel.active { grid-template-columns:1fr; } }
-.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:14px; }
-.card h2 { font-size:15px; margin:0 0 10px; }
-label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
-textarea, input, select { width:100%; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:13px; font-family:inherit; background:#fff; }
+main { max-width:1240px; margin:18px auto; padding:0 18px; }
+.panel { display:none; gap:18px; } .panel.active { display:grid; grid-template-columns:230px 1fr; align-items:start; }
+.func-menu { position:sticky; top:112px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px; }
+.menu-title { font-size:12px; color:var(--muted); margin:4px 6px 10px; letter-spacing:1px; }
+.func-btn { width:100%; text-align:left; border:0; border-radius:9px; padding:10px 12px; font-size:14px; cursor:pointer; background:transparent; color:var(--muted); margin-bottom:4px; }
+.func-btn:hover { background:#f1f5f9; color:var(--text); }
+.func-btn.active { background:#e8f0fe; color:var(--brand); font-weight:600; }
+.func-body { display:flex; flex-direction:column; gap:16px; min-width:0; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+.card h2 { font-size:15px; margin:0 0 12px; }
+.func-card { display:none; } .func-card.active { display:block; }
+label { display:block; font-size:12px; color:var(--muted); margin:12px 0 4px; }
+textarea, input, select { width:100%; border:1px solid var(--line); border-radius:8px; padding:9px 11px; font-size:13px; font-family:inherit; background:#fff; }
 textarea { resize:vertical; }
-button { border:0; border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; background:var(--brand); color:#fff; }
-button:disabled { opacity:.55; cursor:wait; }
-button.secondary { background:#e2e8f0; color:var(--text); }
+input:focus, textarea:focus { outline:2px solid #bfdbfe; border-color:var(--brand); }
+button.primary { border:0; border-radius:8px; padding:9px 18px; font-size:13px; cursor:pointer; background:var(--brand); color:#fff; }
+button.primary:hover { background:var(--brand2); }
+button.primary:disabled { opacity:.55; cursor:wait; }
+button.secondary { background:#fff; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; }
+button.secondary:hover { background:#f1f5f9; }
 .row { display:flex; gap:10px; } .row > * { flex:1; }
-.badge { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; background:#eef2ff; color:var(--brand); margin-right:4px; }
+.badge { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; background:#eef2ff; color:var(--brand); margin-right:4px; }
 .badge.warn { background:#fffbeb; color:var(--warn); } .badge.danger { background:#fef2f2; color:var(--danger); }
-.item { border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-bottom:8px; font-size:13px; }
-.item .t { color:var(--muted); font-size:12px; }
+.item { border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px; font-size:13px; background:#fff; }
+.item:hover { border-color:#cbd5e1; }
+.item .t { color:var(--muted); font-size:12px; margin-top:2px; }
 .item.selected { border-color:var(--brand); background:#eff6ff; }
 .error { background:#fef2f2; color:var(--danger); border:1px solid #fecaca; border-radius:8px; padding:8px 10px; margin-top:10px; font-size:12px; }
 .hidden { display:none; }
-.digest-content { white-space:pre-wrap; font-size:12px; color:#334155; background:#f8fafc; border-radius:8px; padding:8px 10px; }
+.digest-content { white-space:pre-wrap; font-size:12px; color:#334155; background:#f8fafc; border-radius:8px; padding:10px; }
 .mini { font-size:12px; color:var(--muted); }
+.section-note { font-size:12px; color:var(--muted); margin-bottom:10px; }
+@media (max-width:860px){ .panel.active { grid-template-columns:1fr; } .func-menu { position:static; display:flex; flex-wrap:wrap; gap:6px; } .menu-title { display:none; } .func-btn { width:auto; margin:0; } }
 </style>
 </head>
 <body>
-<header>
-<h1>销售军师</h1>
-<span id="health"><span class="dot" id="healthDot"></span><span id="healthText">检查中…</span></span>
-</header>
+<header><h1>销售军师</h1><span class="sub">助销 Agent</span><span id="health"><span class="dot" id="healthDot"></span><span id="healthText">检查中…</span></span></header>
 <div class="tabs">
 <span class="tab active" data-tab="workspace">工作台</span>
 <span class="tab" data-tab="knowledge">知识库</span>
@@ -51,116 +62,144 @@ button.secondary { background:#e2e8f0; color:var(--text); }
 </div>
 <main>
 <section class="panel active" id="panel-workspace">
-<div>
-<div class="card" style="padding:10px">
-<div class="func-menu" style="display:flex;flex-direction:column;gap:6px">
-<button class="func-btn secondary" data-card="convCard">会话库分析</button>
-<button class="func-btn secondary" data-card="vehicleCard">车型优选</button>
-<button class="func-btn secondary" data-card="evalCard">话术评估</button>
-<button class="func-btn secondary" data-card="digestCard">通话/试驾总结</button>
-</div>
-</div>
-<div class="card func-card func-active" id="convCard">
+<aside class="func-menu">
+<div class="menu-title">工作台</div>
+<button class="func-btn active" data-card="convCard">会话库分析</button>
+<button class="func-btn" data-card="vehicleCard">车型优选</button>
+<button class="func-btn" data-card="evalCard">话术评估</button>
+<button class="func-btn" data-card="digestCard">通话/试驾总结</button>
+</aside>
+<div class="func-body">
+<div class="card func-card active" id="convCard">
 <h2>会话库分析</h2>
-<div class="mini" style="margin-bottom:8px">从数据库选取会话分析,无需手动粘贴。</div>
-<button id="convRefreshBtn" class="secondary" style="margin-bottom:8px">刷新会话</button>
-<div id="convList" class="mini">加载中…</div>
+<div class="section-note">从数据库选取会话分析,无需手动粘贴。</div>
+<button id="convRefreshBtn" class="secondary">刷新会话</button>
+<div id="convList" class="mini" style="margin-top:10px">加载中…</div>
 <div id="analyzeMsg" class="mini" style="margin-top:8px"></div>
 </div>
-<div class="card func-card hidden" id="vehicleCard">
+<div class="card func-card" id="vehicleCard">
 <h2>车型优选</h2>
 <div class="row"><input id="vBudgetMin" type="number" placeholder="预算最低" value="15"><input id="vBudgetMax" type="number" placeholder="预算最高" value="30"></div>
 <div class="row"><input id="vSeats" type="number" placeholder="座位" value="5"><input id="vEnergy" placeholder="能源(纯电/混动)"></div>
 <label>用车场景</label><input id="vUsage" placeholder="商务接待 / 家庭通勤…">
-<div style="margin-top:10px"><button id="vehicleBtn">生成优选方案</button></div>
+<div style="margin-top:12px"><button id="vehicleBtn" class="primary">生成优选方案</button></div>
 <div id="vehicleError" class="error hidden"></div>
 </div>
-<div class="card func-card hidden" id="evalCard">
+<div class="card func-card" id="evalCard">
 <h2>话术评估</h2>
-<textarea id="evalConversation" style="min-height:60px" placeholder="客户对话"></textarea>
-<textarea id="evalReply" style="min-height:60px" placeholder="你的回复"></textarea>
-<div style="margin-top:10px"><button id="evalBtn" class="secondary">评估并改进</button></div>
+<label>客户对话</label><textarea id="evalConversation" style="min-height:60px" placeholder="客户对话"></textarea>
+<label>你的回复</label><textarea id="evalReply" style="min-height:60px" placeholder="你的回复"></textarea>
+<div style="margin-top:12px"><button id="evalBtn" class="secondary">评估并改进</button></div>
 <div id="evalError" class="error hidden"></div>
 </div>
-<div class="card func-card hidden" id="digestCard">
+<div class="card func-card" id="digestCard">
 <h2>通话/试驾总结</h2>
-<textarea id="digestText" style="min-height:70px" placeholder="粘贴文字稿…"></textarea>
-<div style="margin-top:10px"><button id="digestBtn" class="secondary">生成总结</button></div>
+<label>文字稿</label><textarea id="digestText" style="min-height:70px" placeholder="粘贴文字稿…"></textarea>
+<div style="margin-top:12px"><button id="digestBtn" class="secondary">生成总结</button></div>
 <div id="digestError" class="error hidden"></div>
 <div id="digestBox" class="mini" style="margin-top:8px"></div>
 </div>
-</div>
-<div>
 <div class="card hidden" id="resultCard">
 <h2>分析结果 <span class="badge" id="intentBadge"></span></h2>
 <p id="summary" style="font-size:13px"></p>
-<div style="margin-top:10px"><b>信号</b></div><div id="signals"></div>
-<div style="margin-top:10px"><b>建议回复</b></div><textarea id="suggestedReply" style="min-height:80px" readonly></textarea>
+<div style="margin-top:12px"><b>信号</b></div><div id="signals"></div>
+<div style="margin-top:12px"><b>建议回复</b></div><textarea id="suggestedReply" style="min-height:80px" readonly></textarea>
 <div style="margin-top:8px"><button id="copyBtn" class="secondary">复制话术</button></div>
-<div style="margin-top:10px"><b>下一步</b></div><ol id="nextSteps"></ol>
+<div style="margin-top:12px"><b>下一步</b></div><ol id="nextSteps"></ol>
 <p class="mini" id="followupAt"></p>
 <p class="mini" id="resultMeta"></p>
-<div style="margin-top:10px"><b>过程回放</b></div><div id="timelineBox" class="mini"></div>
+<div style="margin-top:12px"><b>过程回放</b></div><div id="timelineBox" class="mini"></div>
 </div>
 <div class="card hidden" id="vehicleResultCard">
 <h2>优选方案 <span class="badge" id="vProfile"></span></h2>
 <div id="vehicleList"></div>
-<div style="margin-top:10px"><b>关键差异</b></div><ul id="vDifferences"></ul>
-<div style="margin-top:10px"><b>建议话术</b></div><textarea id="vReply" style="min-height:80px" readonly></textarea>
+<div style="margin-top:12px"><b>关键差异</b></div><ul id="vDifferences"></ul>
+<div style="margin-top:12px"><b>建议话术</b></div><textarea id="vReply" style="min-height:80px" readonly></textarea>
 <div style="margin-top:8px"><button id="vCopyBtn" class="secondary">复制话术</button></div>
-<div style="margin-top:10px"><b>下一步</b></div><ol id="vNextSteps"></ol>
+<div style="margin-top:12px"><b>下一步</b></div><ol id="vNextSteps"></ol>
 <p class="mini" id="vMeta"></p>
 </div>
 <div class="card hidden" id="evalResultCard">
 <h2>评估结果 <span class="badge" id="evalScore"></span></h2>
 <div id="evalDims" class="mini"></div>
-<div style="margin-top:10px"><b>做得好的</b></div><ul id="evalStrengths"></ul>
-<div style="margin-top:10px"><b>可改进</b></div><ul id="evalImprovements"></ul>
-<div style="margin-top:10px"><b>建议回复</b></div><textarea id="evalSuggested" style="min-height:80px" readonly></textarea>
+<div style="margin-top:12px"><b>做得好的</b></div><ul id="evalStrengths"></ul>
+<div style="margin-top:12px"><b>可改进</b></div><ul id="evalImprovements"></ul>
+<div style="margin-top:12px"><b>建议回复</b></div><textarea id="evalSuggested" style="min-height:80px" readonly></textarea>
 <div style="margin-top:8px"><button id="evalCopyBtn" class="secondary">复制建议话术</button></div>
 <p class="mini" id="evalMeta"></p>
 </div>
 </div>
 </section>
 <section class="panel" id="panel-knowledge">
-<div>
-<div class="card"><h2>知识沉淀</h2><div class="mini" style="margin-bottom:8px">会话分析后自动生成候选(基于库内对话),一键入库。</div><div id="candidateList"></div></div>
-<div class="card"><h2>知识库检索</h2><div class="row"><input id="kbSearch" placeholder="检索关键词"><button id="kbSearchBtn" class="secondary">检索</button></div><div id="kbHits" class="mini" style="margin-top:8px"></div></div>
+<aside class="func-menu">
+<div class="menu-title">知识库</div>
+<button class="func-btn active" data-card="kbCandidatesCard">知识沉淀</button>
+<button class="func-btn" data-card="kbSearchCard">知识库检索</button>
+<button class="func-btn" data-card="kbUploadCard">知识库上传</button>
+</aside>
+<div class="func-body">
+<div class="card func-card active" id="kbCandidatesCard">
+<h2>知识沉淀</h2>
+<div class="section-note">会话分析后自动生成候选(基于库内对话),一键入库。</div>
+<div id="candidateList"></div>
 </div>
-<div>
-<div class="card">
+<div class="card func-card" id="kbSearchCard">
+<h2>知识库检索</h2>
+<div class="row"><input id="kbSearch" placeholder="检索关键词"><button id="kbSearchBtn" class="secondary">检索</button></div>
+<div id="kbHits" class="mini" style="margin-top:10px"></div>
+</div>
+<div class="card func-card" id="kbUploadCard">
 <h2>知识库上传(分类 + 多条知识点)</h2>
 <label>分类</label><input id="docCategory" placeholder="如 价格政策 / 竞品话术 / 售后FAQ">
 <label>每行一条: 标题 :: 内容</label>
 <textarea id="docEntries" style="min-height:120px" placeholder="旗舰版价格 :: 1999元/年,年付送一个月&#10;售后网点 :: 全国300家"></textarea>
-<div style="margin-top:10px"><button id="uploadEntriesBtn">批量上传</button></div>
+<div style="margin-top:12px"><button id="uploadEntriesBtn" class="primary">批量上传</button></div>
 <div id="uploadResult" class="mini" style="margin-top:8px"></div>
 </div>
 </div>
 </section>
 <section class="panel" id="panel-tasks">
-<div>
-<div class="card">
+<aside class="func-menu">
+<div class="menu-title">跟进与通知</div>
+<button class="func-btn active" data-card="tasksCard">跟进任务</button>
+<button class="func-btn" data-card="profileCard">客户画像</button>
+</aside>
+<div class="func-body">
+<div class="card func-card active" id="tasksCard">
 <h2>跟进任务 <button id="notifyBtn" class="secondary" style="padding:4px 10px;font-size:12px;float:right">推送到期提醒</button></h2>
-<div id="notifyResult" class="mini" style="margin-bottom:6px"></div>
+<div id="notifyResult" class="mini" style="margin-bottom:8px"></div>
 <div id="taskList"></div>
 </div>
-</div>
-<div>
-<div class="card">
+<div class="card func-card" id="profileCard">
 <h2>客户画像</h2>
 <div class="row"><input id="historyKey" placeholder="客户标识 e.g. c_001" value="c_001"><button id="tagBtn" class="secondary">查标签和历史</button></div>
-<div id="tagBox" style="margin-top:8px"></div>
-<div id="historyList" class="mini" style="margin-top:8px"></div>
+<div id="tagBox" style="margin-top:10px"></div>
+<div id="historyList" class="mini" style="margin-top:10px"></div>
 </div>
 </div>
 </section>
 <section class="panel" id="panel-insights">
-<div><div class="card"><h2>经营洞察(近7天)</h2><div id="insightBox" class="mini"></div></div></div>
-<div><div class="card"><h2>军师晨报</h2><button id="digestBtn2" class="secondary" style="margin-bottom:8px">生成今日晨报</button><div id="digestList"></div></div></div>
+<aside class="func-menu">
+<div class="menu-title">洞察晨报</div>
+<button class="func-btn active" data-card="insightCard">经营洞察</button>
+<button class="func-btn" data-card="digestCard2">军师晨报</button>
+</aside>
+<div class="func-body">
+<div class="card func-card active" id="insightCard">
+<h2>经营洞察(近7天)</h2>
+<div id="insightBox" class="mini"></div>
+</div>
+<div class="card func-card" id="digestCard2">
+<h2>军师晨报</h2>
+<button id="digestBtn2" class="secondary" style="margin-bottom:10px">生成今日晨报</button>
+<div id="digestList"></div>
+</div>
+</div>
 </section>
 </main>
+
 <script>
+
 
 const $ = (id) => document.getElementById(id);
 const api = async (path, options = {}) => {
@@ -392,14 +431,17 @@ async function loadImprovements(box) {
 
 document.querySelectorAll(".func-btn").forEach((btn) => btn.addEventListener("click", () => {
   const cardId = btn.dataset.card;
-  document.querySelectorAll(".func-card").forEach((c) => c.classList.add("hidden"));
-  document.getElementById(cardId).classList.remove("hidden");
-  document.querySelectorAll(".func-btn").forEach((b) => b.classList.remove("selected"));
-  btn.classList.add("selected");
+  const panel = btn.closest("section.panel");
+  panel.querySelectorAll(".func-card").forEach((c) => c.classList.remove("active"));
+  const target = document.getElementById(cardId);
+  if (target) target.classList.add("active");
+  panel.querySelectorAll(".func-btn").forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active");
 }));
-document.querySelector("[data-card=convCard]").classList.add("selected");
+
 
 checkHealth(); loadConversations(); loadCandidates(); loadTasks(); loadNotifications(); loadDigests(); loadInsights();
+
 
 </script>
 </body>
