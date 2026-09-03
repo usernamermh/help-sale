@@ -52,14 +52,22 @@ button.secondary { background:#e2e8f0; color:var(--text); }
 <main>
 <section class="panel active" id="panel-workspace">
 <div>
-<div class="card">
+<div class="card" style="padding:10px">
+<div class="func-menu" style="display:flex;flex-direction:column;gap:6px">
+<button class="func-btn secondary" data-card="convCard">会话库分析</button>
+<button class="func-btn secondary" data-card="vehicleCard">车型优选</button>
+<button class="func-btn secondary" data-card="evalCard">话术评估</button>
+<button class="func-btn secondary" data-card="digestCard">通话/试驾总结</button>
+</div>
+</div>
+<div class="card func-card func-active" id="convCard">
 <h2>会话库分析</h2>
 <div class="mini" style="margin-bottom:8px">从数据库选取会话分析,无需手动粘贴。</div>
 <button id="convRefreshBtn" class="secondary" style="margin-bottom:8px">刷新会话</button>
 <div id="convList" class="mini">加载中…</div>
 <div id="analyzeMsg" class="mini" style="margin-top:8px"></div>
 </div>
-<div class="card">
+<div class="card func-card hidden" id="vehicleCard">
 <h2>车型优选</h2>
 <div class="row"><input id="vBudgetMin" type="number" placeholder="预算最低" value="15"><input id="vBudgetMax" type="number" placeholder="预算最高" value="30"></div>
 <div class="row"><input id="vSeats" type="number" placeholder="座位" value="5"><input id="vEnergy" placeholder="能源(纯电/混动)"></div>
@@ -67,14 +75,14 @@ button.secondary { background:#e2e8f0; color:var(--text); }
 <div style="margin-top:10px"><button id="vehicleBtn">生成优选方案</button></div>
 <div id="vehicleError" class="error hidden"></div>
 </div>
-<div class="card">
+<div class="card func-card hidden" id="evalCard">
 <h2>话术评估</h2>
 <textarea id="evalConversation" style="min-height:60px" placeholder="客户对话"></textarea>
 <textarea id="evalReply" style="min-height:60px" placeholder="你的回复"></textarea>
 <div style="margin-top:10px"><button id="evalBtn" class="secondary">评估并改进</button></div>
 <div id="evalError" class="error hidden"></div>
 </div>
-<div class="card">
+<div class="card func-card hidden" id="digestCard">
 <h2>通话/试驾总结</h2>
 <textarea id="digestText" style="min-height:70px" placeholder="粘贴文字稿…"></textarea>
 <div style="margin-top:10px"><button id="digestBtn" class="secondary">生成总结</button></div>
@@ -154,8 +162,6 @@ button.secondary { background:#e2e8f0; color:var(--text); }
 </main>
 <script>
 
-<script>
-
 const $ = (id) => document.getElementById(id);
 const api = async (path, options = {}) => {
   const res = await fetch(path, { headers: { "Content-Type": "application/json", "x-tenant-id": "t_demo" }, ...options });
@@ -163,7 +169,7 @@ const api = async (path, options = {}) => {
   if (!res.ok) throw new Error(body.error || body.message || ("HTTP " + res.status));
   return body;
 };
-function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", """: "&quot;", "'": "&#39;" }[c])); }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c])); }
 document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => {
   document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
   tab.classList.add("active");
@@ -383,6 +389,16 @@ async function loadInsights() {
 async function loadImprovements(box) {
   try { const r = await api("/api/v1/assistant/improvements?days=30").catch(() => null); if (!r || !r.suggestions || !r.suggestions.length) return; const div = document.createElement("div"); div.innerHTML = "<div style=\"margin-top:10px\"><b>规则改进建议</b></div><ul style=\"font-size:12px\"></ul>"; const ul = div.querySelector("ul"); for (const s of r.suggestions.slice(0, 4)) { const li = document.createElement("li"); li.textContent = s.topic + "(" + s.count + ")·" + s.suggestion; ul.appendChild(li); } box.appendChild(div); } catch {}
 }
+
+document.querySelectorAll(".func-btn").forEach((btn) => btn.addEventListener("click", () => {
+  const cardId = btn.dataset.card;
+  document.querySelectorAll(".func-card").forEach((c) => c.classList.add("hidden"));
+  document.getElementById(cardId).classList.remove("hidden");
+  document.querySelectorAll(".func-btn").forEach((b) => b.classList.remove("selected"));
+  btn.classList.add("selected");
+}));
+document.querySelector("[data-card=convCard]").classList.add("selected");
+
 checkHealth(); loadConversations(); loadCandidates(); loadTasks(); loadNotifications(); loadDigests(); loadInsights();
 
 </script>
