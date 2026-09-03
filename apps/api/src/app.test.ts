@@ -323,6 +323,39 @@ describe("api", () => {
 
 
 
+
+	it("会话列表与从库内会话分析:不依赖手动粘贴", async () => {
+		dir = tmpDataDir("api-conv-flow");
+		try {
+			app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+			const headers = { "x-tenant-id": "t1" };
+			const res = await app.inject({ method: "POST", url: "/api/v1/copilot/analyze", payload: { transcript: "客户:价格多少?", customerKey: "c_convf" }, headers });
+			expect(res.statusCode).toBe(200);
+			const convId = res.json().conversationId;
+			const list = await app.inject({ method: "GET", url: "/api/v1/conversations", headers });
+			expect(list.statusCode).toBe(200);
+			expect(list.json().conversations).toHaveLength(1);
+			expect(list.json().conversations[0].id).toBe(convId);
+			expect(list.json().conversations[0].customerKey).toBe("c_convf");
+			expect(list.json().conversations[0].messageCount).toBeGreaterThan(0);
+			await app.close(); app = undefined;
+
+			// 新实例(同一数据目录)从库读取会话原文再分析
+			app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+			const again = await app.inject({ method: "POST", url: `/api/v1/conversations/${convId}/analyze`, headers });
+			expect(again.statusCode).toBe(200);
+			expect(again.json().analysisId).toBeTruthy();
+			const list2 = await app.inject({ method: "GET", url: "/api/v1/conversations", headers });
+			expect(list2.json().conversations[0].messageCount).toBeGreaterThan(0);
+		} finally {
+			if (app) await app.close();
+			app = undefined;
+			if (dir) cleanupDataDir(dir);
+			dir = undefined;
+		}
+	});
+
+
 	it("通知推送:到期任务触发记录,重复触发去重", async () => {
 		dir = tmpDataDir("api-notify");
 		const queue = createMemoryReminderQueue();
@@ -365,7 +398,34 @@ describe("api", () => {
 		const seqs = tl.json().events.map((e: { seq: number }) => e.seq);
 		expect([...seqs].sort((a, b) => a - b)).toEqual(seqs);
 	});
-		it("知识沉淀:分析后生成话术候选,确认入库后可检索", async () => {
+	
+	it("知识库批量导入:分类+多条知识点+幂等", async () => {
+		dir = tmpDataDir("api-kb");
+		app = buildApp({ dataDir: dir, mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/knowledge/batch",
+			payload: { category: "价格政策", entries: [{ title: "旗舰版价格", content: "旗舰版 1999 元/年" }, { title: "标准版价格", content: "标准版 999 元/年" }] },
+			headers,
+		});
+		expect(res.statusCode).toBe(200);
+		expect(res.json().results).toHaveLength(2);
+		expect(res.json().results[0].skipped).toBe(false);
+		const search = await app.inject({ method: "GET", url: "/api/v1/knowledge/search?q=1999", headers });
+		expect(search.json().hits.some((h: { category?: string | null }) => h.category === "价格政策")).toBe(true);
+		// 幂等:再传一遍全部跳过
+		const again = await app.inject({
+			method: "POST",
+			url: "/api/v1/knowledge/batch",
+			payload: { category: "价格政策", entries: [{ title: "旗舰版价格", content: "x" }, { title: "标准版价格", content: "x" }] },
+			headers,
+		});
+		expect(again.json().results.every((r: { skipped: boolean }) => r.skipped)).toBe(true);
+	});
+
+
+	it("知识沉淀:分析后生成话术候选,确认入库后可检索", async () => {
 		dir = tmpDataDir("api-candidates");
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const headers = { "x-tenant-id": "t1" };

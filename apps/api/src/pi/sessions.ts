@@ -19,6 +19,7 @@ export function buildConversationText(messages: ConversationMessage[]): string {
 
 export interface SessionStore {
 	createConversation(): Promise<{ session: import("@earendil-works/pi-agent-core").Session<any>; conversationId: string }>;
+	openConversation(conversationId: string): Promise<import("@earendil-works/pi-agent-core").Session<any>>;
 	close(): Promise<void>;
 }
 
@@ -43,6 +44,10 @@ export function openSessionStore(dataDir: string, databasePath?: string): Sessio
 			const session = await repo.create({ cwd: dataDir, metadata: { app: "sales-copilot" } });
 			const { id } = await session.getMetadata();
 			return { session, conversationId: id };
+		},
+		async openConversation(conversationId: string) {
+			// metadata 由后端按 id 查找,所需字段仅 id/cwd;类型按需断言
+			return repo.open({ id: conversationId, createdAt: 0, cwd: dataDir, path: dbPath } as never);
 		},
 		async close() {
 			await repo.close();

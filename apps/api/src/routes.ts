@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify";
 import type { DatabaseSync } from "node:sqlite";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import type { ModelRuntime } from "./pi/models.js";
-import { ingestDocument } from "./services/ingest.js";
+import { ingestDocument, ingestEntries } from "./services/ingest.js";
 import { searchKnowledge } from "./repositories/knowledge.js";
 import { normalizeAnalyzeMessages } from "./services/conversation.js";
 import { requireTenant, upsertCustomer } from "./repositories/customers.js";
@@ -20,6 +20,8 @@ import { runResponseEvaluation } from "./pi/evaluator.js";
 import { runVoiceDigest } from "./pi/voice-digest.js";
 import { notifyOverdue } from "./services/notifications.js";
 import { listNotificationLogs } from "./repositories/notification-logs.js";
+import { getConversation, listConversations, upsertConversation } from "./repositories/conversations.js";
+import { fetchTranscript } from "./pi/sessions.js";
 import { loadConfig } from "./env.js";
 import { approveCandidate, createCandidate, listCandidates, rejectCandidate } from "./repositories/knowledge-candidates.js";
 import { listAgentEvents } from "./repositories/agent-events.js";
@@ -69,10 +71,17 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
 	app.get("/api/v1/health", async () => ({ status: "ok", ts: Date.now() }));
 
-	app.post<{ Body: { title?: string; content?: string } }>("/api/v1/knowledge", async (request, reply) => {
-		const { title, content } = request.body ?? {};
+	app.post<{ Body: { title?: string; content?: string; category?: string } }>("/api/v1/knowledge", async (request, reply) => {
+		const { title, content, category } = request.body ?? {};
 		if (!title || !content) return reply.code(400).send({ error: "title and content are required" });
-		return ingestDocument(deps.db, { tenantId: request.tenantId, title, content });
+		return ingestDocument(deps.db, { tenantId: request.tenantId, title, content, category });
+	});
+
+	app.post<{ Body: { category?: string; entries?: Array<{ title: string; content: string }> } }>("/api/v1/knowledge/batch", async (request, reply) => {
+		const entries = request.body?.entries;
+		if (!entries || entries.length === 0) return reply.code(400).send({ error: "entries are required" });
+		if (entries.some((e) => !e.title || !e.content)) return reply.code(400).send({ error: "every entry needs title and content" });
+		return { results: ingestEntries(deps.db, { tenantId: request.tenantId, category: request.body?.category, entries }) };
 	});
 	app.get<{ Querystring: { q?: string; limit?: string } }>("/api/v1/knowledge/search", async (request) => {
 		const query = String(request.query.q ?? "").trim();
@@ -157,6 +166,14 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 				createdAt: saved.createdAt,
 			});
 		}
+
+		upsertConversation(deps.db, {
+			id: result.conversationId,
+			tenantId: request.tenantId,
+			customerId: customer.id,
+			salesName: (request.headers["x-sales-name"] as string | undefined) ?? "默认销售",
+			messageCount: result.messages.filter((m) => (m as { role: string }).role !== "user").length,
+		});
 
 		return { analysisId: saved.id, conversationId: result.conversationId, analysis: saved };
 	});
@@ -347,6 +364,96 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
 	app.get("/api/v1/notifications", async (request) => {
 		return { logs: listNotificationLogs(deps.db, request.tenantId) };
+	});
+
+	app.get<{ Querystring: { limit?: string } }>("/api/v1/conversations", async (request) => {
+		const limit = Math.min(Number(request.query.limit ?? 30) || 30, 100);
+		return { conversations: listConversations(deps.db, request.tenantId, limit) };
+	});
+
+	app.post<{ Params: { id: string } }>("/api/v1/conversations/:id/analyze", async (request, reply) => {
+		const meta = getConversation(deps.db, request.tenantId, request.params.id);
+		if (!meta) return reply.code(404).send({ error: "conversation_not_found", message: "会话不存在" });
+		const session = await deps.store.openConversation(meta.id);
+		const transcript = await fetchTranscript(session);
+		if (transcript.length === 0) return reply.code(422).send({ error: "conversation_empty", message: "会话中无消息" });
+
+		const customer = upsertCustomer(deps.db, { tenantId: request.tenantId, key: meta.customerKey ?? `c_${randomUUID().slice(0, 8)}` });
+		const result = await runCopilotAnalysis(
+			{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
+			{ messages: transcript, customerKey: customer.key },
+		);
+		if (!result.details) return reply.code(502).send({ error: "agent produced no analysis" });
+
+		const saved = createAnalysis(deps.db, {
+			tenantId: request.tenantId,
+			customerId: customer.id,
+			conversationId: result.conversationId,
+			intent: result.details.intent,
+			summary: result.details.summary,
+			signals: result.details.signals,
+			suggestedReply: result.details.suggestedReply,
+			nextSteps: result.details.nextSteps,
+			followupAt: result.details.followupAt,
+		});
+
+		const firstStep = result.details.nextSteps[0];
+		if (result.details.followupAt || firstStep) {
+			const task = createTask(deps.db, {
+				tenantId: request.tenantId,
+				customerId: customer.id,
+				analysisId: saved.id,
+				action: firstStep ?? "跟进客户",
+				dueAt: result.details.followupAt,
+			});
+			const dueMs = task.dueAt ? Date.parse(task.dueAt) : Number.NaN;
+			void deps.reminders.add(task.id, Number.isFinite(dueMs) ? dueMs : null);
+		}
+
+		refreshCustomerTags(deps.db, {
+			tenantId: request.tenantId,
+			customerId: customer.id,
+			analysisId: saved.id,
+			intent: saved.intent,
+			signals: (saved.signals as Array<{ kind?: string; quote?: string; note?: string }>) ?? [],
+		});
+
+		if (result.details.suggestedReply && result.details.suggestedReply.length >= 40) {
+			const intent = (saved.intent ?? "通用").slice(0, 40);
+			createCandidate(deps.db, {
+				tenantId: request.tenantId,
+				analysisId: saved.id,
+				intent,
+				draftTitle: `话术·${intent}`.slice(0, 120),
+				draftContent: `【适用场景】${saved.summary.slice(0, 120)}\n【话术】${result.details.suggestedReply}`,
+			});
+		}
+
+		if (deps.mysqlSink) {
+			void deps.mysqlSink.appendAnalysis({
+				id: saved.id,
+				tenantId: request.tenantId,
+				customerId: customer.id,
+				conversationId: saved.conversationId,
+				intent: saved.intent,
+				summary: saved.summary,
+				signalsJson: JSON.stringify(saved.signals),
+				suggestedReply: saved.suggestedReply,
+				nextStepsJson: JSON.stringify(saved.nextSteps),
+				followupAt: saved.followupAt,
+				createdAt: saved.createdAt,
+			});
+		}
+
+		upsertConversation(deps.db, {
+			id: result.conversationId,
+			tenantId: request.tenantId,
+			customerId: customer.id,
+			salesName: meta.salesName,
+			messageCount: result.messages.filter((m) => (m as { role: string }).role !== "user").length,
+		});
+
+		return { analysisId: saved.id, conversationId: result.conversationId, analysis: saved };
 	});
 
 	app.get<{ Params: { conversationId: string } }>("/api/v1/conversations/:conversationId/timeline", async (request) => {
