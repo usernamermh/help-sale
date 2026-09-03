@@ -10,6 +10,20 @@ const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "sche
 export function migrate(db: DatabaseSync): void {
 	const current = db.prepare("PRAGMA user_version").get() as { user_version: number };
 	if (current.user_version >= MIGRATION_VERSION) return;
+
+	// v10:先补 knowledge_documents.category 列,再执行全量 schema(索引引用该列)
+	if (current.user_version < 10) {
+		const hasKd = db
+			.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'knowledge_documents'")
+			.get();
+		if (hasKd) {
+			const kdCols = db.prepare("PRAGMA table_info(knowledge_documents)").all() as Array<{ name: string }>;
+			if (!kdCols.some((col) => col.name === "category")) {
+				db.exec("ALTER TABLE knowledge_documents ADD COLUMN category TEXT;");
+			}
+		}
+	}
+
 	const sql = readFileSync(schemaPath, "utf8");
 	db.exec(sql);
 	// v8:重建 customer_tags(唯一约束改为 客户+标签,支持跨分析权重累加)
@@ -29,13 +43,6 @@ export function migrate(db: DatabaseSync): void {
 				UNIQUE (tenant_id, customer_id, tag)
 			);`,
 		);
-	}
-	// v10:knowledge_documents 增加分类列(旧库补列,新库 CREATE 已含,按列存在性判断)
-	if (current.user_version < 10) {
-		const kdCols = db.prepare("PRAGMA table_info(knowledge_documents)").all() as Array<{ name: string }>;
-		if (!kdCols.some((col) => col.name === "category")) {
-			db.exec("ALTER TABLE knowledge_documents ADD COLUMN category TEXT;");
-		}
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }

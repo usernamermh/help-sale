@@ -112,7 +112,8 @@ describe("api", () => {
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
 		expect(res.body).toContain("销售军师");
-		expect(res.body).toContain("copilot/analyze");
+		expect(res.body).toContain("会话库分析");
+		expect(res.body).toContain("panel-knowledge");
 	});
 
 	it("health 可达", async () => {

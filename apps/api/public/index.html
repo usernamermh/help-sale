@@ -5,579 +5,386 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>销售军师 · 助销 Agent</title>
 <style>
-  :root { --bg:#f5f7fa; --card:#fff; --line:#e2e8f0; --text:#1e293b; --muted:#64748b; --brand:#2563eb; --ok:#16a34a; --warn:#d97706; --danger:#dc2626; }
-  * { box-sizing:border-box; }
-  body { margin:0; font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; background:var(--bg); color:var(--text); }
-  header { display:flex; align-items:center; gap:12px; padding:16px 24px; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:10; }
-  header h1 { font-size:18px; margin:0; }
-  #health { font-size:12px; color:var(--muted); margin-left:auto; display:flex; align-items:center; gap:6px; }
-  .dot { width:8px; height:8px; border-radius:50%; background:#94a3b8; }
-  .dot.ok { background:var(--ok); }
-  main { max-width:1080px; margin:24px auto; padding:0 16px; display:grid; grid-template-columns: 420px 1fr; gap:24px; }
-  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:18px; }
-  .card h2 { font-size:15px; margin:0 0 12px; }
-  label { display:block; font-size:13px; color:var(--muted); margin:12px 0 4px; }
-  textarea, input { width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:14px; font-family:inherit; background:#fff; }
-  textarea { resize:vertical; min-height:180px; }
-  button { border:0; border-radius:8px; padding:10px 18px; font-size:14px; cursor:pointer; background:var(--brand); color:#fff; }
-  button:disabled { opacity:.55; cursor:wait; }
-  button.secondary { background:#e2e8f0; color:var(--text); }
-  .row { display:flex; gap:12px; }
-  .row > * { flex:1; }
-  .badge { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; background:#eef2ff; color:var(--brand); }
-  .badge.warn { background:#fffbeb; color:var(--warn); }
-  .badge.danger { background:#fef2f2; color:var(--danger); }
-  .signal { border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:10px; }
-  .signal .quote { margin:4px 0; padding:6px 10px; background:#f8fafc; border-radius:6px; font-size:13px; color:#475569; }
-  .signal .note { font-size:13px; color:var(--muted); margin:0; }
-  .suggest { min-height:150px; }
-  .steps li { margin-bottom:6px; font-size:14px; }
-  .meta { font-size:12px; color:var(--muted); }
-  .error { background:#fef2f2; color:var(--danger); border:1px solid #fecaca; border-radius:8px; padding:10px 12px; margin-top:12px; font-size:13px; }
-  .hidden { display:none; }
-  .history-item { border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:8px; font-size:13px; }
-  .history-item .t { color:var(--muted); font-size:12px; }
-  .digest-content { white-space:pre-wrap; font-size:13px; color:#334155; background:#f8fafc; border-radius:8px; padding:10px 12px; }
+:root { --bg:#f5f7fa; --card:#fff; --line:#e2e8f0; --text:#1e293b; --muted:#64748b; --brand:#2563eb; --ok:#16a34a; --warn:#d97706; --danger:#dc2626; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; background:var(--bg); color:var(--text); }
+header { display:flex; align-items:center; gap:12px; padding:12px 24px; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20; }
+header h1 { font-size:17px; margin:0; }
+#health { font-size:12px; color:var(--muted); margin-left:auto; display:flex; align-items:center; gap:6px; }
+.dot { width:8px; height:8px; border-radius:50%; background:#94a3b8; } .dot.ok { background:var(--ok); }
+.tabs { display:flex; gap:4px; padding:0 24px; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:56px; z-index:15; }
+.tab { padding:10px 16px; cursor:pointer; font-size:14px; color:var(--muted); border-bottom:2px solid transparent; }
+.tab.active { color:var(--brand); border-bottom-color:var(--brand); font-weight:600; }
+main { max-width:1200px; margin:16px auto; padding:0 16px; }
+.panel { display:none; gap:16px; } .panel.active { display:grid; grid-template-columns:380px 1fr; }
+@media (max-width:860px){ .panel.active { grid-template-columns:1fr; } }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:14px; }
+.card h2 { font-size:15px; margin:0 0 10px; }
+label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
+textarea, input, select { width:100%; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:13px; font-family:inherit; background:#fff; }
+textarea { resize:vertical; }
+button { border:0; border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; background:var(--brand); color:#fff; }
+button:disabled { opacity:.55; cursor:wait; }
+button.secondary { background:#e2e8f0; color:var(--text); }
+.row { display:flex; gap:10px; } .row > * { flex:1; }
+.badge { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; background:#eef2ff; color:var(--brand); margin-right:4px; }
+.badge.warn { background:#fffbeb; color:var(--warn); } .badge.danger { background:#fef2f2; color:var(--danger); }
+.item { border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-bottom:8px; font-size:13px; }
+.item .t { color:var(--muted); font-size:12px; }
+.item.selected { border-color:var(--brand); background:#eff6ff; }
+.error { background:#fef2f2; color:var(--danger); border:1px solid #fecaca; border-radius:8px; padding:8px 10px; margin-top:10px; font-size:12px; }
+.hidden { display:none; }
+.digest-content { white-space:pre-wrap; font-size:12px; color:#334155; background:#f8fafc; border-radius:8px; padding:8px 10px; }
+.mini { font-size:12px; color:var(--muted); }
 </style>
 </head>
 <body>
 <header>
-  <h1>销售军师</h1>
-  <span id="health"><span class="dot" id="healthDot"></span><span id="healthText">检查中…</span></span>
+<h1>销售军师</h1>
+<span id="health"><span class="dot" id="healthDot"></span><span id="healthText">检查中…</span></span>
 </header>
+<div class="tabs">
+<span class="tab active" data-tab="workspace">工作台</span>
+<span class="tab" data-tab="knowledge">知识库</span>
+<span class="tab" data-tab="tasks">跟进与通知</span>
+<span class="tab" data-tab="insights">洞察晨报</span>
+</div>
 <main>
-  <div>
-    <div class="card">
-      <h2>客户对话分析</h2>
-      <label>粘贴客户沟通记录</label>
-      <textarea id="transcript" placeholder="客户:你们旗舰版一年多少钱?有点贵,我们预算一年1500。另一个供应商报了1200,你们贵在哪?"></textarea>
-      <label>客户标识(customerKey,留空自动生成)</label>
-      <input id="customerKey" placeholder="c_demo" value="c_demo">
-      <label>租户</label>
-      <input id="tenantId" placeholder="t_demo" value="t_demo">
-      <div style="margin-top:14px"><button id="analyzeBtn">开始分析</button></div>
-      <div id="analyzeError" class="error hidden"></div>
-    </div>
-
-    <div class="card">
-    <div class="card">
+<section class="panel active" id="panel-workspace">
+<div>
 <div class="card">
-      <h2>话术评估</h2>
-      <label>客户对话</label>
-      <textarea id="evalConversation" style="min-height:70px" placeholder="客户:太贵了…"></textarea>
-      <label>你的回复</label>
-      <textarea id="evalReply" style="min-height:70px" placeholder="粘贴你的回复话术"></textarea>
-      <div style="margin-top:14px"><button id="evalBtn" class="secondary">评估并改进</button></div>
-      <div id="evalError" class="error hidden"></div>
-    </div>
+<h2>会话库分析</h2>
+<div class="mini" style="margin-bottom:8px">从数据库选取会话分析,无需手动粘贴。</div>
+<button id="convRefreshBtn" class="secondary" style="margin-bottom:8px">刷新会话</button>
+<div id="convList" class="mini">加载中…</div>
+<div id="analyzeMsg" class="mini" style="margin-top:8px"></div>
+</div>
 <div class="card">
-      <h2>通话/试驾总结</h2>
-      <label>粘贴试驾、电话或到店沟通文字稿</label>
-      <textarea id="digestText" style="min-height:90px" placeholder="客户试驾了汉EV,说空间不错,但价格有点高…"></textarea>
-      <div style="margin-top:14px"><button id="digestBtn" class="secondary">生成总结</button></div>
-      <div id="digestError" class="error hidden"></div>
-      <div id="digestBox" style="font-size:13px;margin-top:8px"></div>
-    </div>
-      <h2>车型优选</h2>
-      <label>预算区间(万元)</label>
-      <div class="row">
-        <input id="vBudgetMin" type="number" placeholder="最低" value="15">
-        <input id="vBudgetMax" type="number" placeholder="最高" value="30">
-      </div>
-      <div class="row">
-        <div><label>座位数</label><input id="vSeats" type="number" placeholder="5" value="5"></div>
-        <div><label>能源类型</label><input id="vEnergy" placeholder="纯电/混动/不限"></div>
-      </div>
-      <label>用车场景</label>
-      <input id="vUsage" placeholder="商务接待 / 家庭通勤 / 城市代步…">
-      <div style="margin-top:14px"><button id="vehicleBtn">生成优选方案</button></div>
-      <div id="vehicleError" class="error hidden"></div>
-    </div>
-    <div class="card">
-      <h2>知识沉淀</h2>
-      <div id="candidateList" style="margin-top:8px"></div>
-    </div>
-      <h2>知识库上传</h2>
-      <label>标题(同名重复上传会被跳过)</label>
-      <input id="docTitle" placeholder="价格政策">
-      <label>内容</label>
-      <textarea id="docContent" style="min-height:90px" placeholder="旗舰版 1999 元/年,政企客户可申请 9 折…"></textarea>
-      <div style="margin-top:14px"><button id="uploadBtn" class="secondary">上传知识</button></div>
-      <div id="uploadResult" class="meta" style="margin-top:8px"></div>
-    </div>
-
-    <div class="card">
-    <div class="card">
-      <h2>跟进任务 <button id="notifyBtn" class="secondary" style="padding:4px 10px;font-size:12px;float:right">推送到期提醒</button></h2>
-      <div id="notifyResult" class="meta" style="font-size:12px;margin-bottom:6px"></div>
-      <div id="taskList" style="margin-top:12px"></div>
-    </div>
-    <div class="card">
+<h2>车型优选</h2>
+<div class="row"><input id="vBudgetMin" type="number" placeholder="预算最低" value="15"><input id="vBudgetMax" type="number" placeholder="预算最高" value="30"></div>
+<div class="row"><input id="vSeats" type="number" placeholder="座位" value="5"><input id="vEnergy" placeholder="能源(纯电/混动)"></div>
+<label>用车场景</label><input id="vUsage" placeholder="商务接待 / 家庭通勤…">
+<div style="margin-top:10px"><button id="vehicleBtn">生成优选方案</button></div>
+<div id="vehicleError" class="error hidden"></div>
+</div>
 <div class="card">
-      <h2>经营洞察(近 7 天)</h2>
-      <div id="insightBox" style="font-size:13px"></div>
-    </div>
-      <h2>军师晨报</h2>
-      <div style="margin-bottom:8px"><button id="digestBtn" class="secondary">生成今日晨报</button></div>
-      <div id="digestList"></div>
-    </div>
-      <h2>历史分析</h2>
-      <div class="row">
-        <input id="historyKey" placeholder="c_demo">
-        <button id="historyBtn" class="secondary">查询</button>
-      </div>
-      <div id="historyList" style="margin-top:12px"></div>
-    </div>
-  </div>
-
-  <div>
+<h2>话术评估</h2>
+<textarea id="evalConversation" style="min-height:60px" placeholder="客户对话"></textarea>
+<textarea id="evalReply" style="min-height:60px" placeholder="你的回复"></textarea>
+<div style="margin-top:10px"><button id="evalBtn" class="secondary">评估并改进</button></div>
+<div id="evalError" class="error hidden"></div>
+</div>
+<div class="card">
+<h2>通话/试驾总结</h2>
+<textarea id="digestText" style="min-height:70px" placeholder="粘贴文字稿…"></textarea>
+<div style="margin-top:10px"><button id="digestBtn" class="secondary">生成总结</button></div>
+<div id="digestError" class="error hidden"></div>
+<div id="digestBox" class="mini" style="margin-top:8px"></div>
+</div>
+</div>
+<div>
+<div class="card hidden" id="resultCard">
+<h2>分析结果 <span class="badge" id="intentBadge"></span></h2>
+<p id="summary" style="font-size:13px"></p>
+<div style="margin-top:10px"><b>信号</b></div><div id="signals"></div>
+<div style="margin-top:10px"><b>建议回复</b></div><textarea id="suggestedReply" style="min-height:80px" readonly></textarea>
+<div style="margin-top:8px"><button id="copyBtn" class="secondary">复制话术</button></div>
+<div style="margin-top:10px"><b>下一步</b></div><ol id="nextSteps"></ol>
+<p class="mini" id="followupAt"></p>
+<p class="mini" id="resultMeta"></p>
+<div style="margin-top:10px"><b>过程回放</b></div><div id="timelineBox" class="mini"></div>
+</div>
+<div class="card hidden" id="vehicleResultCard">
+<h2>优选方案 <span class="badge" id="vProfile"></span></h2>
+<div id="vehicleList"></div>
+<div style="margin-top:10px"><b>关键差异</b></div><ul id="vDifferences"></ul>
+<div style="margin-top:10px"><b>建议话术</b></div><textarea id="vReply" style="min-height:80px" readonly></textarea>
+<div style="margin-top:8px"><button id="vCopyBtn" class="secondary">复制话术</button></div>
+<div style="margin-top:10px"><b>下一步</b></div><ol id="vNextSteps"></ol>
+<p class="mini" id="vMeta"></p>
+</div>
 <div class="card hidden" id="evalResultCard">
-      <h2>评估结果 <span class="badge" id="evalScore"></span></h2>
-      <div id="evalDims" style="font-size:13px"></div>
-      <div style="margin-top:10px"><b>做得好的</b></div>
-      <ul class="steps" id="evalStrengths"></ul>
-      <div style="margin-top:10px"><b>可改进</b></div>
-      <ul class="steps" id="evalImprovements"></ul>
-      <div style="margin-top:10px"><b>建议回复</b></div>
-      <textarea class="suggest" id="evalSuggested" readonly></textarea>
-      <div style="margin-top:8px"><button id="evalCopyBtn" class="secondary">复制建议话术</button></div>
-      <p class="meta" id="evalMeta"></p>
-    </div>
-    <div class="card hidden" id="vehicleResultCard">
-      <h2>优选方案 <span class="badge" id="vProfile"></span></h2>
-      <div id="vehicleList"></div>
-      <h2 style="margin-top:18px">关键差异</h2>
-      <ul class="steps" id="vDifferences"></ul>
-      <h2 style="margin-top:18px">建议话术</h2>
-      <textarea class="suggest" id="vReply" readonly></textarea>
-      <div style="margin-top:8px"><button id="vCopyBtn" class="secondary">复制话术</button></div>
-      <h2 style="margin-top:18px">下一步</h2>
-      <ol class="steps" id="vNextSteps"></ol>
-      <p class="meta" id="vMeta"></p>
-    </div>
-    <div class="card hidden" id="resultCard">
-      <h2>分析结果 <span class="badge" id="intentBadge"></span></h2>
-      <p id="summary" style="font-size:14px"></p>
-      <h2 style="margin-top:18px">信号</h2>
-      <div id="signals"></div>
-      <h2 style="margin-top:18px">建议回复</h2>
-      <textarea class="suggest" id="suggestedReply" readonly></textarea>
-      <div style="margin-top:8px"><button id="copyBtn" class="secondary">复制话术</button></div>
-      <h2 style="margin-top:18px">下一步</h2>
-      <ol class="steps" id="nextSteps"></ol>
-      <p class="meta" id="followupAt"></p>
-      <p class="meta" id="resultMeta"></p>
-      <h2 style="margin-top:18px">过程回放</h2>
-      <div id="timelineBox" class="meta" style="font-size:12px"></div>
-
-    </div>
-  </div>
+<h2>评估结果 <span class="badge" id="evalScore"></span></h2>
+<div id="evalDims" class="mini"></div>
+<div style="margin-top:10px"><b>做得好的</b></div><ul id="evalStrengths"></ul>
+<div style="margin-top:10px"><b>可改进</b></div><ul id="evalImprovements"></ul>
+<div style="margin-top:10px"><b>建议回复</b></div><textarea id="evalSuggested" style="min-height:80px" readonly></textarea>
+<div style="margin-top:8px"><button id="evalCopyBtn" class="secondary">复制建议话术</button></div>
+<p class="mini" id="evalMeta"></p>
+</div>
+</div>
+</section>
+<section class="panel" id="panel-knowledge">
+<div>
+<div class="card"><h2>知识沉淀</h2><div class="mini" style="margin-bottom:8px">会话分析后自动生成候选(基于库内对话),一键入库。</div><div id="candidateList"></div></div>
+<div class="card"><h2>知识库检索</h2><div class="row"><input id="kbSearch" placeholder="检索关键词"><button id="kbSearchBtn" class="secondary">检索</button></div><div id="kbHits" class="mini" style="margin-top:8px"></div></div>
+</div>
+<div>
+<div class="card">
+<h2>知识库上传(分类 + 多条知识点)</h2>
+<label>分类</label><input id="docCategory" placeholder="如 价格政策 / 竞品话术 / 售后FAQ">
+<label>每行一条: 标题 :: 内容</label>
+<textarea id="docEntries" style="min-height:120px" placeholder="旗舰版价格 :: 1999元/年,年付送一个月&#10;售后网点 :: 全国300家"></textarea>
+<div style="margin-top:10px"><button id="uploadEntriesBtn">批量上传</button></div>
+<div id="uploadResult" class="mini" style="margin-top:8px"></div>
+</div>
+</div>
+</section>
+<section class="panel" id="panel-tasks">
+<div>
+<div class="card">
+<h2>跟进任务 <button id="notifyBtn" class="secondary" style="padding:4px 10px;font-size:12px;float:right">推送到期提醒</button></h2>
+<div id="notifyResult" class="mini" style="margin-bottom:6px"></div>
+<div id="taskList"></div>
+</div>
+</div>
+<div>
+<div class="card">
+<h2>客户画像</h2>
+<div class="row"><input id="historyKey" placeholder="客户标识 e.g. c_001" value="c_001"><button id="tagBtn" class="secondary">查标签和历史</button></div>
+<div id="tagBox" style="margin-top:8px"></div>
+<div id="historyList" class="mini" style="margin-top:8px"></div>
+</div>
+</div>
+</section>
+<section class="panel" id="panel-insights">
+<div><div class="card"><h2>经营洞察(近7天)</h2><div id="insightBox" class="mini"></div></div></div>
+<div><div class="card"><h2>军师晨报</h2><button id="digestBtn2" class="secondary" style="margin-bottom:8px">生成今日晨报</button><div id="digestList"></div></div></div>
+</section>
 </main>
 <script>
+
+<script>
+
 const $ = (id) => document.getElementById(id);
 const api = async (path, options = {}) => {
-  const res = await fetch(path, { headers: { "Content-Type": "application/json", "x-tenant-id": $("tenantId").value || "t_demo" }, ...options });
+  const res = await fetch(path, { headers: { "Content-Type": "application/json", "x-tenant-id": "t_demo" }, ...options });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error || body.message || ("HTTP " + res.status));
   return body;
 };
-
-async function checkHealth() {
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", """: "&quot;", "'": "&#39;" }[c])); }
+document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+  tab.classList.add("active");
+  document.querySelectorAll("section.panel").forEach((p) => p.classList.remove("active"));
+  document.getElementById("panel-" + tab.dataset.tab).classList.add("active");
+}));
+async function checkHealth() { try { await fetch("/api/v1/health"); $("healthDot").className = "dot ok"; $("healthText").textContent = "服务正常"; } catch { $("healthText").textContent = "服务不可用"; } }
+let selectedConvId = null;
+async function loadConversations() {
+  const box = $("convList"); box.innerHTML = "加载中…";
   try {
-    const h = await fetch("/api/v1/health").then((r) => r.json());
-    $("healthDot").className = "dot ok";
-    $("healthText").textContent = "服务正常";
-  } catch {
-    $("healthDot").className = "dot";
-    $("healthText").textContent = "服务不可用";
-  }
+    const r = await api("/api/v1/conversations?limit=30");
+    const list = r.conversations || [];
+    if (!list.length) { box.innerHTML = "暂无会话"; return; }
+    box.innerHTML = "";
+    for (const c of list) {
+      const d = document.createElement("div");
+      d.className = "item" + (selectedConvId === c.id ? " selected" : "");
+      d.innerHTML = "<div><b>" + escapeHtml(c.customerName || c.customerKey || "未知客户") + "</b> <span class=\"badge\">" + escapeHtml(c.salesName) + "</span></div><div class=\"t\">" + escapeHtml(c.id.slice(0, 10)) + "… · " + escapeHtml(new Date(c.createdAt).toLocaleString()) + " · " + c.messageCount + " 条</div>";
+      d.style.cursor = "pointer";
+      d.addEventListener("click", async () => { selectedConvId = c.id; loadConversations(); await analyzeConversation(); });
+      box.appendChild(d);
+    }
+  } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
 }
-
-$("analyzeBtn").addEventListener("click", async () => {
-  const btn = $("analyzeBtn");
-  const err = $("analyzeError");
-  err.classList.add("hidden");
-  const transcript = $("transcript").value.trim();
-  if (!transcript) { err.textContent = "请先粘贴对话内容"; err.classList.remove("hidden"); return; }
-  btn.disabled = true; btn.textContent = "分析中…";
+async function analyzeConversation() {
+  if (!selectedConvId) return;
+  const box = $("analyzeMsg"); box.textContent = "分析中…";
   try {
-    const result = await api("/api/v1/copilot/analyze", { method: "POST", body: JSON.stringify({ transcript, customerKey: $("customerKey").value.trim() || undefined }) });
-    renderResult(result.analysis);
-    $("historyKey").value = $("customerKey").value.trim() || "自动生成";
-    loadTasks();
-loadNotifications();
-loadDigests();
-loadCandidates();
-loadInsights();
-  } catch (e) {
-    err.textContent = "分析失败:" + e.message;
-    err.classList.remove("hidden");
-  } finally {
-    btn.disabled = false; btn.textContent = "开始分析";
-  }
-});
-
+    const r = await api("/api/v1/conversations/" + selectedConvId + "/analyze", { method: "POST" });
+    renderResult(r.analysis); box.textContent = "分析完成:" + r.analysisId;
+    loadTasks(); loadCandidates(); loadDigests(); loadInsights();
+  } catch (e) { box.textContent = "分析失败:" + e.message; }
+}
+$("convRefreshBtn").addEventListener("click", loadConversations);
+$("convList").addEventListener("click", (ev) => { const item = ev.target.closest(".item"); if (item && selectedConvId) analyzeConversation(); });
 function renderResult(a) {
   $("resultCard").classList.remove("hidden");
   $("intentBadge").textContent = a.intent || "";
   $("summary").textContent = a.summary || "";
-  const signals = $("signals");
-  signals.innerHTML = "";
+  const signals = $("signals"); signals.innerHTML = "";
   for (const s of a.signals || []) {
     const cls = s.kind === "risk" ? "danger" : s.kind === "buying_signal" ? "warn" : "";
-    const div = document.createElement("div");
-    div.className = "signal";
-    div.innerHTML = `<span class="badge ${cls}">${escapeHtml(s.kind || "")}</span><p class="quote">“${escapeHtml(s.quote || "")}”</p><p class="note">${escapeHtml(s.note || "")}</p>`;
+    const div = document.createElement("div"); div.className = "item";
+    div.innerHTML = "<span class=\"badge " + cls + "\">" + escapeHtml(s.kind || "") + "</span><p>“" + escapeHtml(s.quote || "") + "”</p><div class=\"t\">" + escapeHtml(s.note || "") + "</div>";
     signals.appendChild(div);
   }
   $("suggestedReply").value = a.suggestedReply || "";
-  const steps = $("nextSteps");
-  steps.innerHTML = "";
-  for (const step of a.nextSteps || []) {
-    const li = document.createElement("li");
-    li.textContent = step;
-    steps.appendChild(li);
-  }
+  const steps = $("nextSteps"); steps.innerHTML = "";
+  for (const step of a.nextSteps || []) { const li = document.createElement("li"); li.textContent = step; steps.appendChild(li); }
   $("followupAt").textContent = a.followupAt ? "建议跟进时间:" + a.followupAt : "";
   $("resultMeta").textContent = "分析ID:" + a.id + " / 会话:" + a.conversationId;
-    loadTimeline(a.conversationId);
-  window.scrollTo({ top: $("resultCard").offsetTop - 80, behavior: "smooth" });
+  loadTimeline(a.conversationId);
+  $("resultCard").scrollIntoView({ behavior: "smooth" });
 }
-
-$("copyBtn").addEventListener("click", async () => {
-  const v = $("suggestedReply").value;
-  if (!v) return;
-  try { await navigator.clipboard.writeText(v); $("copyBtn").textContent = "已复制"; setTimeout(() => ($("copyBtn").textContent = "复制话术"), 1500); }
-  catch { $("suggestedReply").select(); document.execCommand("copy"); }
-});
-
+async function loadTimeline(conversationId) {
+  const box = $("timelineBox"); if (!conversationId) { box.textContent = ""; return; }
+  try { const r = await api("/api/v1/conversations/" + conversationId + "/timeline"); const steps = []; for (const e of r.events || []) { if (e.type === "agent_start") steps.push("🚀 开始"); else if (e.type === "tool_start") steps.push("调用:" + e.toolName); else if (e.type === "tool_end") steps.push("完成:" + e.toolName); else if (e.type === "agent_end") steps.push("收尾"); } box.textContent = steps.join(" → "); } catch { box.textContent = ""; }
+}
+async function copyToClipboard(id, label, text) { if (!text) return; try { await navigator.clipboard.writeText(text); $(id).textContent = "已复制"; setTimeout(() => ($(id).textContent = label), 1500); } catch {} }
+$("copyBtn").addEventListener("click", () => copyToClipboard("copyBtn", "复制话术", $("suggestedReply").value));
 $("vehicleBtn").addEventListener("click", async () => {
-  const btn = $("vehicleBtn");
-  const err = $("vehicleError");
-  err.classList.add("hidden");
-  const requirements = {
-    budgetMin: Number($("vBudgetMin").value) || undefined,
-    budgetMax: Number($("vBudgetMax").value) || undefined,
-    seats: Number($("vSeats").value) || undefined,
-    energyType: $("vEnergy").value.trim() || undefined,
-    usage: $("vUsage").value.trim() || undefined,
-  };
-  if (!requirements.budgetMin && !requirements.budgetMax && !requirements.usage) {
-    err.textContent = "请至少填写预算或用车场景"; err.classList.remove("hidden"); return;
-  }
-  btn.disabled = true; btn.textContent = "优选中…";
-  try {
-    const result = await api("/api/v1/copilot/vehicle-match", {
-      method: "POST",
-      body: JSON.stringify({ customerKey: $("customerKey").value.trim() || "c_car", requirements }),
-    });
-    renderVehiclePlan(result.plan, result.planId, result.conversationId);
-  } catch (e) {
-    err.textContent = "优选失败:" + e.message; err.classList.remove("hidden");
-  } finally {
-    btn.disabled = false; btn.textContent = "生成优选方案";
-  }
+  const err = $("vehicleError"); err.classList.add("hidden");
+  const requirements = { budgetMin: Number($("vBudgetMin").value) || undefined, budgetMax: Number($("vBudgetMax").value) || undefined, seats: Number($("vSeats").value) || undefined, energyType: $("vEnergy").value.trim() || undefined, usage: $("vUsage").value.trim() || undefined };
+  if (!requirements.budgetMin && !requirements.budgetMax && !requirements.usage) { err.textContent = "请至少填写预算或场景"; err.classList.remove("hidden"); return; }
+  const btn = $("vehicleBtn"); btn.disabled = true; btn.textContent = "优选中…";
+  try { const r = await api("/api/v1/copilot/vehicle-match", { method: "POST", body: JSON.stringify({ customerKey: $("historyKey").value.trim() || "c_car", requirements }) }); renderVehiclePlan(r.plan); }
+  catch (e) { err.textContent = "优选失败:" + e.message; err.classList.remove("hidden"); }
+  finally { btn.disabled = false; btn.textContent = "生成优选方案"; }
 });
-
-function renderVehiclePlan(plan, planId, conversationId) {
+function renderVehiclePlan(plan) {
   $("vehicleResultCard").classList.remove("hidden");
   $("vProfile").textContent = plan.profile || "";
-  const list = $("vehicleList");
-  list.innerHTML = "";
+  const list = $("vehicleList"); list.innerHTML = "";
   for (const v of plan.recommendations || []) {
-    const div = document.createElement("div");
-    div.className = "signal";
-    const score = v.fitScore != null ? ' <span class="badge">匹配度 ' + v.fitScore + "</span>" : "";
-    div.innerHTML = "<div><b>" + escapeHtml(v.brand + " " + v.series + " " + v.modelName) + "</b>" + score + "</div>" +
-      '<div class="t" style="font-size:12px;color:#64748b;margin:4px 0">' + escapeHtml(v.priceText + " / " + v.energyType + " / " + v.bodyType + " / " + v.seats + "座") + "</div>" +
-      '<p class="note" style="margin:0">' + escapeHtml(v.reason || "") + "</p>";
+    const div = document.createElement("div"); div.className = "item";
+    const score = v.fitScore != null ? " <span class=\"badge\">匹配度 " + v.fitScore + "</span>" : "";
+    div.innerHTML = "<div><b>" + escapeHtml(v.brand + " " + v.series + " " + v.modelName) + "</b>" + score + "</div><div class=\"t\">" + escapeHtml(v.priceText + " / " + v.energyType + " / " + v.bodyType + " / " + v.seats + "座") + "</div><div class=\"t\">" + escapeHtml(v.reason || "") + "</div>";
     list.appendChild(div);
   }
-  const diff = $("vDifferences");
-  diff.innerHTML = "";
+  const diff = $("vDifferences"); diff.innerHTML = "";
   for (const d of plan.keyDifferences || []) { const li = document.createElement("li"); li.textContent = d; diff.appendChild(li); }
   $("vReply").value = plan.suggestedReply || "";
-  const steps = $("vNextSteps");
-  steps.innerHTML = "";
+  const steps = $("vNextSteps"); steps.innerHTML = "";
   for (const s of plan.nextSteps || []) { const li = document.createElement("li"); li.textContent = s; steps.appendChild(li); }
-  $("vMeta").textContent = "方案ID:" + (planId || "") + " / 会话:" + (conversationId || "");
-  window.scrollTo({ top: $("vehicleResultCard").offsetTop - 80, behavior: "smooth" });
+  $("vMeta").textContent = plan.recommendations.length + " 款推荐";
+  $("vehicleResultCard").scrollIntoView({ behavior: "smooth" });
 }
-
-$("vCopyBtn").addEventListener("click", async () => {
-  const v = $("vReply").value;
-  if (!v) return;
-  try { await navigator.clipboard.writeText(v); $("vCopyBtn").textContent = "已复制"; setTimeout(() => ($("vCopyBtn").textContent = "复制话术"), 1500); }
-  catch { $("vReply").select(); document.execCommand("copy"); }
+$("vCopyBtn").addEventListener("click", () => copyToClipboard("vCopyBtn", "复制话术", $("vReply").value));
+$("evalBtn").addEventListener("click", async () => {
+  const conversation = $("evalConversation").value.trim(); const reply = $("evalReply").value.trim();
+  const err = $("evalError"); err.classList.add("hidden");
+  if (!conversation || !reply) { err.textContent = "客户对话与回复都必填"; err.classList.remove("hidden"); return; }
+  const btn = $("evalBtn"); btn.disabled = true; btn.textContent = "评估中…";
+  try { const r = await api("/api/v1/copilot/evaluate-response", { method: "POST", body: JSON.stringify({ conversation, reply }) }); renderEvaluation(r.evaluation); }
+  catch (e) { err.textContent = "评估失败:" + e.message; err.classList.remove("hidden"); }
+  finally { btn.disabled = false; btn.textContent = "评估并改进"; }
 });
-$("uploadBtn").addEventListener("click", async () => {
-  const btn = $("uploadBtn");
-  const title = $("docTitle").value.trim();
-  const content = $("docContent").value.trim();
-  if (!title || !content) { $("uploadResult").textContent = "标题和内容都必填"; return; }
-  btn.disabled = true;
-  try {
-    const r = await api("/api/v1/knowledge", { method: "POST", body: JSON.stringify({ title, content }) });
-    $("uploadResult").textContent = r.skipped ? "已存在,跳过(幂等)" : ("上传成功,分块 " + (r.chunkCount ?? 0) + " 段");
-  } catch (e) {
-    $("uploadResult").textContent = "上传失败:" + e.message;
-  } finally { btn.disabled = false; }
-});
-
-$("digestBtn").addEventListener("click", async () => {
-  const text = $("digestText").value.trim();
-  const err = $("digestError");
-  err.classList.add("hidden");
-  if (!text) { err.textContent = "请粘贴文字稿"; err.classList.remove("hidden"); return; }
-  const btn = $("digestBtn");
-  btn.disabled = true; btn.textContent = "生成中…";
-  try {
-    const r = await api("/api/v1/copilot/voice-digest", { method: "POST", body: JSON.stringify({ transcript: text }) });
-    const d = r.digest;
-    const box = $("digestBox");
-    box.innerHTML = "<div><b>画像:</b> " + escapeHtml(d.customerProfile || "") + "</div>" +
-      "<div style=\"margin-top:6px\"><b>关注点:</b> " + escapeHtml((d.concerns || []).join("、")) + "</div>" +
-      "<div style=\"margin-top:6px\"><b>阶段:</b> " + escapeHtml(d.progress || "") + "</div>" +
-      "<div style=\"margin-top:6px\"><b>建议动作:</b> " + escapeHtml((d.suggestedActions || []).join("; ")) + "</div>" +
-      "<div style=\"margin-top:6px\" class=\"meta\">" + escapeHtml(d.summary || "") + "</div>";
-  } catch (e) { err.textContent = "总结失败:" + e.message; err.classList.remove("hidden"); }
-  finally { btn.disabled = false; btn.textContent = "生成总结"; }
-});
-
-async function loadImprovements(box) {
-  try {
-    const r = await api("/api/v1/assistant/improvements?days=30").catch(() => null);
-    if (!r || !r.suggestions || r.suggestions.length === 0) return;
-    const div = document.createElement("div");
-    div.innerHTML = "<div style=\"margin-top:10px\"><b>规则改进建议</b></div><ul class=\"steps\" style=\"font-size:12px\"></ul>";
-    const ul = div.querySelector("ul");
-    for (const s of r.suggestions.slice(0, 5)) { const li = document.createElement("li"); li.textContent = s.topic + "(" + s.count + ")·" + s.suggestion; ul.appendChild(li); }
-    box.appendChild(div);
-  } catch {}
-}
-
-async function loadInsights() {
-  const box = $("insightBox");
-  try {
-    const r = await api("/api/v1/assistant/insights?days=7").catch(() => null);
-    if (!r) { box.innerHTML = '<div class="meta">洞察加载失败</div>'; return; }
-    const intents = (r.topIntents || []).map((i) => i.intent + " ×" + i.count).join("、") || "暂无";
-    const brands = (r.topBrands || []).map((b) => b.brand + " ×" + b.count).join("、") || "暂无";
-    box.innerHTML = '<div class="t" style="color:#334155;line-height:1.8">' +
-      '分析 ' + r.analyses + " 次 / 待办 " + r.pendingTasks + " / 到期 " + r.overdueTasks + '<br>' +
-      '任务完成率 ' + Math.round(r.taskCompletionRate * 100) + "% / 方案 " + r.vehiclePlans + '<br>' +
-      '热门意图:' + escapeHtml(intents) + '<br>' +
-      '热门品牌:' + escapeHtml(brands) + '</div>';
-      loadImprovements(box);
-  } catch { box.innerHTML = '<div class="meta">洞察加载失败</div>'; }
-}
-
-async function loadTimeline(conversationId) {
-  const box = $("timelineBox");
-  if (!conversationId) { box.textContent = ""; return; }
-  try {
-    const r = await api("/api/v1/conversations/" + conversationId + "/timeline");
-    const steps = [];
-    for (const e of r.events || []) {
-      if (e.type === "agent_start") steps.push("🚀 开始");
-      else if (e.type === "tool_start") steps.push("调用:" + e.toolName);
-      else if (e.type === "tool_end") steps.push("完成:" + e.toolName);
-      else if (e.type === "agent_end") steps.push("收尾");
-    }
-    box.textContent = steps.join(" → ");
-  } catch { box.textContent = ""; }
-}
-
 function renderEvaluation(d) {
   $("evalResultCard").classList.remove("hidden");
   $("evalScore").textContent = d.score + " 分";
-  const dims = $("evalDims");
-  dims.innerHTML = "";
+  const dims = $("evalDims"); dims.innerHTML = "";
   const labels = { empathy: "共情", structure: "结构", value: "价值传达", compliance: "合规", close: "转化引导" };
-  for (const k of Object.keys(d.dimensions || {})) {
-    const row = document.createElement("div");
-    row.style.margin = "4px 0";
-    row.innerHTML = "<b>" + labels[k] + ":</b> " + d.dimensions[k] + " / 100";
-    dims.appendChild(row);
-  }
-  fillList("evalStrengths", d.strengths);
-  fillList("evalImprovements", d.improvements);
+  for (const k of Object.keys(d.dimensions || {})) { const line = document.createElement("div"); line.textContent = labels[k] + ": " + d.dimensions[k] + " / 100"; dims.appendChild(line); }
+  fillList("evalStrengths", d.strengths); fillList("evalImprovements", d.improvements);
   $("evalSuggested").value = d.suggestedReply || "";
-  $("evalMeta").textContent = "会话:" + (window.__evalConversationId || "");
-  window.scrollTo({ top: $("evalResultCard").offsetTop - 80, behavior: "smooth" });
+  $("evalResultCard").scrollIntoView({ behavior: "smooth" });
 }
-
-function fillList(id, items) {
-  const box = $(id);
-  box.innerHTML = "";
-  for (const item of items || []) { const li = document.createElement("li"); li.textContent = item; box.appendChild(li); }
-}
-
-$("evalBtn").addEventListener("click", async () => {
-  const conversation = $("evalConversation").value.trim();
-  const reply = $("evalReply").value.trim();
-  const err = $("evalError");
-  err.classList.add("hidden");
-  if (!conversation || !reply) { err.textContent = "客户对话与回复都必填"; err.classList.remove("hidden"); return; }
-  const btn = $("evalBtn");
-  btn.disabled = true; btn.textContent = "评估中…";
+function fillList(id, items) { const box = $(id); box.innerHTML = ""; for (const item of items || []) { const li = document.createElement("li"); li.textContent = item; box.appendChild(li); } }
+$("evalCopyBtn").addEventListener("click", () => copyToClipboard("evalCopyBtn", "复制建议话术", $("evalSuggested").value));
+$("digestBtn").addEventListener("click", async () => {
+  const text = $("digestText").value.trim(); const err = $("digestError"); err.classList.add("hidden");
+  if (!text) { err.textContent = "请粘贴文字稿"; err.classList.remove("hidden"); return; }
+  const btn = $("digestBtn"); btn.disabled = true; btn.textContent = "生成中…";
+  try { const r = await api("/api/v1/copilot/voice-digest", { method: "POST", body: JSON.stringify({ transcript: text }) }); const d = r.digest; const box = $("digestBox"); box.innerHTML = "<div><b>画像:</b> " + escapeHtml(d.customerProfile || "") + "</div><div><b>关注点:</b> " + escapeHtml((d.concerns || []).join("、")) + "</div><div><b>阶段:</b> " + escapeHtml(d.progress || "") + "</div><div><b>建议:</b> " + escapeHtml((d.suggestedActions || []).join("; ")) + "</div><div class=\"t\">" + escapeHtml(d.summary || "") + "</div>"; }
+  catch (e) { err.textContent = "总结失败:" + e.message; err.classList.remove("hidden"); }
+  finally { btn.disabled = false; btn.textContent = "生成总结"; }
+});
+$("uploadEntriesBtn").addEventListener("click", async () => {
+  const category = $("docCategory").value.trim() || undefined;
+  const lines = $("docEntries").value.split("\n").map((l) => l.trim()).filter(Boolean);
+  const entries = [];
+  for (const line of lines) { const idx = line.indexOf("::"); if (idx <= 0) continue; entries.push({ title: line.slice(0, idx).trim(), content: line.slice(idx + 2).trim() }); }
+  if (!entries.length) { $("uploadResult").textContent = "请按 标题 :: 内容 逐行填写"; return; }
+  const r = await api("/api/v1/knowledge/batch", { method: "POST", body: JSON.stringify({ category, entries }) });
+  const ok = r.results.filter((x) => !x.skipped).length;
+  $("uploadResult").textContent = "上传完成:新增 " + ok + " 条,跳过 " + (r.results.length - ok) + " 条";
+  loadCandidates(); kbSearch("");
+});
+async function kbSearch(query) {
+  const q = query || $("kbSearch").value.trim();
+  if (!q) { $("kbHits").innerHTML = ""; return; }
   try {
-    const r = await api("/api/v1/copilot/evaluate-response", { method: "POST", body: JSON.stringify({ conversation, reply }) });
-    window.__evalConversationId = r.conversationId;
-    renderEvaluation(r.evaluation);
-  } catch (e) { err.textContent = "评估失败:" + e.message; err.classList.remove("hidden"); }
-  finally { btn.disabled = false; btn.textContent = "评估并改进"; }
-});
-
-$("evalCopyBtn").addEventListener("click", async () => {
-  const v = $("evalSuggested").value;
-  if (!v) return;
-  try { await navigator.clipboard.writeText(v); $("evalCopyBtn").textContent = "已复制"; setTimeout(() => ($("evalCopyBtn").textContent = "复制建议话术"), 1500); }
-  catch { $("evalSuggested").select(); document.execCommand("copy"); }
-});
-
+    const r = await api("/api/v1/knowledge/search?q=" + encodeURIComponent(q));
+    $("kbHits").innerHTML = "";
+    if (!r.hits || !r.hits.length) { $("kbHits").innerHTML = "无命中"; return; }
+    for (const h of r.hits.slice(0, 10)) {
+      const d = document.createElement("div"); d.className = "item";
+      d.innerHTML = "<b>" + escapeHtml(h.title) + "</b> <span class=\"badge\">" + escapeHtml(h.category || "未分类") + "</span><div class=\"t\">" + escapeHtml(h.snippet) + "</div>";
+      $("kbHits").appendChild(d);
+    }
+  } catch (e) { $("kbHits").textContent = "检索失败:" + e.message; }
+}
+$("kbSearchBtn").addEventListener("click", () => kbSearch(""));
+$("kbSearch").addEventListener("keydown", (e) => { if (e.key === "Enter") kbSearch(""); });
 async function loadCandidates() {
   const box = $("candidateList");
   try {
     const r = await api("/api/v1/knowledge/candidates?status=pending").catch(() => null);
-    if (!r || !r.candidates || r.candidates.length === 0) { box.innerHTML = '<div class="meta">暂无待沉淀话术(分析后自动生成)</div>'; return; }
+    if (!r || !r.candidates || !r.candidates.length) { box.innerHTML = "<div class=\"mini\">暂无待沉淀话术</div>"; return; }
     box.innerHTML = "";
     for (const c of r.candidates) {
-      const div = document.createElement("div");
-      div.className = "history-item";
-      div.innerHTML = '<div><span class="badge">' + escapeHtml(c.intent) + "</span></div>" +
-        '<div class="t" style="margin:4px 0">' + escapeHtml(c.draftContent.slice(0, 140)) + "</div>" +
-        '<div style="display:flex;gap:8px"><button class="secondary" data-act="approve" style="padding:4px 10px;font-size:12px">确认入库</button>' +
-        '<button class="secondary" data-act="reject" style="padding:4px 10px;font-size:12px">拒绝</button></div>';
-      const act = div.querySelector("[data-act=approve]");
-      const rej = div.querySelector("[data-act=reject]");
-      act.addEventListener("click", async () => {
-        try { const a = await api("/api/v1/knowledge/candidates/" + c.id + "/approve", { method: "POST" }); alert("已入库:" + a.candidate.draftTitle); } catch (e) { alert("入库失败:" + e.message); }
-        loadCandidates();
-      });
-      rej.addEventListener("click", async () => {
-        try { await api("/api/v1/knowledge/candidates/" + c.id + "/reject", { method: "POST" }); } catch (e) { alert("操作失败:" + e.message); }
-        loadCandidates();
-      });
+      const div = document.createElement("div"); div.className = "item";
+      div.innerHTML = "<span class=\"badge\">" + escapeHtml(c.intent) + "</span><div class=\"t\">" + escapeHtml(c.draftContent.slice(0, 140)) + "</div><div style=\"display:flex;gap:6px;margin-top:6px\"><button class=\"secondary\" data-act=\"approve\">入库</button><button class=\"secondary\" data-act=\"reject\">拒绝</button></div>";
+      const approve = div.querySelector("[data-act=approve]"); const reject = div.querySelector("[data-act=reject]");
+      approve.addEventListener("click", async () => { try { await api("/api/v1/knowledge/candidates/" + c.id + "/approve", { method: "POST" }); } catch (e) { alert(e.message); } loadCandidates(); });
+      reject.addEventListener("click", async () => { try { await api("/api/v1/knowledge/candidates/" + c.id + "/reject", { method: "POST" }); } catch (e) { alert(e.message); } loadCandidates(); });
       box.appendChild(div);
     }
-  } catch { box.innerHTML = '<div class="meta">候选加载失败</div>'; }
+  } catch { box.innerHTML = "<div class=\"mini\">候选加载失败</div>"; }
 }
-async function loadDigests() {
-  const box = $("digestList");
-  try {
-    const r = await api("/api/v1/assistant/digests?limit=5").catch(() => null);
-    if (!r || !r.digests || r.digests.length === 0) { box.innerHTML = '<div class="meta">尚未生成晨报</div>'; return; }
-    box.innerHTML = "";
-    for (const d of r.digests) {
-      const meta = '<div class="t" style="color:#64748b;font-size:12px">' + escapeHtml(d.digestDate) + " · 生成于 " + escapeHtml(new Date(d.createdAt).toLocaleString()) + "</div>";
-      const div = document.createElement("div");
-      div.className = "history-item";
-      div.innerHTML = '<div><b>' + escapeHtml(d.title) + "</b></div>" + meta + '<div class="digest-content">' + escapeHtml(d.content) + "</div>";
-      box.appendChild(div);
-    }
-  } catch { box.innerHTML = '<div class="meta">晨报加载失败</div>'; }
-}
-
-$("digestBtn").addEventListener("click", async () => {
-  const btn = $("digestBtn");
-  btn.disabled = true; btn.textContent = "生成中…";
-  try {
-    await api("/api/v1/assistant/digest", { method: "POST" });
-    await loadDigests();
-loadCandidates();
-  } catch (e) { alert("晨报生成失败:" + e.message); }
-  finally { btn.disabled = false; btn.textContent = "生成今日晨报"; }
-});
-async function loadNotifications() {
-  const box = $("notifyResult");
-  try {
-    const r = await api("/api/v1/notifications").catch(() => null);
-    if (!r || !r.logs || r.logs.length === 0) { box.textContent = ""; return; }
-    const last = r.logs[0];
-    box.innerHTML = "最近推送: " + escapeHtml(last.title) + " · " + escapeHtml(new Date(last.createdAt).toLocaleTimeString()) + " · " + escapeHtml(last.status);
-  } catch { box.textContent = ""; }
-}
-
-$("notifyBtn").addEventListener("click", async () => {
-  const box = $("notifyResult");
-  const btn = $("notifyBtn");
-  btn.disabled = true;
-  try {
-    const r = await api("/api/v1/notifications/trigger", { method: "POST" });
-    if (r.newlyNotified.length > 0) box.innerHTML = "已推送 " + r.newlyNotified.length + " 条到期任务" + (r.pushed ? " (webhook)" : " (记录)") + (r.status === "failed" ? " · 失败:" + escapeHtml(r.reason || "") : "");
-    else box.innerHTML = "无新到期任务(已通知去重)";
-    loadNotifications();
-  } catch (e) { box.innerHTML = "推送失败:" + escapeHtml(e.message); }
-  finally { btn.disabled = false; }
-});
-
 async function loadTasks() {
   const box = $("taskList");
-  box.innerHTML = "加载中…";
   try {
-    const [r, rem] = await Promise.all([
-      api("/api/v1/tasks?status=pending&limit=50"),
-      api("/api/v1/reminders/overdue").catch(() => ({ overdue: [] })),
-    ]);
+    const [r, rem] = await Promise.all([ api("/api/v1/tasks?status=pending&limit=50"), api("/api/v1/reminders/overdue").catch(() => ({ overdue: [] })) ]);
     const overdueIds = new Set((rem.overdue || []).map((t) => t.id));
     box.innerHTML = "";
-    if (!r.tasks || r.tasks.length === 0) { box.innerHTML = '<div class="meta">暂无待办任务(对话分析后自动生成)</div>'; return; }
+    if (!r.tasks || !r.tasks.length) { box.innerHTML = "<div class=\"mini\">暂无待办任务</div>"; return; }
     for (const t of r.tasks) {
-      const who = t.customerName || t.customerKey || "未知客户";
-      const due = t.dueAt ? ' <span class="t">到期:' + new Date(t.dueAt).toLocaleString() + "</span>" : "";
-      const dueBadge = overdueIds.has(t.id) ? ' <span class="badge danger">已到期</span>' : "";
-      const div = document.createElement("div");
-      div.className = "history-item";
-      div.innerHTML = '<div><b>' + escapeHtml(who) + "</b>" + dueBadge + due + '</div><div class="t">' + escapeHtml(t.action) + '</div><div style="margin-top:6px"><button class="secondary" style="padding:4px 10px;font-size:12px">完成</button></div>';
-      div.querySelector("button").addEventListener("click", async () => {
-        try { await api("/api/v1/tasks/" + t.id + "/done", { method: "PATCH" }); } catch (e) { alert("操作失败:" + e.message); }
-        loadTasks();
-loadDigests();
-loadCandidates();
-      });
+      const div = document.createElement("div"); div.className = "item";
+      const flag = overdueIds.has(t.id) ? " <span class=\"badge danger\">已到期</span>" : "";
+      div.innerHTML = "<div><b>" + escapeHtml(t.customerName || t.customerKey || "未知客户") + "</b>" + flag + "</div><div class=\"t\">" + escapeHtml(t.action) + "</div><div style=\"margin-top:6px\"><button class=\"secondary\">完成</button></div>";
+      div.querySelector("button").addEventListener("click", async () => { try { await api("/api/v1/tasks/" + t.id + "/done", { method: "PATCH" }); } catch (e) { alert(e.message); } loadTasks(); });
       box.appendChild(div);
     }
-  } catch (e) { box.innerHTML = '<div class="error" style="margin-top:0">' + escapeHtml(e.message) + "</div>"; }
+  } catch { box.innerHTML = "<div class=\"mini\">任务加载失败</div>"; }
 }
-$("historyBtn").addEventListener("click", async () => {
-  const key = $("historyKey").value.trim();
-  if (!key) return;
-  const list = $("historyList");
-  list.innerHTML = "查询中…";
-  const tagsR = await api("/api/v1/customers/" + encodeURIComponent(key) + "/tags").catch(() => null);
-  if (tagsR && tagsR.tags && tagsR.tags.length > 0) {
-    const badgeRow = document.createElement("div");
-    badgeRow.style.marginBottom = "8px";
-    badgeRow.innerHTML = "标签: " + tagsR.tags.map((x) => "<span class=\"badge\">" + escapeHtml(x.tag) + "(x" + x.weight + ")</span>").join(" ");
-    list.appendChild(badgeRow);
-  }
-  try {
-    const r = await api("/api/v1/customers/" + encodeURIComponent(key) + "/analyses");
-    list.innerHTML = "";
-    if (!r.analyses || r.analyses.length === 0) { list.innerHTML = '<div class="meta">暂无分析记录</div>'; return; }
-    for (const a of r.analyses) {
-      const div = document.createElement("div");
-      div.className = "history-item";
-      div.innerHTML = `<div><b>${escapeHtml(a.intent || "")}</b> <span class="t">${escapeHtml(new Date(a.createdAt).toLocaleString())}</span></div><div class="t">${escapeHtml((a.summary || "").slice(0, 120))}</div>`;
-      div.style.cursor = "pointer";
-      div.addEventListener("click", () => renderResult(a));
-      list.appendChild(div);
-    }
-  } catch (e) {
-    list.innerHTML = '<div class="error" style="margin-top:0">' + escapeHtml(e.message) + "</div>";
-  }
+async function loadNotifications() {
+  const box = $("notifyResult");
+  try { const r = await api("/api/v1/notifications").catch(() => null); if (!r || !r.logs || !r.logs.length) { box.textContent = ""; return; } const last = r.logs[0]; box.textContent = "最近推送: " + last.title + " · " + new Date(last.createdAt).toLocaleTimeString() + " · " + last.status; } catch { box.textContent = ""; }
+}
+$("notifyBtn").addEventListener("click", async () => {
+  const box = $("notifyResult"); const btn = $("notifyBtn"); btn.disabled = true;
+  try { const r = await api("/api/v1/notifications/trigger", { method: "POST" }); box.textContent = r.newlyNotified.length ? ("已推送 " + r.newlyNotified.length + " 条") : "无新到期任务(去重)"; loadNotifications(); } catch (e) { box.textContent = "推送失败:" + e.message; } finally { btn.disabled = false; }
 });
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+$("tagBtn").addEventListener("click", async () => {
+  const key = $("historyKey").value.trim(); const tagBox = $("tagBox"); const hist = $("historyList");
+  tagBox.innerHTML = ""; hist.innerHTML = "";
+  if (!key) return;
+  try {
+    const [t, h] = await Promise.all([ api("/api/v1/customers/" + encodeURIComponent(key) + "/tags").catch(() => null), api("/api/v1/customers/" + encodeURIComponent(key) + "/analyses").catch(() => null) ]);
+    if (t && t.tags && t.tags.length) { tagBox.innerHTML = t.tags.map((x) => "<span class=\"badge\">" + escapeHtml(x.tag) + "(x" + x.weight + ")</span>").join(" "); } else { tagBox.innerHTML = "<div class=\"mini\">暂无标签</div>"; }
+    hist.innerHTML = "";
+    if (!h || !h.analyses || !h.analyses.length) { hist.innerHTML = "<div class=\"mini\">暂无分析记录</div>"; return; }
+    for (const a of h.analyses) {
+      const d = document.createElement("div"); d.className = "item"; d.style.cursor = "pointer";
+      d.innerHTML = "<b>" + escapeHtml(a.intent || "") + "</b> <span class=\"t\">" + escapeHtml(new Date(a.createdAt).toLocaleString()) + "</span><div class=\"t\">" + escapeHtml((a.summary || "").slice(0, 120)) + "</div>";
+      d.addEventListener("click", () => renderResult(a));
+      hist.appendChild(d);
+    }
+  } catch (e) { hist.innerHTML = "查询失败:" + escapeHtml(e.message); }
+});
+async function loadDigests() {
+  const box = $("digestList");
+  try { const r = await api("/api/v1/assistant/digests?limit=3").catch(() => null); if (!r || !r.digests || !r.digests.length) { box.innerHTML = "<div class=\"mini\">尚未生成晨报</div>"; return; } box.innerHTML = ""; for (const d of r.digests) { const div = document.createElement("div"); div.className = "item"; div.innerHTML = "<b>" + escapeHtml(d.title) + "</b> <span class=\"t\">" + escapeHtml(new Date(d.createdAt).toLocaleString()) + "</span><div class=\"digest-content\">" + escapeHtml(d.content) + "</div>"; box.appendChild(div); } } catch { box.innerHTML = "<div class=\"mini\">晨报加载失败</div>"; }
 }
+$("digestBtn2").addEventListener("click", async () => { const btn = $("digestBtn2"); btn.disabled = true; btn.textContent = "生成中…"; try { await api("/api/v1/assistant/digest", { method: "POST" }); await loadDigests(); } catch (e) { alert("晨报生成失败:" + e.message); } finally { btn.disabled = false; btn.textContent = "生成今日晨报"; } });
+async function loadInsights() {
+  const box = $("insightBox");
+  try { const r = await api("/api/v1/assistant/insights?days=7").catch(() => null); if (!r) { box.innerHTML = "<div class=\"mini\">洞察加载失败</div>"; return; }
+    const intents = (r.topIntents || []).map((i) => i.intent + " ×" + i.count).join("、") || "暂无";
+    const brands = (r.topBrands || []).map((b) => b.brand + " ×" + b.count).join("、") || "暂无";
+    box.innerHTML = "<div class=\"t\">分析 " + r.analyses + " 次 / 待办 " + r.pendingTasks + " / 到期 " + r.overdueTasks + " / 完成率 " + Math.round(r.taskCompletionRate * 100) + "%</div><div class=\"t\">热门意图:" + escapeHtml(intents) + "</div><div class=\"t\">热门品牌:" + escapeHtml(brands) + "</div>";
+    loadImprovements(box);
+  } catch { box.innerHTML = "<div class=\"mini\">洞察加载失败</div>"; }
+}
+async function loadImprovements(box) {
+  try { const r = await api("/api/v1/assistant/improvements?days=30").catch(() => null); if (!r || !r.suggestions || !r.suggestions.length) return; const div = document.createElement("div"); div.innerHTML = "<div style=\"margin-top:10px\"><b>规则改进建议</b></div><ul style=\"font-size:12px\"></ul>"; const ul = div.querySelector("ul"); for (const s of r.suggestions.slice(0, 4)) { const li = document.createElement("li"); li.textContent = s.topic + "(" + s.count + ")·" + s.suggestion; ul.appendChild(li); } box.appendChild(div); } catch {}
+}
+checkHealth(); loadConversations(); loadCandidates(); loadTasks(); loadNotifications(); loadDigests(); loadInsights();
 
-checkHealth();
-loadTasks();
-loadDigests();
-loadCandidates();
 </script>
 </body>
 </html>
