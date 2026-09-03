@@ -44,6 +44,9 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 | POST | /api/v1/copilot/voice-digest | 通话/试驾文字稿总结 { transcript } |
 | GET | /api/v1/assistant/improvements?days=30 | 规则改进建议(优化流失风险/候选流失) |
 | GET | /api/v1/assistant/insights?days=7 | 经营洞察(分析量/意图/任务完成率/车型偏好) |
+| GET | /api/v1/conversations | 会话列表(时间/ID/销售/客户/消息数) |
+| POST | /api/v1/conversations/:id/analyze | 从库内会话原文分析(无需手动粘贴) |
+| POST | /api/v1/knowledge/batch | 知识库批量上传(category + entries) |
 | GET | /api/v1/conversations/:id/timeline | 分析过程时间线回放 |
 | GET | /api/v1/customers/:key/tags | 客户画像标签(自动聚合) |
 | POST | /api/v1/notifications/trigger | 推送到期提醒(Webhook,按日志去重) |
