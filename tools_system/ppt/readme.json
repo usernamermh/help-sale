@@ -1,0 +1,9 @@
+{
+  "name": "ppt",
+  "label": "读取 PPT",
+  "description": "读取仓库内的 .pptx 演示文稿,提取每页文字内容(路径仅限仓库内)。",
+  "category": "文件读取",
+  "parameters": { "type": "object", "required": ["filePath"], "properties": { "filePath": { "type": "string", "description": "仓库内路径,如 data/方案.pptx" }, "maxSlides": { "type": "number", "default": 20, "maximum": 100 } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

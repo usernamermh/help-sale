@@ -150,4 +150,68 @@ describe("tools_system 基础工具", () => {
 			delete process.env.SUBAGENTS_DIR;
 		}
 	});
+
+describe("文件读取工具(txt/excel/ppt)", () => {
+	const SYS = ["E:\\proj_help_sale\\tools_system"];
+	async function loadAll() {
+		return loadExternalAgentTools(SYS, { db: null, tenantId: "t1" } as never);
+	}
+
+	it("三个文件读取工具可加载", async () => {
+		const tools = await loadAll();
+		const names = tools.map((t) => t.name);
+		for (const n of ["txt", "excel", "ppt"]) expect(names).toContain(n);
+	});
+
+	it("txt 读取仓库内文本,路径穿越被拦截", async () => {
+		const file = path.join(process.cwd(), ".tmp", `ft-txt-${Date.now()}.txt`);
+		fs.writeFileSync(file, "你好,测试内容 abc", "utf8");
+		try {
+			const tools = await loadAll();
+			const tool = tools.find((t) => t.name === "txt")!;
+			const ok = (await tool.execute("x", { filePath: file })) as { content: Array<{ text: string }> };
+			expect(ok.content.map((c) => c.text).join("")).toContain("测试内容");
+			const bad = (await tool.execute("x", { filePath: "../../outside.txt" })) as { content: Array<{ text: string }> };
+			expect(bad.content.map((c) => c.text).join("")).toContain("路径无效");
+		} finally {
+			fs.rmSync(file, { force: true });
+		}
+	});
+
+	it("excel 读取表格内容", async () => {
+		const XLSX = (await import("xlsx")) as typeof import("xlsx");
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["车型", "价格"], ["汉EV", "25万"], ["Model Y", "28万"]]), "车型表");
+		const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+		const file = path.join(process.cwd(), ".tmp", `ft-xlsx-${Date.now()}.xlsx`);
+		fs.writeFileSync(file, buf);
+		try {
+			const tools = await loadAll();
+			const tool = tools.find((t) => t.name === "excel")!;
+			const r = (await tool.execute("x", { filePath: file, sheet: "车型表" })) as { content: Array<{ text: string }>; details: { rowCount: number } };
+			const text = r.content.map((c) => c.text).join("");
+			expect(text).toContain("汉EV");
+			expect(r.details.rowCount).toBe(3);
+		} finally {
+			fs.rmSync(file, { force: true });
+		}
+	});
+
+	it("ppt 提取幻灯片文字", async () => {
+		const AdmZip = (await import("adm-zip")).default;
+		const zip = new AdmZip();
+		zip.addFile("ppt/presentation.xml", Buffer.from("<p:presentation/>"));
+		zip.addFile("ppt/slides/slide1.xml", Buffer.from('<p:sld><p:cSld><p:spTree><p:sp><p:txBody><a:p><a:r><a:t>汉EV 方案</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>'));
+		const file = path.join(process.cwd(), ".tmp", `ft-ppt-${Date.now()}.pptx`);
+		zip.writeZip(file);
+		try {
+			const tools = await loadAll();
+			const tool = tools.find((t) => t.name === "ppt")!;
+			const r = (await tool.execute("x", { filePath: file })) as { content: Array<{ text: string }> };
+			expect(r.content.map((c) => c.text).join("")).toContain("汉EV 方案");
+		} finally {
+			fs.rmSync(file, { force: true });
+		}
+	});
+});
 });
