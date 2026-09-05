@@ -84,6 +84,20 @@ function fakeVoiceDigestStreamFn(): StreamFn {
 }
 
 
+function fakeAgentStreamFn(): StreamFn {
+	const fa = fauxProvider();
+	fa.setResponses([
+		fauxAssistantMessage([
+			fauxToolCall("emit_final", {
+				answer: "参考方案:\n\n| 品牌 | 价格 |\n| --- | --- |\n| 汉EV | 25万 |\n| Model Y | 28万 |",
+				summary: "两款推荐",
+				nextSteps: ["约试驾"],
+			}),
+		]),
+	]);
+	return async (model, context, options) => fa.provider.stream(model as never, context, options);
+}
+
 function fakeVehicleStreamFn(): StreamFn {
 	const fa = fauxProvider();
 	fa.setResponses([
@@ -632,5 +646,22 @@ describe("api", () => {
 		expect(second.json().cached).toBe(true);
 		expect(second.json().analysisId).toBe(first.json().analysisId);
 		expect(calls).toBe(callsAfterFirst);
-	});
+	})
+
+	it("AI 助销流式:run-stream 逐块 delta,合并等于最终答复", async () => {
+		dir = tmpDataDir("api-stream");
+		app = buildApp({ dataDir: dir, streamFn: fakeAgentStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+		const t = await app.inject({ method: "POST", url: "/api/v1/agent/threads", headers });
+		const threadId = t.json().id;
+		const res = await app.inject({ method: "POST", url: `/api/v1/agent/threads/${threadId}/run-stream`, payload: { goal: "用表格列出两款车型" }, headers });
+		expect(res.statusCode).toBe(200);
+		const events = res.body.split("\n").filter(Boolean).map((l) => JSON.parse(l));
+		const deltas = events.filter((e: { type: string }) => e.type === "delta").map((e: { text: string }) => e.text).join("");
+		const finals = events.filter((e: { type: string }) => e.type === "final");
+		expect(deltas.length).toBeGreaterThan(0);
+		expect(finals).toHaveLength(1);
+		expect(deltas).toBe(finals[0].final.answer);
+		expect(events.some((e: { type: string }) => e.type === "tool_start" || e.type === "tool_end")).toBe(true);
+	});;
 });

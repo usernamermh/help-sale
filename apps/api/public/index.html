@@ -75,6 +75,13 @@ button.secondary:hover { background:#f1f5f9; }
 .agent-user { background:#eff6ff; border:1px solid #bfdbfe; margin-left:auto; }
 .agent-assist { background:#f8fafc; border:1px solid #e2e8f0; }
 .agent-body { white-space:pre-wrap; word-break:break-word; }
+.agent-body .md { white-space:normal; }
+.agent-body .md p { margin:0 0 8px; }
+.agent-body .md table { border-collapse:collapse; margin:8px 0; width:100%; }
+.agent-body .md th, .agent-body .md td { border:1px solid var(--line); padding:5px 8px; font-size:13px; text-align:left; }
+.agent-body .md th { background:#f1f5f9; font-weight:600; }
+.agent-body .md ul, .agent-body .md ol { margin:6px 0; padding-left:20px; }
+.agent-body .md a { color:var(--brand); }
 .agent-meta { font-size:11px; color:var(--muted); margin-top:6px; }
 .step-line { font-size:11px; color:var(--brand); margin-top:8px; }
 .agent-input { max-width:860px; width:100%; margin:12px auto 0; display:flex; gap:8px; align-items:flex-end; }
@@ -317,6 +324,8 @@ button.secondary:hover { background:#f1f5f9; }
 </section>
 </main>
 
+<script src="/vendor/marked.min.js"></script>
+<script src="/vendor/purify.min.js"></script>
 <script>
 
 
@@ -328,7 +337,16 @@ const api = async (path, options = {}) => {
   return body;
 };
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c])); }
-document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => {
+function renderMarkdown(text) {
+  try {
+    if (typeof marked !== "undefined" && marked.parse) {
+      const html = marked.parse(text);
+      if (typeof DOMPurify !== "undefined") return DOMPurify.sanitize(html);
+      return html;
+    }
+  } catch {}
+  return escapeHtml(text);
+}document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => {
   document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
   tab.classList.add("active");
   document.querySelectorAll("section.panel").forEach((p) => p.classList.remove("active"));
@@ -565,11 +583,14 @@ checkHealth(); loadConversations(); loadCandidates(); loadTasks(); loadNotificat
 
 let agentRunning = false;
 let currentThreadId = null;
+let agentDeltaBuf = "";
 function appendAgentMsg(role, text) {
   const chat = $("agentChat");
   const div = document.createElement("div");
   div.className = "agent-msg " + (role === "user" ? "agent-user" : "agent-assist");
-  const body = document.createElement("div"); body.className = "agent-body"; body.textContent = text;
+  const body = document.createElement("div"); body.className = "agent-body";
+  if (role === "assistant") { body.innerHTML = '<div class="md">' + renderMarkdown(text) + '</div>'; }
+  else { body.textContent = text; }
   div.appendChild(body);
   const step = document.createElement("div"); step.className = "step-line";
   const meta = document.createElement("div"); meta.className = "agent-meta";
@@ -659,32 +680,83 @@ async function sendAgent() {
   $("agentGoal").value = "";
   appendAgentMsg("user", goal);
   const wait = appendAgentMsg("assist", "正在规划任务…");
+  const steps = [];
   try {
     if (!currentThreadId) { const t = await api("/api/v1/agent/threads", { method: "POST" }); currentThreadId = t.id; }
-    const r = await api("/api/v1/agent/threads/" + currentThreadId + "/run", { method: "POST", body: JSON.stringify({ goal }) });
-    let agentSteps = [];
-    try {
-      const s = await api("/api/v1/agent/" + r.runId + "/steps");
-      agentSteps = s.steps || [];
-    } catch {}
-    const answer = r.final && r.final.answer ? r.final.answer : "（未生成答复）";
-    wait.body.textContent = answer;
-    wait.meta.textContent = (r.final && r.final.nextSteps && r.final.nextSteps.length) ? ("下一步：" + r.final.nextSteps.join(" · ")) : "";
-    attachAgentSteps(wait, agentSteps);
-    for (const s of agentSteps) {
-      if (s.details && Array.isArray(s.details.messages) && s.details.messages.length) {
-        renderTranscript($("agentTrMeta"), $("agentTrList"), "会话 " + String(s.details.conversationId || "").slice(0, 10) + "…", s.details.messages);
-        $("agentTranscript").style.display = "flex";
-      }
-    }
+    await streamAgentRun(goal, wait, steps);
     loadAgentThreads();
   } catch (e) {
-    wait.body.textContent = "出错了：" + e.message;
+    wait.body.innerHTML = '<div class="md">' + escapeHtml("出错了：" + e.message) + '</div>';
   } finally {
     agentRunning = false;
     $("agentSendBtn").disabled = false;
     $("agentGoal").focus();
   }
+}
+// 流式执行:NDJSON 事件逐步展示工具过程,最终答复按 Markdown 渲染(表格可用)
+async function streamAgentRun(goal, wait, steps) {
+  agentDeltaBuf = "";
+  const res = await fetch("/api/v1/agent/threads/" + currentThreadId + "/run-stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-tenant-id": "t_demo" },
+    body: JSON.stringify({ goal }),
+  });
+  if (!res.ok) { let msg = "HTTP " + res.status; try { msg = (await res.json()).message || msg; } catch {} throw new Error(msg); }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let idx;
+    while ((idx = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, idx).replace(/\r$/, "");
+      buf = buf.slice(idx + 1);
+      if (!line.trim()) continue;
+      let evt;
+      try { evt = JSON.parse(line); } catch { continue; }
+      handleAgentEvent(evt, wait, steps);
+    }
+  }
+}
+function handleAgentEvent(evt, wait, steps) {
+  if (evt.type === "tool_start") {
+    const name = evt.label || evt.toolName || "工具";
+    steps.push({ eventType: "tool_start", toolName: evt.toolName, label: name, summary: prettyPayload(evt.payload) });
+    wait.step.textContent = "正在调用 " + name + "…";
+  } else if (evt.type === "tool_end") {
+    const name = evt.label || evt.toolName || "工具";
+    steps.push({ eventType: "tool_end", toolName: evt.toolName, label: name, summary: prettyPayload(evt.payload) });
+    wait.step.textContent = name + " 完成,正在整理…";
+    const det = evt.payload && evt.payload.details;
+    if (det && Array.isArray(det.messages) && det.messages.length) {
+      renderTranscript($("agentTrMeta"), $("agentTrList"), "会话 " + String(det.conversationId || "").slice(0, 10) + "…", det.messages);
+      $("agentTranscript").style.display = "flex";
+    }
+  } else if (evt.type === "delta") {
+    agentDeltaBuf += evt.text || "";
+    wait.body.innerHTML = '<div class="md">' + renderMarkdown(agentDeltaBuf) + '</div>';
+  } else if (evt.type === "final") {
+    agentDeltaBuf = "";
+    const answer = evt.final && evt.final.answer ? evt.final.answer : "（未生成答复）";
+    wait.body.innerHTML = '<div class="md">' + renderMarkdown(answer) + '</div>';
+    wait.step.textContent = "";
+    wait.meta.textContent = (evt.final && evt.final.nextSteps && evt.final.nextSteps.length) ? ("下一步：" + evt.final.nextSteps.join(" · ")) : "";
+    attachAgentSteps(wait, steps);
+  } else if (evt.type === "error") {
+    throw new Error(evt.error || "未知错误");
+  }
+}
+function prettyPayload(p) {
+  if (p == null) return "";
+  try {
+    if (p && Array.isArray(p.content)) {
+      const txt = p.content.map((c) => (c && c.type === "text" ? c.text : "")).join(" ").trim();
+      if (txt) return txt;
+    }
+  } catch {}
+  try { return typeof p === "string" ? p : JSON.stringify(p); } catch { return String(p); }
 }
 
 // ── 门店管理 ──

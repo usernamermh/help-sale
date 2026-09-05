@@ -170,7 +170,7 @@ async function loadCapabilities() {
     }
   } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
 }
-let running = false; let currentThreadId = null;
+let running = false; let currentThreadId = null; let deltaBuf = "";
 function appendAgentMsg(role, text) {
   const chat = $("chat");
   const div = document.createElement("div");
@@ -263,6 +263,7 @@ async function send() {
   }
 }
 async function streamRun(goal, wait, steps) {
+  deltaBuf = "";
   const res = await fetch("/api/v1/agent/threads/" + currentThreadId + "/run-stream", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-tenant-id": "t_demo" },
@@ -302,7 +303,12 @@ function handleStreamEvent(evt, wait, steps) {
     }
   } else if (evt.type === "tool_update") {
     wait.body.textContent = (evt.label || evt.toolName || "工具") + " 处理中…";
+  } else if (evt.type === "delta") {
+    deltaBuf += evt.text || "";
+    wait.body.innerHTML = '<div class="md">' + renderMarkdown(deltaBuf) + '</div>';
+    if (window.mermaid) renderMermaidBlocks(wait.body);
   } else if (evt.type === "final") {
+    deltaBuf = "";
     const answer = evt.final && evt.final.answer ? evt.final.answer : "（未生成答复）";
     wait.body.innerHTML = '<div class="md">' + renderMarkdown(answer) + '</div>'; renderMermaidBlocks(wait.body);
     wait.meta.textContent = (evt.final && evt.final.nextSteps && evt.final.nextSteps.length) ? ("下一步：" + evt.final.nextSteps.join(" · ")) : "";

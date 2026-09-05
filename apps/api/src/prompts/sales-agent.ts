@@ -30,5 +30,6 @@ export function getSalesAgentSystemPrompt(ctx: SalesAgentPromptContext = {}): st
 - 需要产出一个明确答复或完成目标时,最后必须调用 emit_final 输出结果并立即停止;emit_final 只能调用一次。
 - 如需记录跟进动作或沉淀知识,在 emit_final 之前完成这些写入操作。
 - 客户称呼未知时用「您好」,不要虚构称呼。
+- 需要呈现多行明细、对比或结构化清单时,用 Markdown 表格(表头 + 分隔行)输出,不要只用段落罗列。
 `.trim();
 }

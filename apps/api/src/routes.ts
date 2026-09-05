@@ -444,6 +444,12 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 				const t = goal.replace(/\s+/g, " ").trim();
 				setThreadTitle(deps.db, request.tenantId, thread.id, t.length > 24 ? t.slice(0, 24) + "…" : t);
 			}
+			// 打字机流式:最终答复按小块逐步下发(delta),前端逐块渲染;最终仍发 final 全量事件
+			const answer = result.final?.answer ?? "";
+			for (let i = 0; i < answer.length; i += 16) {
+				write({ type: "delta", text: answer.slice(i, i + 16) });
+				await new Promise((r) => setTimeout(r, 12));
+			}
 			write({ type: "final", threadId: thread.id, runId: result.runId, final: result.final });
 			reply.raw.end();
 		} catch (error) {

@@ -71,6 +71,63 @@ export function readModelCallLogs(dir: string): ModelCallLogEntry[] {
  * 包装 fetch:启用时把请求体与响应体(原始文本)异步写入本地日志;未启用时原样透传。
  * 响应通过 clone 读取,不影响上游消费;读取失败时记录 error 字段。
  */
+
+/**
+ * 把 SSE 流式响应聚合为最终输入输出(与日志里只记最终结果、不记流式 chunk 对应)。
+ * 解析 `data: {...}` 块,合并 content/reasoning_content/tool_calls(按 index 拼接 arguments),
+ * 记录 finish_reason 与 usage;非 SSE 文本原样返回。
+ */
+export function aggregateSseResponse(raw: string): unknown {
+	const text = raw.trim();
+	if (!text.includes("data:")) return raw;
+	let content = "";
+	let reasoning = "";
+	const toolCalls: Array<{ id?: string; name?: string; arguments?: string }> = [];
+	let finishReason: string | null = null;
+	let usage: unknown;
+	let chunkCount = 0;
+	let parsedAny = false;
+	for (const line of text.split(/\r?\n/)) {
+		const t = line.trim();
+		if (!t.startsWith("data:")) continue;
+		const payload = t.slice(5).trim();
+		if (!payload || payload === "[DONE]") continue;
+		let chunk: { choices?: Array<{ delta?: { content?: string; reasoning_content?: string; tool_calls?: Array<{ index?: number; id?: string; function?: { name?: string; arguments?: string } }> }; finish_reason?: string | null }>; usage?: unknown };
+		try {
+			chunk = JSON.parse(payload) as typeof chunk;
+		} catch {
+			continue;
+		}
+		parsedAny = true;
+		chunkCount++;
+		const delta = chunk.choices?.[0]?.delta;
+		if (delta) {
+			if (typeof delta.content === "string") content += delta.content;
+			if (typeof delta.reasoning_content === "string") reasoning += delta.reasoning_content;
+			if (Array.isArray(delta.tool_calls)) {
+				for (const tc of delta.tool_calls) {
+					const idx = tc.index ?? toolCalls.length;
+					toolCalls[idx] ??= { id: "", name: "", arguments: "" };
+					if (tc.id) toolCalls[idx].id = tc.id;
+					if (tc.function?.name) toolCalls[idx].name = tc.function.name;
+					if (typeof tc.function?.arguments === "string") toolCalls[idx].arguments += tc.function.arguments;
+				}
+			}
+		}
+		if (chunk.choices?.[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason;
+		if (chunk.usage !== undefined) usage = chunk.usage;
+	}
+	if (!parsedAny) return raw;
+	const out: Record<string, unknown> = { streamed: true, chunkCount, usage };
+	if (content) out.content = content;
+	if (reasoning) out.reasoning = reasoning;
+	const calls = toolCalls.filter((tc) => tc && (tc.id || tc.name || tc.arguments));
+	if (calls.length) out.toolCalls = calls;
+	if (finishReason) out.finishReason = finishReason;
+	// 聚合失败兜底:保留原始文本
+	if (!content && !reasoning && !calls.length) return raw;
+	return out;
+}
 export function wrapFetchWithModelLog(
 	fetchImpl: typeof fetch,
 	cfg: ModelLogConfig,
@@ -109,12 +166,14 @@ export function wrapFetchWithModelLog(
 		void (async () => {
 			try {
 				const text = await clone.text();
+				// 只记最终输入输出:SSE 流聚合为内容/推理/工具调用/用量,不记流式 chunk 原文
+				const finalResponse = aggregateSseResponse(text);
 				appendModelCallLog(cfg.dir, {
 					event: "response",
 					requestId,
 					modelId,
 					request: bodyText,
-					response: text,
+					response: typeof finalResponse === "string" ? finalResponse : JSON.stringify(finalResponse),
 					status: res.status,
 					durationMs: Date.now() - started,
 				}, maxBytes);

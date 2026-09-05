@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { appendModelCallLog, readModelCallLogs, wrapFetchWithModelLog } from "./model-log.js";
+import { aggregateSseResponse, appendModelCallLog, readModelCallLogs, wrapFetchWithModelLog } from "./model-log.js";
 
 const dirs: string[] = [];
 function tmpDir(prefix: string): string {
@@ -91,5 +91,36 @@ describe("model-log", () => {
 		await wrapped("http://x/chat/completions", { method: "POST", body: "{}" });
 		await new Promise((r) => setTimeout(r, 20));
 		expect(fs.existsSync(path.join(dir, "model-calls.log"))).toBe(false);
+});
+
+});
+describe("aggregateSseResponse", () => {
+	it("SSE 流聚合为最终输入输出(推理/内容/工具调用/用量)", () => {
+		const sse = [
+			'data: {"choices":[{"delta":{"role":"assistant","reasoning_content":"先"}}]}',
+			'data: {"choices":[{"delta":{"reasoning_content":"思考"}}]}',
+			'data: {"choices":[{"delta":{"content":"你好"}}]}',
+			'data: {"choices":[{"delta":{"content":"世界"}}]}',
+			'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","function":{"name":"emit_analysis","arguments":"{\\"intent\\":"}}]}}]}',
+			'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\\"价格异议\\"}"}}]}}]}',
+			'data: {"choices":[{"delta":{},"finish_reason":"tool_calls"}]}',
+			'data: {"usage":{"prompt_tokens":10,"completion_tokens":8,"total_tokens":18}}',
+			'data: [DONE]',
+		].join("\n");
+		const out = aggregateSseResponse(sse) as { content: string; reasoning: string; toolCalls: Array<{ id: string; name: string; arguments: string }>; finishReason: string; usage: { total_tokens: number }; chunkCount: number };
+		expect(out.content).toBe("你好世界");
+		expect(out.reasoning).toBe("先思考");
+		expect(out.toolCalls).toHaveLength(1);
+		expect(out.toolCalls[0].id).toBe("call_1");
+		expect(out.toolCalls[0].name).toBe("emit_analysis");
+		expect(out.toolCalls[0].arguments).toBe('{"intent":"价格异议"}');
+		expect(out.finishReason).toBe("tool_calls");
+		expect(out.usage.total_tokens).toBe(18);
+		expect(out.chunkCount).toBe(8);
+	});
+
+	it("非 SSE 文本原样返回", () => {
+		expect(aggregateSseResponse("plain json")).toBe("plain json");
+		expect(aggregateSseResponse('{"choices":[]}')).toBe('{"choices":[]}');
 	});
 });
