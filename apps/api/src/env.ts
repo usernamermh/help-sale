@@ -18,6 +18,9 @@ export interface AppConfig {
 	modelContextWindow: number;
 	modelMaxTokens: number;
 	modelExtraBody: Record<string, unknown>;
+	logEnabled: boolean;
+	logDir: string;
+	logMaxBytes: number;
 	knowledgeSearchLimit: number;
 	mysqlEnabled: boolean;
 	mysqlHost: string;
@@ -61,6 +64,7 @@ export interface FileConfig {
 	mysql?: { enabled?: boolean; host?: string; port?: number; user?: string; password?: string; database?: string };
 	redis?: { enabled?: boolean; host?: string; port?: number; password?: string };
 	notification?: { enabled?: boolean; webhookUrl?: string };
+	logging?: { enabled?: boolean; dir?: string; maxBytes?: number };
 	company?: { name?: string; team?: string };
 }
 
@@ -115,6 +119,9 @@ const defaults: AppConfig = {
 	modelContextWindow: 32768,
 	modelMaxTokens: 8192,
 	modelExtraBody: {},
+	logEnabled: true,
+	logDir: "apps/api/log",
+	logMaxBytes: 8 * 1024 * 1024,
 	knowledgeSearchLimit: 5,
 	mysqlEnabled: true,
 	mysqlHost: "10.10.20.53",
@@ -174,6 +181,9 @@ export function loadConfig(): AppConfig {
 		modelMaxTokens: num(env.MODEL_MAX_TOKENS ?? file.model?.maxTokens, defaults.modelMaxTokens),
 		modelExtraBody:
 			env.MODEL_EXTRA_BODY !== undefined ? (safeParseJson(env.MODEL_EXTRA_BODY) ?? {}) : (file.model?.extraBody ?? defaults.modelExtraBody),
+		logEnabled: bool(env.LOG_ENABLED ?? file.logging?.enabled, defaults.logEnabled),
+		logDir: env.LOG_DIR ?? file.logging?.dir ?? defaults.logDir,
+		logMaxBytes: num(env.LOG_MAX_BYTES ?? file.logging?.maxBytes, defaults.logMaxBytes),
 		knowledgeSearchLimit: num(env.KNOWLEDGE_SEARCH_LIMIT ?? file.knowledge?.searchLimit, defaults.knowledgeSearchLimit),
 		mysqlEnabled: bool(env.MYSQL_ENABLED ?? file.mysql?.enabled, defaults.mysqlEnabled),
 		mysqlHost: env.MYSQL_HOST ?? file.mysql?.host ?? defaults.mysqlHost,

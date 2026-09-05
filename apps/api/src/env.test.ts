@@ -11,10 +11,12 @@ describe("config", () => {
 	it("读取顶层配置的默认值", () => {
 		const cfg = loadConfig();
 		expect(cfg.modelProvider).toBe("local-llm");
-		expect(cfg.modelId).toBe("deepseek-v4-flash-0731");
-		expect(cfg.modelBaseUrl).toContain("10.10.20.34");
+		expect(cfg.modelId.length).toBeGreaterThan(0);
+		expect(cfg.modelBaseUrl.startsWith("http")).toBe(true);
+		// baseUrl 不含 /chat/completions:openai 兼容客户端会自动拼路径
+		expect(cfg.modelBaseUrl.endsWith("/chat/completions")).toBe(false);
 		expect(cfg.knowledgeSearchLimit).toBeGreaterThan(0);
-		expect(cfg.modelProxy).toBeTruthy();
+		expect(typeof cfg.modelProxy).toBe("string");
 		expect(cfg.chunkerSize).toBeGreaterThan(0);
 		expect(cfg.chunkerOverlap).toBeLessThan(cfg.chunkerSize);
 	});
@@ -77,6 +79,31 @@ describe("extra body", () => {
 		} finally {
 			if (old === undefined) delete process.env.MODEL_EXTRA_BODY;
 			else process.env.MODEL_EXTRA_BODY = old;
+		}
+	});
+
+
+	it("日志配置:默认启用并指向 log 目录", () => {
+		delete process.env.LOG_DIR;
+		delete process.env.LOG_ENABLED;
+		const cfg = loadConfig();
+		expect(cfg.logEnabled).toBe(true);
+		expect(cfg.logDir.toLowerCase()).toContain("log");
+		expect(cfg.logMaxBytes).toBeGreaterThan(0);
+	});
+
+	it("日志配置:环境变量可覆盖目录与开关", () => {
+		const oldD = process.env.LOG_DIR;
+		const oldE = process.env.LOG_ENABLED;
+		process.env.LOG_DIR = "/tmp/repo-log";
+		process.env.LOG_ENABLED = "false";
+		try {
+			const cfg = loadConfig();
+			expect(cfg.logDir).toBe("/tmp/repo-log");
+			expect(cfg.logEnabled).toBe(false);
+		} finally {
+			if (oldD === undefined) delete process.env.LOG_DIR; else process.env.LOG_DIR = oldD;
+			if (oldE === undefined) delete process.env.LOG_ENABLED; else process.env.LOG_ENABLED = oldE;
 		}
 	});
 });

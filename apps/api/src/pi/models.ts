@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createModels } from "@earendil-works/pi-ai";
 import type { Provider } from "@earendil-works/pi-ai";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
@@ -6,6 +8,9 @@ import { deepseekProvider } from "@earendil-works/pi-ai/providers/deepseek";
 import { createLocalProvider } from "./local-provider.js";
 import { ProxyAgent, fetch as undiciFetch } from "undici";
 import { loadConfig, type AppConfig } from "../env.js";
+import { wrapFetchWithModelLog } from "../services/model-log.js";
+
+const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
 export interface ModelRuntime {
 	models: ReturnType<typeof createModels>;
@@ -20,6 +25,9 @@ export interface ModelRegistryOptions {
 	contextWindow?: number;
 	maxTokens?: number;
 	extraBody?: Record<string, unknown>;
+	logEnabled?: boolean;
+	logDir?: string;
+	logMaxBytes?: number;
 }
 
 export function createModelRegistry(options?: ModelRegistryOptions): ModelRuntime {
@@ -42,6 +50,14 @@ export function createModelRegistry(options?: ModelRegistryOptions): ModelRuntim
 
 	const extraBody = cfg.extraBody ?? appConfig.modelExtraBody;
 	const proxy = cfg.proxy ?? appConfig.modelProxy;
+	const rawLogDir = cfg.logDir ?? appConfig.logDir;
+	const logDir = path.isAbsolute(rawLogDir) ? rawLogDir : path.join(repoRoot, rawLogDir);
+
+	const logCfg = {
+		enabled: cfg.logEnabled ?? appConfig.logEnabled,
+		dir: logDir,
+		maxBytes: cfg.logMaxBytes ?? appConfig.logMaxBytes,
+	};
 
 	// 基础 fetch:需要代理时走 undici ProxyAgent,否则用全局 fetch。
 	let baseFetch: typeof fetch = globalThis.fetch;
@@ -52,26 +68,34 @@ export function createModelRegistry(options?: ModelRegistryOptions): ModelRuntim
 			undiciFetch(input, { ...init, dispatcher: proxyAgent })) as typeof fetch;
 	}
 
-	const streamFn: StreamFn = async (model, context, options) => {
-		const useCustomFetch = proxyAgent !== undefined || Object.keys(extraBody).length > 0;
-		if (!useCustomFetch) return models.stream(model, context, options);
-
-		// 自定义 fetch:额外参数统一塞进请求体 body 的 extra_body 字段,
-		// 不与标准 OpenAI 参数平级;仅对 JSON body 生效,失败时原样透传。
-		const fetchWithExtraBody: typeof fetch = (input, init) => {
-			const bodyText = typeof init?.body === "string" ? init.body : null;
-			if (bodyText) {
-				try {
-					const nextBody = injectExtraBody(bodyText, extraBody);
-					return baseFetch(input, { ...init, body: nextBody });
-				} catch {
-					// 非 JSON body,原样透传
-				}
+	// 额外参数统一塞进请求体 body 的 extra_body 字段,
+	// 不与标准 OpenAI 参数平级;仅对 JSON body 生效,失败时原样透传。
+	const withExtraBody = (base: typeof fetch): typeof fetch => (input, init) => {
+		const bodyText = typeof init?.body === "string" ? init.body : null;
+		if (bodyText) {
+			try {
+				const nextBody = injectExtraBody(bodyText, extraBody);
+				return base(input, { ...init, body: nextBody });
+			} catch {
+				// 非 JSON body,原样透传
 			}
-			return baseFetch(input, init);
-		};
+		}
+		return base(input, init);
+	};
 
-		return models.stream(model, context, { ...(options ?? {}), fetch: fetchWithExtraBody });
+	const streamFn: StreamFn = async (model, context, options) => {
+		const customFetchNeeded = proxyAgent !== undefined || Object.keys(extraBody).length > 0;
+		if (!logCfg.enabled && !customFetchNeeded) return models.stream(model, context, options);
+
+		// 自定义 fetch 链:模型调用日志(本地 NDJSON)→ 代理 → extra_body 注入
+		let fetchImpl: typeof fetch = baseFetch;
+		if (logCfg.enabled) {
+			fetchImpl = wrapFetchWithModelLog(baseFetch, logCfg, { modelId: model.id });
+		}
+		if (Object.keys(extraBody).length > 0) {
+			fetchImpl = withExtraBody(fetchImpl);
+		}
+		return models.stream(model, context, { ...(options ?? {}), fetch: fetchImpl });
 	};
 
 	return { models, streamFn };

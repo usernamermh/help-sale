@@ -24,6 +24,17 @@ export function migrate(db: DatabaseSync): void {
 		}
 	}
 
+	// v14:先补 analyses.request_hash 列,再执行全量 schema(schema 中的部分唯一索引引用该列)
+	if (current.user_version < 14) {
+		const hasAnalyses = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'analyses'").get();
+		if (hasAnalyses) {
+			const anaCols = db.prepare("PRAGMA table_info(analyses)").all() as Array<{ name: string }>;
+			if (!anaCols.some((col) => col.name === "request_hash")) {
+				db.exec("ALTER TABLE analyses ADD COLUMN request_hash TEXT;");
+			}
+		}
+	}
+
 	const sql = readFileSync(schemaPath, "utf8");
 	db.exec(sql);
 	// v8:重建 customer_tags(唯一约束改为 客户+标签,支持跨分析权重累加)
