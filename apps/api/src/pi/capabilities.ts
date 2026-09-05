@@ -7,6 +7,7 @@ export interface CapabilityDef {
 
 // 与 pi/agent-tools.ts 中的工具一一对应(不含系统收口工具 emit_final)
 export const CAPABILITIES: CapabilityDef[] = [
+	{ name: "list_customers", label: "列出客户", description: "列出客户清单(标识/姓名/电话/阶段/最近分析/会话数)", category: "客户" },
 	{ name: "get_customer_profile", label: "查询客户档案", description: "查客户名称/公司/阶段/备注", category: "客户" },
 	{ name: "get_customer_history", label: "查询客户历史", description: "查客户最近若干次分析结论", category: "客户" },
 	{ name: "get_customer_tags", label: "查询客户标签", description: "查系统自动沉淀的客户标签", category: "客户" },

@@ -8,7 +8,8 @@
 - 对话原文落库:analyze / evaluate-response / voice-digest 把每句(时间/角色/内容)写入 conversation_messages;GET /api/v1/conversations/:id/transcript;分析响应带 transcript;工作台与聊天端右侧「对话原文」侧栏展示。
 - 缓存:确定性工具结果进 tool_call_cache;相同 analyze 请求(哈希)直接复用分析记录不调模型。
 - 模型输入输出本地日志:help-sale.config.yaml logging 段(logging.enabled / dir / maxBytes,LOG_ENABLED/LOG_DIR/LOG_MAX_BYTES 可覆盖),启用后每次模型调用写 `<dir>/model-calls.log` NDJSON:request 行只记 requestId,response 行带同一 requestId 写完整请求/返回(推理+tool_calls),异常落 error 行;默认日志目录 apps/api/log。
-- 128/128 测试 + typecheck 零错误。
+- list_customers 工具:直接返回客户清单 Markdown 表格(标识/姓名/电话/阶段/最近分析/会话数),prompt 强约束原样保留工具表格;最终答复支持打字机流式(delta 6字符/48ms 上限 12s)且 Markdown 表格正常渲染;HTML 响应 no-store 防缓存。
+- 134/134 测试 + typecheck 零错误。
 
 - MVP 后端 Task 1-20 完成,Task 21(真实模型冒烟)已使用内网 U21-Preview 端点完成,Task 22-23(文档/验收)完成。
 - 前端工具页已上线(Fastify 根路由 /,单页 HTML,无构建链):对话分析、车型优选、知识上传、跟进任务、历史查询。

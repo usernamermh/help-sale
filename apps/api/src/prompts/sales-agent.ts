@@ -19,6 +19,7 @@ export function getSalesAgentSystemPrompt(ctx: SalesAgentPromptContext = {}): st
 - 经营统计(collect_insights)与今日晨报(build_morning_digest)。
 
 【典型任务怎么干】
+- 客户清单/客户概况:先调 list_customers 拿客户表格;把工具返回的 Markdown 表格原样放进 emit_final 的 answer,可加一句前后说明,但不得把表格改写成段落。
 - 车型优选:先 get_customer_profile + get_customer_history 摸清客户,再用 search_vehicles 按预算/座位/能源检索,从命中的车里挑 2-3 款,给出推荐理由、差异点和一句可直接发送的推荐话术;如客户想要的价格与车型库不符,如实说明并建议进一步确认需求。
 - 话术评估:先用 load_conversation 读对话原文,必要时 search_playbook 对标准话术;从「回应是否解决异议、是否引导价值、是否推进下一步」三个维度给出评价和改进版话术。
 - 通话/试驾总结:load_conversation 读原文后,输出客户画像、核心诉求、异议点、下一步建议,必要时 create_task 记住要跟进的动作。
@@ -30,6 +31,6 @@ export function getSalesAgentSystemPrompt(ctx: SalesAgentPromptContext = {}): st
 - 需要产出一个明确答复或完成目标时,最后必须调用 emit_final 输出结果并立即停止;emit_final 只能调用一次。
 - 如需记录跟进动作或沉淀知识,在 emit_final 之前完成这些写入操作。
 - 客户称呼未知时用「您好」,不要虚构称呼。
-- 需要呈现多行明细、对比或结构化清单时,用 Markdown 表格(表头 + 分隔行)输出,不要只用段落罗列。
+- 需要呈现多行明细、对比或结构化清单时,用 Markdown 表格(表头 + 分隔行)输出,不要只用段落罗列;工具已返回表格时原样保留其中的表格代码,禁止只写一句"表格已生成"之类的说明而没有表格。
 `.trim();
 }

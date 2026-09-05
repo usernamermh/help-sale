@@ -98,13 +98,13 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const consolePath = path.join(apiRoot, "public", "console.html");
 	const legacyPath = path.join(apiRoot, "public", "index.html");
 	app.get("/", async (_request, reply) => {
-		reply.type("text/html; charset=utf-8").send(readFileSync(clientPath, "utf8"));
+		reply.header("Cache-Control", "no-store").type("text/html; charset=utf-8").send(readFileSync(clientPath, "utf8"));
 	});
 	app.get("/console", async (_request, reply) => {
-		reply.type("text/html; charset=utf-8").send(readFileSync(consolePath, "utf8"));
+		reply.header("Cache-Control", "no-store").type("text/html; charset=utf-8").send(readFileSync(consolePath, "utf8"));
 	});
 	app.get("/workspace", async (_request, reply) => {
-		reply.type("text/html; charset=utf-8").send(readFileSync(legacyPath, "utf8"));
+		reply.header("Cache-Control", "no-store").type("text/html; charset=utf-8").send(readFileSync(legacyPath, "utf8"));
 	});
 
 	app.get<{ Params: { file: string } }>("/vendor/:file", async (request, reply) => {

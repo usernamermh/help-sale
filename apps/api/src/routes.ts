@@ -444,11 +444,14 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 				const t = goal.replace(/\s+/g, " ").trim();
 				setThreadTitle(deps.db, request.tenantId, thread.id, t.length > 24 ? t.slice(0, 24) + "…" : t);
 			}
-			// 打字机流式:最终答复按小块逐步下发(delta),前端逐块渲染;最终仍发 final 全量事件
+			// 打字机流式:最终答复按 6 字符/步逐步下发(delta),节奏可感知,总时长不超过 12s;最终仍发 final 全量事件
 			const answer = result.final?.answer ?? "";
-			for (let i = 0; i < answer.length; i += 16) {
-				write({ type: "delta", text: answer.slice(i, i + 16) });
-				await new Promise((r) => setTimeout(r, 12));
+			const CHUNK = 6;
+			const blocks = Math.max(Math.ceil(answer.length / CHUNK), 1);
+			const stepMs = Math.min(48, Math.floor(12000 / blocks));
+			for (let i = 0; i < answer.length; i += CHUNK) {
+				write({ type: "delta", text: answer.slice(i, i + CHUNK) });
+				if (i + CHUNK < answer.length) await new Promise((r) => setTimeout(r, stepMs));
 			}
 			write({ type: "final", threadId: thread.id, runId: result.runId, final: result.final });
 			reply.raw.end();

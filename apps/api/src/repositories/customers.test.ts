@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import { openDatabase } from "../db/database.js";
-import { getCustomer, requireTenant, upsertCustomer } from "./customers.js";
+import { getCustomer, listCustomers, requireTenant, upsertCustomer } from "./customers.js";
 
 let db: DatabaseSync;
 
@@ -39,5 +39,28 @@ describe("customers", () => {
 		expect(getCustomer(db, "t1", "c_ph")?.phone).toBe("13700000000");
 		const again = upsertCustomer(db, { tenantId: "t1", key: "c_ph", name: "王经理", phone: "13800000000" });
 		expect(again.phone).toBe("13800000000");
+	});
+
+
+	it("listCustomers 返回客户清单(电话/阶段/最近分析/会话数,按最近分析排序)", () => {
+		const a = upsertCustomer(db, { tenantId: "t1", key: "c_a", name: "王总", phone: "13700000001", stage: "洽谈中" });
+		const b = upsertCustomer(db, { tenantId: "t1", key: "c_b", name: "李总", phone: "13700000002", stage: "成交" });
+		// c_a 有最近分析与会话,应排前面
+		requireTenant(db, "t2", "另一租户");
+		upsertCustomer(db, { tenantId: "t2", key: "c_x", name: "别家客户" });
+		// 直接插入分析与会话(与 analyses 表结构一致)
+		db.prepare("INSERT INTO analyses (id, tenant_id, customer_id, conversation_id, intent, summary, signals_json, suggested_reply, next_steps_json, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
+			.run("an-a", "t1", a.id, "conv-a", "价格异议", "s", "[]", "r", "[]", "2026-09-01T08:00:00Z");
+		db.prepare("INSERT INTO conversations (id, tenant_id, customer_id, sales_name, channel, message_count) VALUES (?,?,?,?,?,?)")
+			.run("conv-a", "t1", a.id, "李销售", "chat", 3);
+		const rows = listCustomers(db, "t1", 50);
+		expect(rows).toHaveLength(2);
+		expect(rows[0].key).toBe("c_a");
+		expect(rows[0].name).toBe("王总");
+		expect(rows[0].phone).toBe("13700000001");
+		expect(rows[0].lastAnalysisAt).toBe("2026-09-01T08:00:00Z");
+		expect(rows[0].conversationCount).toBe(1);
+		// 跨租户隔离
+		expect(listCustomers(db, "t2", 50)).toHaveLength(1);
 	});
 });

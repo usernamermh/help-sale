@@ -1,7 +1,7 @@
 import { Type } from "typebox";
 import type { DatabaseSync } from "node:sqlite";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import { getCustomer, upsertCustomer } from "../repositories/customers.js";
+import { getCustomer, listCustomers, upsertCustomer } from "../repositories/customers.js";
 import { searchKnowledge } from "../repositories/knowledge.js";
 import { listAnalysesByCustomer } from "../repositories/analyses.js";
 import { listCustomerTags } from "../repositories/customer-tags.js";
@@ -56,6 +56,22 @@ export function createSalesAgentTools(deps: SalesAgentToolDeps): Array<AgentTool
 				});			},
 		},
 		{
+			name: "list_customers",
+			label: "列出客户",
+			description: "列出当前租户全部客户(标识/姓名/电话/阶段/最近分析时间/会话数),直接返回完整清单表格,内容可原样展示;查询客户概况时优先使用。",
+			parameters: Type.Object({
+				limit: Type.Optional(Type.Number({ default: 50, minimum: 1, maximum: 100 })),
+			}),
+			async execute(_id, params: any) {
+				const rows = listCustomers(db, tenantId, params.limit ?? 50);
+				if (!rows.length) return text("暂无客户档案。", rows);
+				const lines = ["| 客户标识 | 姓名 | 电话 | 阶段 | 最近分析 | 会话数 |", "| --- | --- | --- | --- | --- | --- |"];
+				for (const r of rows) {
+					lines.push(`| ${r.key} | ${r.name ?? "—"} | ${r.phone ?? "—"} | ${r.stage ?? "—"} | ${r.lastAnalysisAt?.slice(0, 10) ?? "—"} | ${r.conversationCount} |`);
+				}
+				return text(`当前客户清单(${rows.length} 位):\n${lines.join("\n")}`, { customers: rows });
+			},
+		},		{
 			name: "get_customer_profile",
 			label: "查看客户档案",
 			description: "按客户 key 获取客户资料(名称/公司/阶段/备注)。",

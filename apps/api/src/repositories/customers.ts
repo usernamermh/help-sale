@@ -69,3 +69,37 @@ export function requireTenant(db: DatabaseSync, tenantId: string, name = "未命
 		db.prepare("INSERT INTO tenants (id, name, slug) VALUES (?,?,?)").run(tenantId, name, slug ?? `t-${tenantId.slice(0, 8)}`);
 	}
 }
+
+export interface CustomerBriefRow {
+	id: string;
+	key: string;
+	name: string | null;
+	phone: string | null;
+	stage: string | null;
+	lastAnalysisAt: string | null;
+	conversationCount: number;
+}
+
+/** 客户清单:key/姓名/电话/阶段 + 最近分析时间与会话数,按最近分析倒序(供表格展示)。 */
+export function listCustomers(db: DatabaseSync, tenantId: string, limit = 50): CustomerBriefRow[] {
+	const rows = db
+		.prepare(
+			`SELECT cu.id, cu.key, cu.name, cu.phone, cu.stage,
+			        (SELECT MAX(a.created_at) FROM analyses a WHERE a.customer_id = cu.id) AS last_analysis_at,
+			        (SELECT COUNT(*) FROM conversations c WHERE c.customer_id = cu.id) AS conversation_count
+			 FROM customers cu
+			 WHERE cu.tenant_id = ?
+			 ORDER BY COALESCE((SELECT MAX(a.created_at) FROM analyses a WHERE a.customer_id = cu.id), '') DESC
+			 LIMIT ?`,
+		)
+		.all(tenantId, limit) as unknown as Array<Record<string, unknown>>;
+	return rows.map((r) => ({
+		id: String(r.id),
+		key: String(r.key),
+		name: r.name != null ? String(r.name) : null,
+		phone: r.phone != null ? String(r.phone) : null,
+		stage: r.stage != null ? String(r.stage) : null,
+		lastAnalysisAt: r.last_analysis_at != null ? String(r.last_analysis_at) : null,
+		conversationCount: Number(r.conversation_count ?? 0),
+	}));
+}
