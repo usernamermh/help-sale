@@ -17,7 +17,8 @@
 - sql 工具权限与危险拦截:默认只读(SELECT/SHOW 等放行);写操作需显式 readOnly=false + confirmWrite=true;规则拦截 DROP/TRUNCATE/ALTER/GRANT/REVOKE,UPDATE/DELETE 必须带 WHERE,多语句拦截;写操作审计到 data/sql-audit.log(sql-policy.ts 可单测)。
 - 数据存储模式开关:help-sale.config.yaml data.mode = local|mysql 二选一(不可双写);local=SQLite 单一主库(默认不再启用 MySQL 归档双写),mysql=远程主库(仓库层 MySQL 迁移完成前启动即报错 fail-fast)。data.databaseId 为库标识,data.tables 为全部业务表名映射(仓库层经 src/db/tables.ts 统一引用),DATA_MODE/DATABASE_ID 环境变量可覆盖。
 - MySQL 主库模式已可用(data.mode=mysql):独立实现于 apps/api/src/db/mysql/(translate 方言转换 + mysql/schema.sql 23 表 + worker 同步桥 SyncMysqlDb),仓库层零改动;知识库检索在 MySQL 模式降级为 LIKE;支持 mysql.schemaRebuild 清表重建(初始化/升级用);pi 会话库仍为本地运行态。冒烟:远程 help_sale 建表+种子+门店/销售/会话/知识检索全部 200。
-- 163/163 测试 + typecheck 零错误。
+- 配置唯一来源:所有配置只从 help-sale.config.yaml 读取,不支持环境变量覆盖(CONFIG_PATH 仅用于指定配置文件路径);env.ts 纯 yaml 解析,缺失/非法字段显式抛错。
+- 158/158 测试 + typecheck 零错误。
 
 - MVP 后端 Task 1-20 完成,Task 21(真实模型冒烟)已使用内网 U21-Preview 端点完成,Task 22-23(文档/验收)完成。
 - 前端工具页已上线(Fastify 根路由 /,单页 HTML,无构建链):对话分析、车型优选、知识上传、跟进任务、历史查询。

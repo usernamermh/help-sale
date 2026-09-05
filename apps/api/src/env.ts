@@ -3,7 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 
-// 所有运行配置由 help-sale.config.yaml 提供,代码内不写任何默认值。
+// 所有运行配置只从 help-sale.config.yaml 读取,不允许环境变量覆盖。
+// 唯一例外:CONFIG_PATH 仅用于指定配置文件路径(不是配置项本身)。
 export interface AppConfig {
 	host: string;
 	port: number;
@@ -132,28 +133,7 @@ export function loadConfigFile(): FileConfig {
 	}
 }
 
-export function loadEnv(): void {
-	if (typeof process.loadEnvFile === "function") {
-		try {
-			process.loadEnvFile?.();
-		} catch {
-			// 没有 .env 文件时忽略,使用系统环境变量
-		}
-	} else if (process.env.NODE_ENV !== "test") {
-		console.warn("[env] loadEnvFile 不可用,请手动注入环境变量");
-	}
-}
-
-function safeParseJson(raw: string): Record<string, unknown> | undefined {
-	try {
-		const parsed = JSON.parse(raw) as unknown;
-		return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : undefined;
-	} catch {
-		return undefined;
-	}
-}
-
-/** 布尔解析:必须能从配置/环境得到明确值,不允许代码内兜底默认。 */
+/** 布尔解析:必须能从配置得到明确值,不允许代码内兜底默认。 */
 function bool(value: unknown): boolean {
 	if (typeof value === "boolean") return value;
 	if (value === undefined || value === null || value === "") {
@@ -162,22 +142,21 @@ function bool(value: unknown): boolean {
 	return String(value).toLowerCase() === "true" || String(value) === "1";
 }
 
-/** 数值解析:必须能从配置/环境得到明确值,不允许代码内兜底默认。 */
+/** 数值解析:必须能从配置得到明确值,不允许代码内兜底默认。 */
 function num(value: unknown): number {
 	const n = Number(value);
 	if (Number.isFinite(n)) return n;
-	throw new Error("配置文件缺少数值字段(在 help-sale.config.yaml 中补齐)");
+	throw new Error("配置缺少数值字段(在 help-sale.config.yaml 中补齐)");
 }
 
-
-/** 数据存储模式枚举校验:只允许 local / mysql,缺省或非法抛错(不允许代码内默认)。 */
+/** 数据存储模式枚举校验:只允许 local / mysql,缺省或非法抛错。 */
 function storageMode(value: unknown): "local" | "mysql" {
 	const v = String(value ?? "").trim().toLowerCase();
 	if (v === "local" || v === "mysql") return v as "local" | "mysql";
 	throw new Error(`配置项目 data.mode 必须为 local 或 mysql(当前:${String(value)})`);
 }
 
-/** 业务表名映射校验:必须覆盖全部逻辑表,缺失或非法抛错(yaml data.tables 是唯一事实源)。 */
+/** 业务表名映射校验:必须覆盖全部逻辑表,缺失或非法抛错(data.tables 是唯一事实源)。 */
 function parseTables(value: unknown): Record<string, string> {
 	if (!value || typeof value !== "object") {
 		throw new Error("配置项 data.tables 缺失:请在 help-sale.config.yaml 的 data.tables 中配置全部业务表名");
@@ -198,67 +177,65 @@ function parseTables(value: unknown): Record<string, string> {
 	}
 	return out;
 }
+
 export function loadConfig(): AppConfig {
 	const file = loadConfigFile();
-	// 优先级:配置文件 < 环境变量(可覆盖单项;CONFIG_PATH 可换文件)
-	const env = process.env;
 	return {
-		host: env.HOST ?? file.server!.host!,
-		port: num(env.PORT ?? file.server!.port!),
-		dataMode: storageMode(env.DATA_MODE ?? file.data!.mode!),
-		databaseId: env.DATABASE_ID ?? file.data!.databaseId!,
+		host: file.server!.host!,
+		port: num(file.server!.port!),
+		dataMode: storageMode(file.data!.mode!),
+		databaseId: file.data!.databaseId!,
 		tables: parseTables(file.data!.tables!),
-		dataDir: env.DATA_DIR ?? file.data!.dataDir!,
-		businessDbPath: env.BUSINESS_DB ?? file.data!.businessDbPath!,
-		sessionDbPath: env.SESSION_DB ?? file.data!.sessionDbPath!,
-		modelProvider: env.MODEL_PROVIDER ?? file.model!.provider!,
-		modelId: env.MODEL_ID ?? file.model!.modelId!,
-		modelBaseUrl: env.MODEL_BASE_URL ?? file.model!.baseUrl!,
-		modelApiKey: env.MODEL_API_KEY ?? file.model!.apiKey!,
-		modelProxy: env.MODEL_PROXY ?? file.model!.proxy!,
-		modelContextWindow: num(env.MODEL_CONTEXT_WINDOW ?? file.model!.contextWindow!),
-		modelMaxTokens: num(env.MODEL_MAX_TOKENS ?? file.model!.maxTokens!),
-		modelExtraBody:
-			env.MODEL_EXTRA_BODY !== undefined ? (safeParseJson(env.MODEL_EXTRA_BODY) ?? {}) : (file.model!.extraBody ?? {}),
-		logEnabled: bool(env.LOG_ENABLED ?? file.logging!.enabled!),
-		logDir: env.LOG_DIR ?? file.logging!.dir!,
-		logMaxBytes: num(env.LOG_MAX_BYTES ?? file.logging!.maxBytes!),
-		knowledgeSearchLimit: num(env.KNOWLEDGE_SEARCH_LIMIT ?? file.knowledge!.searchLimit!),
-		mysqlEnabled: bool(env.MYSQL_ENABLED ?? file.mysql!.enabled!),
-		mysqlSchemaRebuild: bool(env.MYSQL_SCHEMA_REBUILD ?? file.mysql!.schemaRebuild!),
-		mysqlConnectTimeout: num(env.MYSQL_CONNECT_TIMEOUT ?? file.mysql!.connectTimeout!),
-		mysqlHost: env.MYSQL_HOST ?? file.mysql!.host!,
-		mysqlPort: num(env.MYSQL_PORT ?? file.mysql!.port!),
-		mysqlUser: env.MYSQL_USER ?? file.mysql!.user!,
-		mysqlPassword: env.MYSQL_PASSWORD ?? file.mysql!.password!,
-		mysqlDatabase: env.MYSQL_DATABASE ?? file.mysql!.database!,
-		redisEnabled: bool(env.REDIS_ENABLED ?? file.redis!.enabled!),
-		redisHost: env.REDIS_HOST ?? file.redis!.host!,
-		redisPort: num(env.REDIS_PORT ?? file.redis!.port!),
-		redisPassword: env.REDIS_PASSWORD ?? file.redis!.password!,
-		chunkerSize: num(env.CHUNKER_SIZE ?? file.chunker!.size!),
-		chunkerOverlap: num(env.CHUNKER_OVERLAP ?? file.chunker!.overlap!),
-		notificationEnabled: bool(env.NOTIFICATION_ENABLED ?? file.notification!.enabled!),
-		notificationWebhookUrl: env.NOTIFICATION_WEBHOOK_URL ?? file.notification!.webhookUrl!,
-		companyName: env.COMPANY_NAME ?? file.company!.name!,
-		teamName: env.TEAM_NAME ?? file.company!.team!,
-		tenantId: env.TENANT_ID ?? file.tenant!.defaultTenantId!,
-		insightsDays: num(env.INSIGHTS_DAYS ?? file.defaults!.insightsDays!),
-		improvementsDays: num(env.IMPROVEMENTS_DAYS ?? file.defaults!.improvementsDays!),
-		conversationsLimit: num(env.CONVERSATIONS_LIMIT ?? file.defaults!.conversationsLimit!),
-		dealsLimit: num(env.DEALS_LIMIT ?? file.defaults!.dealsLimit!),
-		storeOverviewDays: num(env.STORE_OVERVIEW_DAYS ?? file.defaults!.storeOverviewDays!),
-		customersLimit: num(env.CUSTOMERS_LIMIT ?? file.defaults!.customersLimit!),
-		knowledgeCandidatesLimit: num(env.KNOWLEDGE_CANDIDATES_LIMIT ?? file.defaults!.knowledgeCandidatesLimit!),
-		agentThreadsLimit: num(env.AGENT_THREADS_LIMIT ?? file.defaults!.agentThreadsLimit!),
-		transcriptLimit: num(env.TRANSCRIPT_LIMIT ?? file.defaults!.transcriptLimit!),
-		agentListLimit: num(env.AGENT_LIST_LIMIT ?? file.defaults!.agentListLimit!),
-		notificationScanLimit: num(env.NOTIFICATION_SCAN_LIMIT ?? file.defaults!.notificationScanLimit!),
-		remindersTakeLimit: num(env.REMINDERS_TAKE_LIMIT ?? file.defaults!.remindersTakeLimit!),
-		analysisHistoryLimit: num(env.ANALYSIS_HISTORY_LIMIT ?? file.defaults!.analysisHistoryLimit!),
-		vehicleSearchLimit: num(env.VEHICLE_SEARCH_LIMIT ?? file.defaults!.vehicleSearchLimit!),
+		dataDir: file.data!.dataDir!,
+		businessDbPath: file.data!.businessDbPath!,
+		sessionDbPath: file.data!.sessionDbPath!,
+		modelProvider: file.model!.provider!,
+		modelId: file.model!.modelId!,
+		modelBaseUrl: file.model!.baseUrl!,
+		modelApiKey: file.model!.apiKey!,
+		modelProxy: file.model!.proxy!,
+		modelContextWindow: num(file.model!.contextWindow!),
+		modelMaxTokens: num(file.model!.maxTokens!),
+		modelExtraBody: file.model!.extraBody ?? {},
+		logEnabled: bool(file.logging!.enabled!),
+		logDir: file.logging!.dir!,
+		logMaxBytes: num(file.logging!.maxBytes!),
+		knowledgeSearchLimit: num(file.knowledge!.searchLimit!),
+		mysqlEnabled: bool(file.mysql!.enabled!),
+		mysqlSchemaRebuild: bool(file.mysql!.schemaRebuild!),
+		mysqlConnectTimeout: num(file.mysql!.connectTimeout!),
+		mysqlHost: file.mysql!.host!,
+		mysqlPort: num(file.mysql!.port!),
+		mysqlUser: file.mysql!.user!,
+		mysqlPassword: file.mysql!.password!,
+		mysqlDatabase: file.mysql!.database!,
+		redisEnabled: bool(file.redis!.enabled!),
+		redisHost: file.redis!.host!,
+		redisPort: num(file.redis!.port!),
+		redisPassword: file.redis!.password!,
+		chunkerSize: num(file.chunker!.size!),
+		chunkerOverlap: num(file.chunker!.overlap!),
+		notificationEnabled: bool(file.notification!.enabled!),
+		notificationWebhookUrl: file.notification!.webhookUrl!,
+		companyName: file.company!.name!,
+		teamName: file.company!.team!,
+		tenantId: file.tenant!.defaultTenantId!,
+		insightsDays: num(file.defaults!.insightsDays!),
+		improvementsDays: num(file.defaults!.improvementsDays!),
+		conversationsLimit: num(file.defaults!.conversationsLimit!),
+		dealsLimit: num(file.defaults!.dealsLimit!),
+		storeOverviewDays: num(file.defaults!.storeOverviewDays!),
+		customersLimit: num(file.defaults!.customersLimit!),
+		knowledgeCandidatesLimit: num(file.defaults!.knowledgeCandidatesLimit!),
+		agentThreadsLimit: num(file.defaults!.agentThreadsLimit!),
+		transcriptLimit: num(file.defaults!.transcriptLimit!),
+		agentListLimit: num(file.defaults!.agentListLimit!),
+		notificationScanLimit: num(file.defaults!.notificationScanLimit!),
+		remindersTakeLimit: num(file.defaults!.remindersTakeLimit!),
+		analysisHistoryLimit: num(file.defaults!.analysisHistoryLimit!),
+		vehicleSearchLimit: num(file.defaults!.vehicleSearchLimit!),
 	};
 }
 
-/** 应用全局配置实例:各模块顶部直接 import { config } 使用,不再经过函数入参传递。 */
+/** 应用全局配置实例:各模块顶部直接 import { config } 使用,配置只来自 yaml。 */
 export const config: AppConfig = loadConfig();

@@ -17,7 +17,6 @@ function writeResult(status: "ok" | "error", payload: Record<string, unknown>): 
 			writeRaw({ status: "error", message: `结果超出共享内存上限(${bytes.length} > ${resultBuf.byteLength - 8})` });
 			return;
 		}
-		console.log("[worker] write", bytes.length, text.slice(0, 80));
 		const dv = new DataView(resultBuf);
 		dv.setUint32(4, bytes.length, true);
 		new Uint8Array(resultBuf, 8, bytes.length).set(bytes);

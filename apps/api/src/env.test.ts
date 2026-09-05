@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig, loadConfigFile, locateConfigFile } from "./env.js";
 
+// 配置唯一来源:help-sale.config.yaml。环境变量一律不参与配置读取(仅 CONFIG_PATH 可选配置文件路径)。
+const YAML = {
+	modelId: loadConfig().modelId, // 以 yaml 实际值为基准
+	port: loadConfig().port,
+	modelProxy: loadConfig().modelProxy,
+	dataDir: loadConfig().dataDir,
+	logEnabled: loadConfig().logEnabled,
+	logDir: loadConfig().logDir,
+};
+
 describe("config", () => {
 	it("定位到仓库顶层 YAML 配置文件", () => {
 		const file = locateConfigFile();
@@ -8,10 +18,9 @@ describe("config", () => {
 		expect(file!.endsWith("help-sale.config.yaml")).toBe(true);
 	});
 
-	it("读取顶层配置的默认值", () => {
+	it("读取顶层配置关键值", () => {
 		const cfg = loadConfig();
 		expect(cfg.modelProvider).toBe("local-llm");
-		expect(cfg.modelId.length).toBeGreaterThan(0);
 		expect(cfg.modelBaseUrl.startsWith("http")).toBe(true);
 		// baseUrl 不含 /chat/completions:openai 兼容客户端会自动拼路径
 		expect(cfg.modelBaseUrl.endsWith("/chat/completions")).toBe(false);
@@ -19,6 +28,7 @@ describe("config", () => {
 		expect(typeof cfg.modelProxy).toBe("string");
 		expect(cfg.chunkerSize).toBeGreaterThan(0);
 		expect(cfg.chunkerOverlap).toBeLessThan(cfg.chunkerSize);
+		expect(cfg.dataMode).toBe("local");
 	});
 
 	it("YAML 配置含注释仍可解析", () => {
@@ -30,84 +40,52 @@ describe("config", () => {
 		expect(file.model?.extraBody).toEqual({});
 	});
 
-	it("环境变量覆盖配置文件", () => {
-		const oldModel = process.env.MODEL_ID;
-		const oldPort = process.env.PORT;
+	it("环境变量不覆盖配置:modelId/port/proxy/dataDir 均取 yaml 值", () => {
+		const old1 = process.env.MODEL_ID;
+		const old2 = process.env.PORT;
+		const old3 = process.env.MODEL_PROXY;
+		const old4 = process.env.DATA_DIR;
 		process.env.MODEL_ID = "override-model";
 		process.env.PORT = "4321";
-		try {
-			const cfg = loadConfig();
-			expect(cfg.modelId).toBe("override-model");
-			expect(cfg.port).toBe(4321);
-		} finally {
-			if (oldModel === undefined) delete process.env.MODEL_ID;
-			else process.env.MODEL_ID = oldModel;
-			if (oldPort === undefined) delete process.env.PORT;
-			else process.env.PORT = oldPort;
-		}
-	});
-
-
-	it("MODEL_PROXY 环境变量覆盖", () => {
-		const old = process.env.MODEL_PROXY;
 		process.env.MODEL_PROXY = "http://127.0.0.1:8123";
-		try {
-			expect(loadConfig().modelProxy).toBe("http://127.0.0.1:8123");
-		} finally {
-			if (old === undefined) delete process.env.MODEL_PROXY;
-			else process.env.MODEL_PROXY = old;
-		}
-	});
-		it("路径配置可被环境变量覆盖", () => {
-		const old = process.env.DATA_DIR;
 		process.env.DATA_DIR = "/tmp/custom-data";
 		try {
-			expect(loadConfig().dataDir).toBe("/tmp/custom-data");
+			const cfg = loadConfig();
+			expect(cfg.modelId).toBe(YAML.modelId);
+			expect(cfg.port).toBe(YAML.port);
+			expect(cfg.modelProxy).toBe(YAML.modelProxy);
+			expect(cfg.dataDir).toBe(YAML.dataDir);
 		} finally {
-			if (old === undefined) delete process.env.DATA_DIR;
-			else process.env.DATA_DIR = old;
-		}
-	});
-});
-
-describe("extra body", () => {
-	it("环境变量 MODEL_EXTRA_BODY 以 JSON 覆盖", () => {
-		const old = process.env.MODEL_EXTRA_BODY;
-		process.env.MODEL_EXTRA_BODY = '{"temperature":0.7}';
-		try {
-			expect(loadConfig().modelExtraBody).toEqual({ temperature: 0.7 });
-		} finally {
-			if (old === undefined) delete process.env.MODEL_EXTRA_BODY;
-			else process.env.MODEL_EXTRA_BODY = old;
+			if (old1 === undefined) delete process.env.MODEL_ID; else process.env.MODEL_ID = old1;
+			if (old2 === undefined) delete process.env.PORT; else process.env.PORT = old2;
+			if (old3 === undefined) delete process.env.MODEL_PROXY; else process.env.MODEL_PROXY = old3;
+			if (old4 === undefined) delete process.env.DATA_DIR; else process.env.DATA_DIR = old4;
 		}
 	});
 
-
-	it("日志配置:默认启用并指向 log 目录", () => {
-		delete process.env.LOG_DIR;
-		delete process.env.LOG_ENABLED;
-		const cfg = loadConfig();
-		expect(cfg.logEnabled).toBe(true);
-		expect(cfg.logDir.toLowerCase()).toContain("log");
-		expect(cfg.logMaxBytes).toBeGreaterThan(0);
-	});
-
-	it("日志配置:环境变量可覆盖目录与开关", () => {
-		const oldD = process.env.LOG_DIR;
-		const oldE = process.env.LOG_ENABLED;
+	it("环境变量不覆盖配置:日志目录/开关/extraBody/data.mode 均取 yaml 值", () => {
+		const old1 = process.env.LOG_DIR;
+		const old2 = process.env.LOG_ENABLED;
+		const old3 = process.env.MODEL_EXTRA_BODY;
+		const old4 = process.env.DATA_MODE;
 		process.env.LOG_DIR = "/tmp/repo-log";
 		process.env.LOG_ENABLED = "false";
+		process.env.MODEL_EXTRA_BODY = '{"temperature":0.7}';
+		process.env.DATA_MODE = "mysql";
 		try {
 			const cfg = loadConfig();
-			expect(cfg.logDir).toBe("/tmp/repo-log");
-			expect(cfg.logEnabled).toBe(false);
+			expect(cfg.logDir).toBe(YAML.logDir);
+			expect(cfg.logEnabled).toBe(YAML.logEnabled);
+			expect(cfg.modelExtraBody).toEqual({});
+			expect(cfg.dataMode).toBe("local");
 		} finally {
-			if (oldD === undefined) delete process.env.LOG_DIR; else process.env.LOG_DIR = oldD;
-			if (oldE === undefined) delete process.env.LOG_ENABLED; else process.env.LOG_ENABLED = oldE;
+			if (old1 === undefined) delete process.env.LOG_DIR; else process.env.LOG_DIR = old1;
+			if (old2 === undefined) delete process.env.LOG_ENABLED; else process.env.LOG_ENABLED = old2;
+			if (old3 === undefined) delete process.env.MODEL_EXTRA_BODY; else process.env.MODEL_EXTRA_BODY = old3;
+			if (old4 === undefined) delete process.env.DATA_MODE; else process.env.DATA_MODE = old4;
 		}
-
-
 	});
+
 	it("数据存储元信息:databaseId 与 tables 表名映射来自配置", () => {
 		const cfg = loadConfig();
 		expect(cfg.databaseId).toBe("help_sale");

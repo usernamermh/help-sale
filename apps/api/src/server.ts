@@ -1,7 +1,5 @@
-import { config, loadEnv } from "./env.js";
+import { config } from "./env.js";
 import { buildApp } from "./app.js";
-
-loadEnv();
 
 
 const app = buildApp({ logger: true });
