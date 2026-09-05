@@ -24,6 +24,7 @@ export const CAPABILITIES: CapabilityDef[] = [
 	{ name: "complete_task", label: "完成任务", description: "把任务标记为已完成", category: "任务" },
 	{ name: "collect_insights", label: "收集经营洞察", description: "统计分析量/意图/任务完成率", category: "经营" },
 	{ name: "build_morning_digest", label: "生成晨报", description: "生成本日待办与跟进晨报", category: "经营" },
+	{ name: "todo_list", label: "待办清单", description: "创建/细化/标记完成 todo list(tools_system)", category: "流程" },
 ];
 
 export function capabilitiesFor(category?: string): CapabilityDef[] {

@@ -6,9 +6,9 @@ import { insertKnowledgeDocument } from "../repositories/knowledge.js";
 import { createCopilotTools } from "./tools.js";
 
 let db: DatabaseSync;
-let tools: ReturnType<typeof createCopilotTools>;
+let tools: Awaited<ReturnType<typeof createCopilotTools>>;
 
-beforeEach(() => {
+beforeEach(async () => {
 	db = openDatabase(":memory:");
 	requireTenant(db, "t1", "演示租户");
 	insertKnowledgeDocument(db, {
@@ -16,7 +16,7 @@ beforeEach(() => {
 		title: "价格政策",
 		chunks: ["标准版 999 元/年,旗舰版 1999 元/年,年付送一个月"],
 	});
-	tools = createCopilotTools({ db, tenantId: "t1" });
+	tools = await createCopilotTools({ db, tenantId: "t1" });
 });
 
 afterEach(() => db.close());

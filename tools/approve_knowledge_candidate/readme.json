@@ -1,0 +1,8 @@
+{
+  "name": "approve_knowledge_candidate",
+  "description": "把知识候选确认入库。",
+  "category": "知识",
+  "parameters": { "type": "object", "required": ["candidateId"], "properties": { "candidateId": { "type": "string" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

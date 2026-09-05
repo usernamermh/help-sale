@@ -1,5 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
+import type { AgentTool, AgentToolResult } from "@earendil-works/pi-agent-core";
 
 /**
  * 外部工具目录约定:
@@ -14,6 +16,12 @@ export interface ExternalToolInfo {
 	name: string;
 	description: string;
 	functions: string[];
+	/** 可选:readme.json 声明的分类(前端能力清单用) */
+	category?: string;
+	/** 可选:readme.json 声明的参数 JSON Schema(缺省时从 main.ts 的 schema 导出取) */
+	parameters?: Record<string, unknown>;
+	/** 实现入口:优先 readme.json entry,否则 main.ts */
+	entry?: string;
 }
 
 export const TOOL_ROOTS = ["tools", "tools_system"];
@@ -34,7 +42,7 @@ export function scanExternalTools(roots: string[]): ExternalToolInfo[] {
 			const dirPath = path.join(root, entry.name);
 			const readmePath = path.join(dirPath, "readme.json");
 			if (!existsSync(readmePath)) continue;
-			let meta: { name?: string; description?: string; function_list?: string[] };
+			let meta: { name?: string; description?: string; function_list?: string[]; category?: string; parameters?: unknown; entry?: string };
 			try {
 				meta = JSON.parse(readFileSync(readmePath, "utf8")) as typeof meta;
 			} catch {
@@ -50,6 +58,9 @@ export function scanExternalTools(roots: string[]): ExternalToolInfo[] {
 					Array.isArray(meta.function_list) && meta.function_list.length > 0
 						? meta.function_list.map(String)
 						: extractMainFunctions(dirPath),
+				category: typeof meta.category === "string" ? meta.category : undefined,
+				parameters: meta.parameters && typeof meta.parameters === "object" ? (meta.parameters as Record<string, unknown>) : undefined,
+				entry: typeof meta.entry === "string" ? meta.entry : undefined,
 			});
 		}
 	}
@@ -77,6 +88,68 @@ export function extractMainFunctions(dirPath: string): string[] {
 	return [...new Set(funcs)];
 }
 
+
+/** 外部工具运行时上下文:由宿主注入,外部 main.ts 自行声明同名接口即可(结构化类型)。 */
+export interface ExternalToolContext {
+	db: unknown;
+	tenantId: string;
+}
+
+export interface ExternalToolResult {
+	content: Array<{ type: "text"; text: string }>;
+	details?: unknown;
+}
+
+interface ExternalToolModule {
+	execute?: (ctx: ExternalToolContext, params: unknown) => ExternalToolResult | string;
+	schema?: Record<string, unknown>;
+	default?: { execute?: (ctx: ExternalToolContext, params: unknown) => ExternalToolResult | string; schema?: Record<string, unknown> };
+}
+
+/** 外部工具加载结果:与 agent 运行时 AgentTool 兼容。 */
+export type ExternalAgentTool = AgentTool<any, any>;
+
+/**
+ * 从 roots 目录动态加载具备实现入口(main.ts/main.mts)的外部工具,构建 agent 工具列表。
+ * 契约:main.ts 导出 `execute(ctx, params)`(或 default.execute),可选导出 `schema` 作为参数 JSON Schema;
+ * readme.json 的 parameters/entry 优先于代码内声明。无实现、损坏或加载失败的目录跳过。
+ */
+export async function loadExternalAgentTools(
+	roots: string[],
+	ctx: ExternalToolContext,
+): Promise<ExternalAgentTool[]> {
+	const out: ExternalAgentTool[] = [];
+	for (const root of roots) {
+		for (const tool of scanExternalTools([root])) {
+			if (tool.functions.length === 0) continue; // 纯描述性目录(无实现)不注册为可调用工具
+			const entry = tool.entry ?? "main.ts";
+			const entryPath = path.join(root, tool.dir, entry);
+			if (!existsSync(entryPath)) continue;
+		let mod: ExternalToolModule;
+		try {
+			mod = (await import(pathToFileURL(entryPath).href)) as ExternalToolModule;
+		} catch (error) {
+			console.warn(`[external-tools] 加载 ${tool.name} 失败:`, error instanceof Error ? error.message : String(error));
+			continue;
+		}
+		const execute = mod.execute ?? mod.default?.execute;
+		if (typeof execute !== "function") continue;
+		const schema = tool.parameters ?? mod.schema ?? mod.default?.schema ?? {};
+		out.push({
+			name: tool.name,
+			label: tool.name,
+			description: tool.description,
+			parameters: schema as never,
+			async execute(_toolCallId, params: any): Promise<AgentToolResult<any>> {
+				const raw = await execute(ctx, params);
+				if (typeof raw === "string") return { content: [{ type: "text" as const, text: raw }], details: null };
+				return { content: raw.content as never, details: raw.details ?? null };
+			},
+		});
+	}
+	}
+	return out;
+}
 /** 生成追加到 system prompt 的外部工具说明块;无工具时返回空串。 */
 export function buildExternalToolsText(tools: ExternalToolInfo[]): string {
 	if (tools.length === 0) return "";

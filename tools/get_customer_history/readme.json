@@ -1,0 +1,8 @@
+{
+  "name": "get_customer_history",
+  "description": "查看客户最近若干次分析结论,供回顾或延续上下文。",
+  "category": "客户",
+  "parameters": { "type": "object", "required": ["customerKey"], "properties": { "customerKey": { "type": "string" }, "limit": { "type": "number", "default": 5, "maximum": 20 } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

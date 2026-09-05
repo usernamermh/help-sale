@@ -63,7 +63,7 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 	});
 	const capabilityStates = listCapabilityStates(db, tenantId);
 	const disabled = new Set(capabilityStates.filter((c) => !c.enabled).map((c) => c.name));
-	const tools = createSalesAgentTools({ db, tenantId, store }).filter(
+	const tools = (await createSalesAgentTools({ db, tenantId, store })).filter(
 		(t) => t.name === "emit_final" || !disabled.has(t.name),
 	);
 

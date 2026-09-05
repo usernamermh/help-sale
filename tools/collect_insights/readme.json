@@ -1,0 +1,8 @@
+{
+  "name": "collect_insights",
+  "description": "统计近 N 天分析量、热门意图、任务完成率、车型偏好。",
+  "category": "经营",
+  "parameters": { "type": "object", "properties": { "days": { "type": "number", "default": 7 } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

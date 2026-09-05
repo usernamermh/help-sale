@@ -10,7 +10,7 @@
 - 模型输入输出本地日志:help-sale.config.yaml logging 段(logging.enabled / dir / maxBytes,LOG_ENABLED/LOG_DIR/LOG_MAX_BYTES 可覆盖),启用后每次模型调用写 `<dir>/model-calls.log` NDJSON:request 行只记 requestId,response 行带同一 requestId 写完整请求/返回(推理+tool_calls),异常落 error 行;默认日志目录 apps/api/log。
 - list_customers 工具:直接返回客户清单 Markdown 表格(标识/姓名/电话/阶段/最近分析/会话数),prompt 强约束原样保留工具表格;最终答复支持打字机流式(delta 6字符/48ms 上限 12s)且 Markdown 表格正常渲染;HTML 响应 no-store 防缓存。
 - 配置重构:help-sale.config.yaml 为唯一配置源(含 defaults 段),env.ts 顶层导出全局 config 实例,各模块直接 import { config },函数入参不再传配置;代码内默认值全部删除(env defaults / DEFAULT_MAX_BYTES / 列表 limit 等统一走 yaml)。日志 request/response 直接落对象(可解析时),maxBytes 必填来自配置。
-- 外部工具目录:tools / tools_system 下每个工具子目录统一用 readme.json({name,description,function_list},不再支持 readme.md);sales-agent system prompt 启动时自动扫描两个目录并拼接【外部工具】块(readme.json 损坏/缺失的目录跳过,无 function_list 时从 main.ts/main.py 提取)。
+- 外部工具目录:tools / tools_system 下每个工具子目录统一用 readme.json({name,description,category,parameters,entry,function_list});工具执行逻辑全部外置:main.ts 导出 execute(ctx,params)(ctx={db,tenantId}) 即成为 agent 可调用工具,createSalesAgentTools/createCopilotTools 均为目录加载器(loadExternalAgentTools 动态 import;无实现/损坏/加载失败目录跳过),业务工具已全部迁出 agent-tools.ts;系统收口工具(emit_final/emit_analysis)保留代码内;todo_list 自带实现已接入(CAPABILITIES 同步)。system prompt 仍自动拼接【外部工具】块。
 - 142/142 测试 + typecheck 零错误。
 
 - MVP 后端 Task 1-20 完成,Task 21(真实模型冒烟)已使用内网 U21-Preview 端点完成,Task 22-23(文档/验收)完成。

@@ -1,0 +1,8 @@
+{
+  "name": "load_conversation",
+  "description": "按会话 ID 读取完整对话原文(客户/销售交替,含时间),供分析使用。",
+  "category": "会话",
+  "parameters": { "type": "object", "required": ["conversationId"], "properties": { "conversationId": { "type": "string", "description": "会话 ID" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}
