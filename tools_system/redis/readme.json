@@ -1,0 +1,5 @@
+{
+  "name": "redis",
+  "description": "用于操作redis",
+  "function_list": []
+}

@@ -1,0 +1,5 @@
+{
+  "name": "dialog_extract",
+  "description": "用于从人-人对话中抽取出对话原文\r\n模型输入：\r\n1：角色1：xxx\r\n2：角色2：xxx\r\n3：角色3：xxx\r\n模型输出：\r\n```json\r\n[1,2,3]\r\n```",
+  "function_list": []
+}

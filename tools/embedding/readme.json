@@ -1,0 +1,5 @@
+{
+  "name": "embedding",
+  "description": "用于获取文本向量",
+  "function_list": []
+}

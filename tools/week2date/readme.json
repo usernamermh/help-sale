@@ -1,0 +1,8 @@
+{
+  "name": "week2date",
+  "description": "把周X转为年月日",
+  "function_list": [
+    "main.replace_next_week",
+    "main.replace_current_week"
+  ]
+}

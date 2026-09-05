@@ -1,0 +1,5 @@
+{
+  "name": "dialog_select",
+  "description": "用于从大批量对话中，根据一定的规则选择其中的一部分对话",
+  "function_list": []
+}

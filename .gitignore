@@ -9,6 +9,7 @@ apps/api/apps/
 /pi/**/dist/
 /.playwright-cli/
 *.log
+*.pid
 .DS_Store
 reference/llm-agent-workflow/
 llm-agent-workflow-master.zip

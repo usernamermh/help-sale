@@ -1,0 +1,5 @@
+{
+  "name": "kanban",
+  "description": "看板工具，用于subagent模式下通信",
+  "function_list": []
+}

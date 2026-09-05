@@ -1,0 +1,9 @@
+{
+    "name": "todo_list",
+    "description": "创建、细化、标记完成 todo list",
+    "function_list": [
+        "main.createTodoList",
+        "main.detailTodoList",
+        "main.finishTodoList"
+    ]
+}
