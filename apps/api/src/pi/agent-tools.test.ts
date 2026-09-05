@@ -24,6 +24,15 @@ beforeEach(() => {
 afterEach(() => db.close());
 
 describe("list_customers", () => {
+	it("get_customer_profile 支持按姓名解析真实 key", async () => {
+		upsertCustomer(db, { tenantId: "t1", key: "c_cj", name: "陈静", phone: "13700000000", company: "盛源科技" });
+		const tools = await createSalesAgentTools({ db, tenantId: "t1", store: stubStore });
+		const tool = tools.find((t) => t.name === "get_customer_profile")!;
+		const out = (await tool.execute("g1", { customerKey: "陈静" })) as { content: Array<{ text: string }>; details: { key: string; phone: string | null } };
+		const text = out.content.map((c) => c.text).join("");
+		expect(out.details.key).toBe("c_cj");
+		expect(text).toContain("13700000000");
+	});
 	it("返回 Markdown 表格与结构化明细", async () => {
 		upsertCustomer(db, { tenantId: "t1", key: "c_001", name: "王总", phone: "13700000001", stage: "洽谈中" });
 		upsertCustomer(db, { tenantId: "t1", key: "c_002", name: "陈静", phone: "13700000002", stage: "成交" });

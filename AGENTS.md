@@ -13,7 +13,8 @@
 - 外部工具目录:tools / tools_system 下每个工具子目录统一用 readme.json({name,description,category,parameters,entry,function_list});工具执行逻辑全部外置:main.ts 导出 execute(ctx,params)(ctx={db,tenantId}) 即成为 agent 可调用工具,createSalesAgentTools/createCopilotTools 均为目录加载器(loadExternalAgentTools 动态 import;无实现/损坏/加载失败目录跳过),业务工具已全部迁出 agent-tools.ts;系统收口工具(emit_final/emit_analysis)保留代码内;todo_list 自带实现已接入(CAPABILITIES 同步)。system prompt 仍自动拼接【外部工具】块。
 - capabilities 能力清单不再硬编码:由 tools / tools_system 目录动态生成(有实现入口且声明函数的工具才进入清单,label/category 取自 readme.json);evaluator/vehicle/voice 流程的 search_playbook/search_vehicles 同样外置到目录,代码内仅保留系统收口工具(emit_final/emit_analysis/emit_evaluation/emit_vehicle_plan/emit_digest)。
 - tools_system 基础工具已完善(8 个全部可调用):browser(轻量 HTTP 抓取,完整功能需 playwright)/computer(安全数值计算)/kanban(本地看板 JSON,支持 KANBAN_FILE 重定向)/redis(ioredis,配置文件连接,白名单操作)/sql(mysql2,配置文件连接,单条 SQL)/subagents(任务队列,支持 SUBAGENTS_DIR 重定向)/table_generate(Markdown 表格+mermaid)/todo_list;业务 tools 应基于这些系统工具组合发展。
-- 147/147 测试 + typecheck 零错误。
+- 答复兜底:模型可能不调用 emit_final 而直接输出文本,agent-runtime 无 emit_final 时把最后一条 assistant 文本作为最终答复,前端不再出现"未生成答复";客户类工具(get_customer_profile/history/tags)支持按姓名解析真实 key(customer-resolve),模型传错 key 也能命中。
+- 149/149 测试 + typecheck 零错误。
 
 - MVP 后端 Task 1-20 完成,Task 21(真实模型冒烟)已使用内网 U21-Preview 端点完成,Task 22-23(文档/验收)完成。
 - 前端工具页已上线(Fastify 根路由 /,单页 HTML,无构建链):对话分析、车型优选、知识上传、跟进任务、历史查询。

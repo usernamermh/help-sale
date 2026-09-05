@@ -84,6 +84,15 @@ function fakeVoiceDigestStreamFn(): StreamFn {
 }
 
 
+function fakeAgentNoEmitStreamFn(): StreamFn {
+	const fa = fauxProvider();
+	fa.setResponses([
+		fauxAssistantMessage([fauxToolCall("get_customer_profile", { customerKey: "陈静" })]),
+		fauxAssistantMessage([{ type: "text", text: "陈静的档案里暂时没有电话,建议先补录联系方式。" }]),
+	]);
+	return async (model, context, options) => fa.provider.stream(model as never, context, options);
+}
+
 function fakeAgentStreamFn(): StreamFn {
 	const fa = fauxProvider();
 	fa.setResponses([
@@ -663,5 +672,18 @@ describe("api", () => {
 		expect(finals).toHaveLength(1);
 		expect(deltas).toBe(finals[0].final.answer);
 		expect(events.some((e: { type: string }) => e.type === "tool_start" || e.type === "tool_end")).toBe(true);
-	});;
+	});
+
+	it("模型未调用 emit_final 时,兜底把最后一条 assistant 文本作为答复", async () => {
+		dir = tmpDataDir("api-noemit");
+		app = buildApp({ dataDir: dir, streamFn: fakeAgentNoEmitStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+		const t = await app.inject({ method: "POST", url: "/api/v1/agent/threads", headers });
+		const res = await app.inject({ method: "POST", url: `/api/v1/agent/threads/${t.json().id}/run-stream`, payload: { goal: "陈静的电话号是多少" }, headers });
+		expect(res.statusCode).toBe(200);
+		const events = res.body.split("\n").filter(Boolean).map((l) => JSON.parse(l));
+		const finals = events.filter((e: { type: string }) => e.type === "final");
+		expect(finals).toHaveLength(1);
+		expect(finals[0].final.answer).toContain("陈静");
+	});
 });

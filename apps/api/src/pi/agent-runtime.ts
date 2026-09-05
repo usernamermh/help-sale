@@ -41,6 +41,21 @@ export interface AgentFinal {
 	nextSteps: string[];
 }
 
+
+/** 从 assistant 消息 content(TextContent[] 或字符串)提取纯文本。 */
+function assistantText(content: unknown): string {
+	if (!content) return "";
+	if (typeof content === "string") return content;
+	if (Array.isArray(content)) {
+		return content
+			.map((c) => {
+				const item = c as { type?: string; text?: string };
+				return typeof item?.text === "string" ? item.text : "";
+			})
+			.join("");
+	}
+	return "";
+}
 export interface SalesAgentResult {
 	runId: string;
 	final?: AgentFinal;
@@ -111,6 +126,18 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 					summary: details.summary,
 					nextSteps: Array.isArray(details.nextSteps) ? details.nextSteps : [],
 				};
+			}
+		}
+	}
+	// 兜底:模型可能不调用 emit_final 而直接输出普通文本;此时把最后一条 assistant 文本作为最终答复
+	if (!final) {
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const message = messages[i] as { role?: string; content?: unknown };
+			if (message.role !== "assistant") continue;
+			const text = assistantText(message.content);
+			if (text.trim()) {
+				final = { answer: text.trim(), summary: undefined, nextSteps: [] };
+				break;
 			}
 		}
 	}
