@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { buildExternalToolsText, scanExternalTools } from "./external-tools.js";
+import { loadExternalAgentTools, buildExternalToolsText, scanExternalTools } from "./external-tools.js";
 
 let root: string;
 const dirs: string[] = [];
@@ -85,5 +85,69 @@ describe("buildExternalToolsText", () => {
 
 	it("空列表返回空串", () => {
 		expect(buildExternalToolsText([])).toBe("");
+	});
+});
+
+describe("tools_system 基础工具", () => {
+	const SYS_ROOTS = ["E:\\proj_help_sale\\tools", "E:\\proj_help_sale\\tools_system"];
+	async function loadAll() {
+		return loadExternalAgentTools(SYS_ROOTS, { db: null, tenantId: "t1" } as never);
+	}
+
+	it("八个系统工具全部具备实现可加载", async () => {
+		const tools = await loadAll();
+		const names = tools.map((t) => t.name);
+		for (const n of ["browser", "computer", "kanban", "redis", "sql", "subagents", "table_generate", "todo_list"]) {
+			expect(names).toContain(n);
+		}
+	});
+
+	it("computer 安全计算表达式与变量", async () => {
+		const tools = await loadAll();
+		const tool = tools.find((t) => t.name === "computer")!;
+		const r1 = (await tool.execute("c1", { expression: "(a + b) * 2 / 3", variables: { a: 10, b: 20 } })) as { content: Array<{ text: string }>; details: { result: number } };
+		expect(r1.details.result).toBe(20);
+		const r2 = (await tool.execute("c2", { expression: "17 % 5 + 3 * 4" })) as { details: { result: number } };
+		expect(r2.details.result).toBe(14);
+	});
+
+	it("kanban 增删改查(move/list)", async () => {
+		const boardFile = path.join(root, "kanban-test.json");
+		process.env.KANBAN_FILE = boardFile;
+		try {
+			const tools = await loadAll();
+			const tool = tools.find((t) => t.name === "kanban")!;
+			const added = (await tool.execute("k1", { op: "add", title: "分析会话", description: "s1" })) as { details: { id: string } };
+			expect(added.details.id).toMatch(/^K\d+$/);
+			await tool.execute("k2", { op: "move", id: added.details.id, status: "inprogress" });
+			const listed = (await tool.execute("k3", { op: "list", statusFilter: "inprogress" })) as { details: { items: unknown[] } };
+			expect(listed.details.items).toHaveLength(1);
+		} finally {
+			delete process.env.KANBAN_FILE;
+		}
+	});
+
+	it("table_generate 生成 Markdown 表格与 mermaid", async () => {
+		const tools = await loadAll();
+		const tool = tools.find((t) => t.name === "table_generate")!;
+		const r = (await tool.execute("t1", { title: "车型", rows: [{ name: "汉EV", price: "25万" }, { name: "Model Y", price: "28万" }], chartType: "both", pie: [{ label: "A", value: 1 }, { label: "B", value: 2 }] })) as { content: Array<{ text: string }> };
+		const text = r.content.map((c) => c.text).join("");
+		expect(text).toContain("| name | price |");
+		expect(text).toContain("```mermaid");
+	});
+
+	it("subagents 队列 create/list", async () => {
+		const dir = path.join(root, "subagents-test");
+		process.env.SUBAGENTS_DIR = dir;
+		try {
+			const tools = await loadAll();
+			const tool = tools.find((t) => t.name === "subagents")!;
+			const created = (await tool.execute("s1", { op: "create", title: "子任务A", goal: "分析 c_001" })) as { details: { id: string } };
+			expect(created.details.id).toBeTruthy();
+			const listed = (await tool.execute("s2", { op: "list" })) as { details: { tasks: unknown[] } };
+			expect(listed.details.tasks).toHaveLength(1);
+		} finally {
+			delete process.env.SUBAGENTS_DIR;
+		}
 	});
 });

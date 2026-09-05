@@ -9,7 +9,7 @@ describe("sales-agent prompt", () => {
 		expect(prompt).toContain("创建、细化、标记完成 todo list");
 		expect(prompt).toContain("main.createTodoList");
 		expect(prompt).toContain("week2date");
-		expect(prompt).toContain("用于操作mysql");
+		expect(prompt).toContain("操作 MySQL");
 	});
 
 	it("模板不再残留 SYSTEM_TOOLS/TASKS_TOOLS 占位符", () => {

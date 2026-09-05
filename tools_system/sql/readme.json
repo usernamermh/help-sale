@@ -1,5 +1,9 @@
 {
   "name": "sql",
-  "description": "用于操作mysql",
-  "function_list": []
+  "label": "操作 MySQL",
+  "description": "操作 MySQL:基于配置文件 mysql 段连接执行单条 SQL(禁止多语句,参数用 ? 占位);SELECT 返回行集,其余返回影响行数。",
+  "category": "数据库",
+  "parameters": { "type": "object", "required": ["sql"], "properties": { "sql": { "type": "string", "description": "单条 SQL,如 SELECT * FROM customers WHERE tenant_id = ?" }, "values": { "type": "array", "description": "SQL 占位符 ? 对应的值" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
 }
