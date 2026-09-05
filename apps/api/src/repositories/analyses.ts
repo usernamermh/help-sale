@@ -86,3 +86,14 @@ export function listAnalysesByCustomer(db: DatabaseSync, tenantId: string, custo
 		.all(tenantId, customerId, limit) as unknown as { id: string }[];
 	return rows.map((r) => getAnalysis(db, tenantId, r.id)!);
 }
+
+/** 记录分析请求哈希(相同输入下次直接复用,不调模型)。 */
+export function bindAnalysisRequestHash(db: DatabaseSync, tenantId: string, analysisId: string, hash: string): void {
+	db.prepare("UPDATE analyses SET request_hash = ? WHERE id = ? AND tenant_id = ?").run(hash, analysisId, tenantId);
+}
+
+export function findAnalysisByRequestHash(db: DatabaseSync, tenantId: string, hash: string): AnalysisRecord | undefined {
+	const row = db.prepare("SELECT id FROM analyses WHERE tenant_id = ? AND request_hash = ?").get(tenantId, hash) as unknown as { id: string } | undefined;
+	if (!row) return undefined;
+	return getAnalysis(db, tenantId, row.id);
+}

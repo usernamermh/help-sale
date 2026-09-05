@@ -11,7 +11,8 @@ import type { ModelRuntime } from "./pi/models.js";
 import { registerRoutes } from "./routes.js";
 import { createMysqlSink, type MysqlSink } from "./integrations/mysql-sink.js";
 import { createReminderQueue, type ReminderQueue } from "./integrations/reminder-queue.js";
-import { seedVehicles } from "./services/seed.js";
+import { seedStoreData, seedVehicles } from "./services/seed.js";
+import { appendRuntimeLog } from "./services/runtime-log.js";
 
 declare module "fastify" {
 	interface FastifyRequest {
@@ -43,11 +44,12 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const db = openDatabase(businessDbPath);
 	const store = openSessionStore(dataDir, sessionDbPath);
 
-	// 为默认租户播种示例车型(车型优选开箱即用;测试/定制可传 false 或指定租户)
+	// 为默认租户播种示例车型与门店经营数据(门店/店长/销售/客户/会话原文/成交;测试/定制可传 false 或指定租户)
 	if (options.seedVehiclesFor !== false) {
 		const targets = options.seedVehiclesFor ?? [config.tenantId];
 		for (const tenantId of targets) requireTenant(db, tenantId, "示例租户");
 		seedVehicles(db, targets);
+		seedStoreData(db, targets);
 	}
 
 	app.decorateRequest("tenantId", "");
@@ -70,12 +72,50 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		password: config.redisPassword,
 	});
 
-	registerRoutes(app, { db, store, runtime: options.runtime, streamFn: options.streamFn, mysqlSink, reminders });
+	registerRoutes(app, { db, store, dataDir, runtime: options.runtime, streamFn: options.streamFn, mysqlSink, reminders });
+
+	app.addHook("onResponse", async (request, reply) => {
+		if (request.url.startsWith("/api/")) {
+			appendRuntimeLog(dataDir, {
+				level: "info",
+				type: "request",
+				message: `${request.method} ${request.url} -> ${reply.statusCode}`,
+				meta: { tenantId: request.tenantId, elapsedMs: reply.elapsedTime },
+			});
+		}
+	});
+	app.addHook("onError", async (request, reply, error) => {
+		appendRuntimeLog(dataDir, {
+			level: "error",
+			type: "error",
+			message: `${request.method} ${request.url} -> ${reply.statusCode}: ${error.message}`,
+			meta: { tenantId: request.tenantId, stack: error.stack },
+		});
+	});
 
 	// 前端单页工具:根路径返回内嵌页面
-	const pagePath = path.join(apiRoot, "public", "index.html");
+	const clientPath = path.join(apiRoot, "public", "client.html");
+	const consolePath = path.join(apiRoot, "public", "console.html");
+	const legacyPath = path.join(apiRoot, "public", "index.html");
 	app.get("/", async (_request, reply) => {
-		reply.type("text/html; charset=utf-8").send(readFileSync(pagePath, "utf8"));
+		reply.type("text/html; charset=utf-8").send(readFileSync(clientPath, "utf8"));
+	});
+	app.get("/console", async (_request, reply) => {
+		reply.type("text/html; charset=utf-8").send(readFileSync(consolePath, "utf8"));
+	});
+	app.get("/workspace", async (_request, reply) => {
+		reply.type("text/html; charset=utf-8").send(readFileSync(legacyPath, "utf8"));
+	});
+
+	app.get<{ Params: { file: string } }>("/vendor/:file", async (request, reply) => {
+		const name = request.params.file;
+		if (!/^[\w.-]+\.js$/.test(name)) return reply.code(404).send({ error: "not_found" });
+		try {
+			const filePath = path.join(apiRoot, "public", "vendor", name);
+			return reply.type("text/javascript; charset=utf-8").send(readFileSync(filePath, "utf8"));
+		} catch {
+			return reply.code(404).send({ error: "not_found" });
+		}
 	});
 
 	app.addHook("onClose", async () => {

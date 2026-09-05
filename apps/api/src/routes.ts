@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { DatabaseSync } from "node:sqlite";
-import type { StreamFn } from "@earendil-works/pi-agent-core";
+import type { AgentMessage, StreamFn } from "@earendil-works/pi-agent-core";
 import type { ModelRuntime } from "./pi/models.js";
 import { ingestDocument, ingestEntries } from "./services/ingest.js";
 import { searchKnowledge } from "./repositories/knowledge.js";
-import { normalizeAnalyzeMessages } from "./services/conversation.js";
+import { normalizeAnalyzeMessages, type ConversationMessage } from "./services/conversation.js";
 import { requireTenant, upsertCustomer } from "./repositories/customers.js";
-import { createAnalysis, listAnalysesByCustomer } from "./repositories/analyses.js";
+import { bindAnalysisRequestHash, createAnalysis, findAnalysisByRequestHash, listAnalysesByCustomer } from "./repositories/analyses.js";
 import { createTask, getTask, listTasks, setTaskStatus } from "./repositories/tasks.js";
 import { createVehiclePlan, listVehiclePlansByCustomer } from "./repositories/vehicle-plans.js";
 import { createDigest, getDigestByDate, listDigests } from "./repositories/digests.js";
@@ -29,11 +29,20 @@ import { runVehicleMatch } from "./pi/vehicle-advisor.js";
 import type { MysqlSink } from "./integrations/mysql-sink.js";
 import type { ReminderQueue } from "./integrations/reminder-queue.js";
 import { runCopilotAnalysis } from "./pi/copilot.js";
+import { replaceConversationMessages, listConversationMessages as listConvMessages, type ConversationMessageRow } from "./repositories/conversation-data.js";
+import { createDeal, getSalespersonById, getStore, getStoreManager, getStoreOverview, listDeals, listSales, listStores, upsertSalesperson, upsertStore } from "./repositories/store-ops.js";
+import { analysisRequestHash } from "./services/analysis-cache.js";
+import { runSalesAgent } from "./pi/agent-runtime.js";
+import { CAPABILITIES, getCapabilityDef } from "./pi/capabilities.js";
+import { createWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled } from "./repositories/agent-capabilities.js";
+import { queryConsoleLogs } from "./services/console-logs.js";
+import { appendThreadMessage, createThread, getThread, listThreadMessages, listThreads, setThreadTitle } from "./repositories/agent-threads.js";
 import type { SessionStore } from "./pi/sessions.js";
 
 export interface RouteDeps {
 	db: DatabaseSync;
 	store: SessionStore;
+	dataDir: string;
 	runtime?: ModelRuntime;
 	streamFn?: StreamFn;
 	mysqlSink?: MysqlSink;
@@ -64,12 +73,423 @@ function buildVehicleRequirementsText(r: VehicleRequirements): string {
 	return parts.join(";");
 }
 
-export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
+
+interface SalesContext {
+	salesName?: string;
+	salesId?: string;
+	salesPhone?: string;
+	storeId?: string;
+}
+
+function pickStr(value: unknown): string | undefined {
+	return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+/** 从请求体与请求头解析销售/门店上下文(body 优先,兼容 x-sales-* 头)。 */
+function salesContextFrom(body: Record<string, unknown> | undefined, headers: Record<string, string | string[] | undefined>): SalesContext {
+	const b = body ?? {};
+	return {
+		salesName: pickStr(b.salesName ?? headers["x-sales-name"]),
+		salesId: pickStr(b.salesId ?? headers["x-sales-id"]),
+		salesPhone: pickStr(b.salesPhone ?? headers["x-sales-phone"]),
+		storeId: pickStr(b.storeId ?? headers["x-store-id"]),
+	};
+}
+
+/** 店长数据范围:带 x-sales-id 且角色为 manager 时,只能访问所属门店;越权返回 denied。 */
+async function resolveManagerScope(
+	db: DatabaseSync,
+	tenantId: string,
+	headers: Record<string, string | string[] | undefined>,
+	requestedStoreId?: string,
+): Promise<{ storeId?: string; denied?: boolean }> {
+	const salesId = pickStr(headers["x-sales-id"]);
+	if (!salesId) return { storeId: requestedStoreId };
+	const sale = getSalespersonById(db, tenantId, salesId);
+	if (!sale || sale.role !== "manager") return { storeId: requestedStoreId };
+	if (requestedStoreId && requestedStoreId !== sale.store_id) return { denied: true };
+	return { storeId: sale.store_id ?? undefined };
+}
+
+function messageRowsToPayload(rows: ConversationMessageRow[]): Array<{ seq: number; speakerRole: string; speakerName: string | null; content: string; spokenAt: string | null }> {
+	return rows.map((r) => ({
+		seq: r.seq,
+		speakerRole: r.speaker_role,
+		speakerName: r.speaker_name,
+		content: r.content,
+		spokenAt: r.spoken_at,
+	}));
+}
+
+/** 把对话原文按 角色/内容(可带时间)写入 conversation_messages,缺时间由仓库生成近似值。 */
+function persistTranscript(
+	db: DatabaseSync,
+	tenantId: string,
+	conversationId: string,
+	messages: Array<{ role: string; content: string; spokenAt?: string; speakerName?: string }>,
+	names: { customerName?: string; salesName?: string },
+): number {
+	return replaceConversationMessages(db, tenantId, conversationId, messages.map((m) => ({
+		speakerRole: m.role,
+		speakerName: m.speakerName ?? (m.role === "customer" ? (names.customerName ?? "客户") : m.role === "sales" ? (names.salesName ?? "销售") : "其他"),
+		content: m.content,
+		spokenAt: m.spokenAt,
+	})));
+}
+/** 有销售标识时同步 sales 台账(门店/姓名/电话),返回解析后的销售上下文。 */
+function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesContext): SalesContext {
+	if (!sales.salesId) return sales;
+	const sp = upsertSalesperson(db, tenantId, { storeId: sales.storeId, name: sales.salesName ?? "未知销售", phone: sales.salesPhone, role: "sales" });
+	return { salesName: sp.name, salesId: sp.id, salesPhone: sp.phone ?? undefined, storeId: sp.store_id ?? undefined };
+}export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	app.addHook("preHandler", async (request) => {
 		requireTenant(deps.db, request.tenantId, "API 租户");
 	});
 
+
 	app.get("/api/v1/health", async () => ({ status: "ok", ts: Date.now() }));
+	// 分析执行 + 落库 + 请求级缓存(相同对话原文+上下文直接复用,不调模型)
+	async function runAndPersistAnalysis(
+		request: { tenantId: string },
+		input: {
+			messages: ConversationMessage[];
+			customerKey?: string;
+			customerName?: string;
+			customerPhone?: string;
+			conversationId?: string;
+			sales: SalesContext;
+		},
+	): Promise<{ status?: number; body?: Record<string, unknown> }> {
+		const { db, store, runtime, streamFn } = deps;
+		const tenantId = request.tenantId;
+		const requestHash = analysisRequestHash({
+			messages: input.messages.map((m) => ({ role: m.role, content: m.content, spokenAt: m.spokenAt })),
+			customerKey: input.customerKey,
+			customerName: input.customerName,
+			customerPhone: input.customerPhone,
+			salesId: input.sales.salesId,
+			salesName: input.sales.salesName,
+			salesPhone: input.sales.salesPhone,
+			storeId: input.sales.storeId,
+			conversationId: input.conversationId,
+		});
+		const cached = findAnalysisByRequestHash(db, tenantId, requestHash);
+		if (cached) {
+			const customer = upsertCustomer(db, {
+				tenantId,
+				key: input.customerKey ?? `c_${randomUUID().slice(0, 8)}`,
+				name: input.customerName,
+				phone: input.customerPhone,
+			});
+			if (listConvMessages(db, tenantId, cached.conversationId).length === 0) {
+				persistTranscript(db, tenantId, cached.conversationId, input.messages, { customerName: input.customerName, salesName: input.sales.salesName });
+			}
+			upsertConversation(db, {
+				id: cached.conversationId,
+				tenantId,
+				customerId: customer.id,
+				salesName: input.sales.salesName,
+				salesId: input.sales.salesId,
+				salesPhone: input.sales.salesPhone,
+				storeId: input.sales.storeId,
+				followupAdvice: cached.nextSteps[0] ?? null,
+				messageCount: input.messages.length,
+			});
+			return {
+				body: {
+					analysisId: cached.id,
+					conversationId: cached.conversationId,
+					analysis: cached,
+					cached: true,
+					transcript: messageRowsToPayload(listConvMessages(db, tenantId, cached.conversationId)),
+				},
+			};
+		}
+
+		const result = await runCopilotAnalysis({ db, tenantId, store, runtime, streamFn }, { messages: input.messages, customerKey: input.customerKey });
+		if (!result.details) return { status: 502, body: { error: "agent produced no analysis" } };
+
+		const customer = upsertCustomer(db, {
+			tenantId,
+			key: input.customerKey ?? `c_${randomUUID().slice(0, 8)}`,
+			name: input.customerName,
+			phone: input.customerPhone,
+		});
+
+		// 有销售标识时同步 sales 台账,并把门店归属带到会话
+		let sales = input.sales;
+		if (input.sales.salesId) {
+			const sp = upsertSalesperson(db, tenantId, {
+				storeId: input.sales.storeId,
+				name: input.sales.salesName ?? "未知销售",
+				phone: input.sales.salesPhone,
+				role: "sales",
+			});
+			sales = { salesName: sp.name, salesId: sp.id, salesPhone: sp.phone ?? undefined, storeId: sp.store_id ?? undefined };
+		}
+
+		const saved = createAnalysis(db, {
+			tenantId,
+			customerId: customer.id,
+			conversationId: result.conversationId,
+			intent: result.details.intent,
+			summary: result.details.summary,
+			signals: result.details.signals,
+			suggestedReply: result.details.suggestedReply,
+			nextSteps: result.details.nextSteps,
+			followupAt: result.details.followupAt,
+		});
+
+		const firstStep = result.details.nextSteps[0];
+		if (result.details.followupAt || firstStep) {
+			const task = createTask(db, {
+				tenantId,
+				customerId: customer.id,
+				analysisId: saved.id,
+				action: firstStep ?? "跟进客户",
+				dueAt: result.details.followupAt,
+			});
+			const dueMs = task.dueAt ? Date.parse(task.dueAt) : Number.NaN;
+			void deps.reminders.add(task.id, Number.isFinite(dueMs) ? dueMs : null);
+		}
+
+		refreshCustomerTags(db, {
+			tenantId,
+			customerId: customer.id,
+			analysisId: saved.id,
+			intent: saved.intent,
+			signals: (saved.signals as Array<{ kind?: string; quote?: string; note?: string }>) ?? [],
+		});
+
+		if (result.details.suggestedReply && result.details.suggestedReply.length >= 40) {
+			const intent = (saved.intent ?? "通用").slice(0, 40);
+			createCandidate(db, {
+				tenantId,
+				analysisId: saved.id,
+				intent,
+				draftTitle: `话术·${intent}`.slice(0, 120),
+				draftContent: `【适用场景】${saved.summary.slice(0, 120)}\n【话术】${result.details.suggestedReply}`,
+			});
+		}
+
+		if (deps.mysqlSink) {
+			void deps.mysqlSink.appendAnalysis({
+				id: saved.id,
+				tenantId,
+				customerId: customer.id,
+				conversationId: saved.conversationId,
+				intent: saved.intent,
+				summary: saved.summary,
+				signalsJson: JSON.stringify(saved.signals),
+				suggestedReply: saved.suggestedReply,
+				nextStepsJson: JSON.stringify(saved.nextSteps),
+				followupAt: saved.followupAt,
+				createdAt: saved.createdAt,
+			});
+		}
+
+		upsertConversation(db, {
+			id: result.conversationId,
+			tenantId,
+			customerId: customer.id,
+			salesName: sales.salesName,
+			salesId: sales.salesId,
+			salesPhone: sales.salesPhone,
+			storeId: sales.storeId,
+			followupAdvice: firstStep ?? result.details.suggestedReply ?? null,
+			messageCount: input.messages.length,
+		});
+		persistTranscript(db, tenantId, result.conversationId, input.messages, { customerName: input.customerName, salesName: sales.salesName });
+		bindAnalysisRequestHash(db, tenantId, saved.id, requestHash);
+
+		return {
+			body: {
+				analysisId: saved.id,
+				conversationId: result.conversationId,
+				analysis: saved,
+				cached: false,
+				transcript: messageRowsToPayload(listConvMessages(db, tenantId, result.conversationId)),
+			},
+		};
+	}
+
+	app.get("/api/v1/agent/capabilities", async (request) => {
+		const states = new Map(listCapabilityStates(deps.db, request.tenantId).map((s) => [s.name, s.enabled]));
+		return {
+			capabilities: CAPABILITIES.map((c) => ({
+				name: c.name,
+				label: c.label,
+				description: c.description,
+				category: c.category,
+				enabled: states.has(c.name) ? states.get(c.name)! : true,
+			})),
+		};
+	});
+
+	app.put<{ Params: { name: string }; Body: { enabled?: boolean } }>("/api/v1/console/capabilities/:name", async (request, reply) => {
+		const def = getCapabilityDef(request.params.name);
+		if (!def) return reply.code(404).send({ error: "capability_not_found", message: "能力不存在" });
+		const enabled = request.body?.enabled !== false;
+		setCapabilityEnabled(deps.db, request.tenantId, def.name, enabled);
+		return { name: def.name, enabled };
+	});
+
+	app.get<{ Querystring: { category?: string; q?: string; limit?: string } }>("/api/v1/console/logs", async (request) => {
+		const category = (["all", "runtime", "agent", "notification"].includes(request.query.category ?? "") ? request.query.category : "all") as "all" | "runtime" | "agent" | "notification" | undefined;
+		const limit = Number.parseInt(request.query.limit ?? "100", 10);
+		const logs = queryConsoleLogs(deps.db, deps.dataDir, {
+			tenantId: request.tenantId,
+			category,
+			q: request.query.q,
+			limit: Number.isFinite(limit) ? limit : 100,
+		});
+		return { logs, count: logs.length };
+	});
+
+	app.get("/api/v1/console/workflows", async (request) => {
+		return { workflows: listWorkflows(deps.db, request.tenantId) };
+	});
+
+	app.post<{ Body: { name?: string; description?: string; steps?: unknown[]; enabled?: boolean } }>("/api/v1/console/workflows", async (request, reply) => {
+		const name = request.body?.name?.trim();
+		if (!name) return reply.code(400).send({ error: "name is required" });
+		const wf = createWorkflow(deps.db, request.tenantId, {
+			name,
+			description: request.body?.description,
+			steps: Array.isArray(request.body?.steps) ? request.body.steps : [],
+			enabled: request.body?.enabled,
+		});
+		return wf;
+	});
+
+	app.post<{ Body: { goal?: string; customerKey?: string; conversationId?: string; history?: AgentMessage[] } }>("/api/v1/agent/run", async (request, reply) => {
+		const { goal, customerKey, conversationId, history } = request.body ?? {};
+		if (!goal || !goal.trim()) return reply.code(400).send({ error: "goal is required" });
+		const result = await runSalesAgent(
+			{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
+			{ goal, customerKey, conversationId, history },
+		);
+	
+	return { runId: result.runId, final: result.final, hasResponse: Boolean(result.final) };
+	});
+
+	app.post("/api/v1/agent/threads", async (request) => {
+		return createThread(deps.db, request.tenantId);
+	});
+
+	app.get("/api/v1/agent/threads", async (request) => {
+		const threads = listThreads(deps.db, request.tenantId, 50);
+		return { threads };
+	});
+
+	app.get<{ Params: { id: string } }>("/api/v1/agent/threads/:id", async (request, reply) => {
+		const thread = getThread(deps.db, request.tenantId, request.params.id);
+		if (!thread) return reply.code(404).send({ error: "thread_not_found", message: "会话不存在" });
+		const messages = listThreadMessages(deps.db, request.tenantId, thread.id).map((m) => ({
+			id: m.id,
+			seq: m.seq,
+			role: m.role,
+			content: m.content,
+			createdAt: m.createdAt,
+		}));
+		return { thread, messages };
+	});
+
+	app.post<{ Params: { id: string }; Body: { goal?: string } }>("/api/v1/agent/threads/:id/run", async (request, reply) => {
+		const thread = getThread(deps.db, request.tenantId, request.params.id);
+		if (!thread) return reply.code(404).send({ error: "thread_not_found", message: "会话不存在" });
+		const goal = request.body?.goal;
+		if (!goal || !goal.trim()) return reply.code(400).send({ error: "goal is required" });
+		const prior = listThreadMessages(deps.db, request.tenantId, thread.id);
+		const history = prior.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role, content: m.content })) as AgentMessage[];
+		const result = await runSalesAgent(
+			{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
+			{ goal, history },
+		);
+		appendThreadMessage(deps.db, request.tenantId, thread.id, "user", [{ type: "text", text: goal }]);
+		if (result.final?.answer) {
+			appendThreadMessage(deps.db, request.tenantId, thread.id, "assistant", [{ type: "text", text: result.final.answer }]);
+		}
+		if (!thread.title) {
+			const t = goal.replace(/\s+/g, " ").trim();
+			setThreadTitle(deps.db, request.tenantId, thread.id, t.length > 24 ? t.slice(0, 24) + "…" : t);
+		}
+		return { threadId: thread.id, runId: result.runId, final: result.final, hasResponse: Boolean(result.final) };
+	});
+
+	app.post<{ Params: { id: string }; Body: { goal?: string } }>("/api/v1/agent/threads/:id/run-stream", async (request, reply) => {
+		const thread = getThread(deps.db, request.tenantId, request.params.id);
+		if (!thread) return reply.code(404).send({ error: "thread_not_found", message: "会话不存在" });
+		const goal = request.body?.goal;
+		if (!goal || !goal.trim()) return reply.code(400).send({ error: "goal is required" });
+		const prior = listThreadMessages(deps.db, request.tenantId, thread.id);
+		const history = prior.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role, content: m.content })) as AgentMessage[];
+
+		reply.hijack();
+		reply.raw.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
+		reply.raw.setHeader("Cache-Control", "no-cache");
+		reply.raw.setHeader("X-Accel-Buffering", "no");
+		const write = (obj: unknown) => reply.raw.write(JSON.stringify(obj) + "\n");
+
+		try {
+			const result = await runSalesAgent(
+				{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
+				{ goal, history, onProgress: (e) => write(e) },
+			);
+			appendThreadMessage(deps.db, request.tenantId, thread.id, "user", [{ type: "text", text: goal }]);
+			if (result.final?.answer) {
+				appendThreadMessage(deps.db, request.tenantId, thread.id, "assistant", [{ type: "text", text: result.final.answer }]);
+			}
+			if (!thread.title) {
+				const t = goal.replace(/\s+/g, " ").trim();
+				setThreadTitle(deps.db, request.tenantId, thread.id, t.length > 24 ? t.slice(0, 24) + "…" : t);
+			}
+			write({ type: "final", threadId: thread.id, runId: result.runId, final: result.final });
+			reply.raw.end();
+		} catch (error) {
+			write({ type: "error", error: error instanceof Error ? error.message : String(error) });
+			reply.raw.end();
+		}
+		return reply;
+	});
+
+
+	app.get<{ Params: { runId: string } }>("/api/v1/agent/:runId/timeline", async (request) => {
+		const events = listAgentEvents(deps.db, request.tenantId, request.params.runId);
+		return { runId: request.params.runId, events };
+	});
+
+	app.get<{ Params: { runId: string } }>("/api/v1/agent/:runId/steps", async (request) => {
+		const rows = listAgentEvents(deps.db, request.tenantId, request.params.runId);
+		const steps = [];
+		for (const e of rows) {
+			if (e.eventType !== "tool_start" && e.eventType !== "tool_end") continue;
+			let summary = "";
+			if (e.payloadJson) {
+				try {
+					const p = JSON.parse(e.payloadJson);
+					if (e.eventType === "tool_start") {
+						summary = JSON.stringify(p);
+					} else {
+						const txt = Array.isArray(p?.content) ? p.content.map((c: any) => c?.text ?? "").join(" ").trim() : "";
+						summary = txt || JSON.stringify(p);
+					}
+				} catch {
+					summary = e.payloadJson;
+				}
+			}
+			let details: unknown;
+			if (e.eventType === "tool_end" && e.payloadJson) {
+				try {
+					details = JSON.parse(e.payloadJson);
+				} catch {
+					details = undefined;
+				}
+			}
+			steps.push({ seq: e.seq, eventType: e.eventType, toolName: e.toolName, summary, details });
+		}
+		return { runId: request.params.runId, steps };
+	});
 
 	app.post<{ Body: { title?: string; content?: string; category?: string } }>("/api/v1/knowledge", async (request, reply) => {
 		const { title, content, category } = request.body ?? {};
@@ -89,93 +509,19 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		return { query, hits: searchKnowledge(deps.db, request.tenantId, query, limit) };
 	});
 
-	app.post<{ Body: { transcript?: string; messages?: Array<{ role?: string; content: string }>; customerKey?: string } }>("/api/v1/copilot/analyze", async (request, reply) => {
-		const messages = normalizeAnalyzeMessages({ transcript: request.body?.transcript, messages: request.body?.messages });
+		app.post<{ Body: { transcript?: string; messages?: Array<{ role?: string; content: string; spokenAt?: string; speakerName?: string }>; customerKey?: string; customerName?: string; customerPhone?: string; salesName?: string; salesId?: string; salesPhone?: string; storeId?: string } }>("/api/v1/copilot/analyze", async (request, reply) => {
+		const body = request.body ?? {};
+		const messages = normalizeAnalyzeMessages({ transcript: body.transcript, messages: body.messages });
 		if (messages.length === 0) return reply.code(400).send({ error: "conversation is required", message: "transcript 或 messages 至少提供一个" });
-
-		const result = await runCopilotAnalysis(
-			{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
-			{ messages, customerKey: request.body.customerKey },
-		);
-		if (!result.details) return reply.code(502).send({ error: "agent produced no analysis" });
-
-		const customer = upsertCustomer(deps.db, {
-			tenantId: request.tenantId,
-			key: request.body.customerKey ?? `c_${randomUUID().slice(0, 8)}`,
+		const out = await runAndPersistAnalysis(request, {
+			messages,
+			customerKey: body.customerKey,
+			customerName: body.customerName,
+			customerPhone: body.customerPhone,
+			sales: salesContextFrom(body as unknown as Record<string, unknown>, request.headers),
 		});
-		const saved = createAnalysis(deps.db, {
-			tenantId: request.tenantId,
-			customerId: customer.id,
-			conversationId: result.conversationId,
-			intent: result.details.intent,
-			summary: result.details.summary,
-			signals: result.details.signals,
-			suggestedReply: result.details.suggestedReply,
-			nextSteps: result.details.nextSteps,
-			followupAt: result.details.followupAt,
-		});
-
-		// loop F3:分析完成后自动生成跟进任务,并进入 Redis 到期提醒队列
-		const firstStep = result.details.nextSteps[0];
-		if (result.details.followupAt || firstStep) {
-			const task = createTask(deps.db, {
-				tenantId: request.tenantId,
-				customerId: customer.id,
-				analysisId: saved.id,
-				action: firstStep ?? "跟进客户",
-				dueAt: result.details.followupAt,
-			});
-			const dueMs = task.dueAt ? Date.parse(task.dueAt) : Number.NaN;
-			void deps.reminders.add(task.id, Number.isFinite(dueMs) ? dueMs : null);
-		}
-
-		// 客户画像标签(zhiji 语义标签):按意图+信号自动聚合
-		refreshCustomerTags(deps.db, {
-			tenantId: request.tenantId,
-			customerId: customer.id,
-			analysisId: saved.id,
-			intent: saved.intent,
-			signals: (saved.signals as Array<{ kind?: string; quote?: string; note?: string }>) ?? [],
-		});
-
-		// loop F6:高质量话术自动生成知识沉淀候选
-		if (result.details.suggestedReply && result.details.suggestedReply.length >= 40) {
-			const intent = (saved.intent ?? "通用").slice(0, 40);
-			createCandidate(deps.db, {
-				tenantId: request.tenantId,
-				analysisId: saved.id,
-				intent,
-				draftTitle: `话术·${intent}`.slice(0, 120),
-				draftContent: `【适用场景】${saved.summary.slice(0, 120)}\n【话术】${result.details.suggestedReply}`,
-			});
-		}
-
-		// 归档到远程 MySQL(失败自动降级)
-		if (deps.mysqlSink) {
-			void deps.mysqlSink.appendAnalysis({
-				id: saved.id,
-				tenantId: request.tenantId,
-				customerId: customer.id,
-				conversationId: saved.conversationId,
-				intent: saved.intent,
-				summary: saved.summary,
-				signalsJson: JSON.stringify(saved.signals),
-				suggestedReply: saved.suggestedReply,
-				nextStepsJson: JSON.stringify(saved.nextSteps),
-				followupAt: saved.followupAt,
-				createdAt: saved.createdAt,
-			});
-		}
-
-		upsertConversation(deps.db, {
-			id: result.conversationId,
-			tenantId: request.tenantId,
-			customerId: customer.id,
-			salesName: (request.headers["x-sales-name"] as string | undefined) ?? "默认销售",
-			messageCount: result.messages.filter((m) => (m as { role: string }).role !== "user").length,
-		});
-
-		return { analysisId: saved.id, conversationId: result.conversationId, analysis: saved };
+		if (out.status) return reply.code(out.status).send(out.body);
+		return out.body;
 	});
 
 	app.get<{ Params: { key: string } }>("/api/v1/customers/:key/analyses", async (request) => {
@@ -336,6 +682,10 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 			{ text: `【客户对话】\n${conversation}\n\n【销售回复】\n${replyText}` },
 		);
 		if (!result.details) return reply.code(502).send({ error: "agent produced no evaluation" });
+		const salesEval = resolveSalesperson(deps.db, request.tenantId, salesContextFrom(request.body as unknown as Record<string, unknown> | undefined, request.headers));
+		const evalMsgs = normalizeAnalyzeMessages({ transcript: conversation });
+		upsertConversation(deps.db, { id: result.conversationId, tenantId: request.tenantId, salesName: salesEval.salesName, salesId: salesEval.salesId, salesPhone: salesEval.salesPhone, storeId: salesEval.storeId, messageCount: evalMsgs.length });
+		persistTranscript(deps.db, request.tenantId, result.conversationId, evalMsgs, { salesName: salesEval.salesName });
 		return { conversationId: result.conversationId, evaluation: result.details };
 	});
 
@@ -348,6 +698,10 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 			{ text },
 		);
 		if (!result.details) return reply.code(502).send({ error: "agent produced no digest" });
+		const salesDigest = resolveSalesperson(deps.db, request.tenantId, salesContextFrom(request.body as unknown as Record<string, unknown> | undefined, request.headers));
+		const digestMsgs = normalizeAnalyzeMessages({ transcript: text });
+		upsertConversation(deps.db, { id: result.conversationId, tenantId: request.tenantId, salesName: salesDigest.salesName, salesId: salesDigest.salesId, salesPhone: salesDigest.salesPhone, storeId: salesDigest.storeId, messageCount: digestMsgs.length });
+		persistTranscript(deps.db, request.tenantId, result.conversationId, digestMsgs, { salesName: salesDigest.salesName });
 		return { conversationId: result.conversationId, digest: result.details };
 	});
 
@@ -366,94 +720,124 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		return { logs: listNotificationLogs(deps.db, request.tenantId) };
 	});
 
+
+	// ── 门店管理:门店 / 销售 / 成交 / 经营概览(店长按 x-sales-id 限所属门店) ──
+	app.get("/api/v1/stores", async (request) => {
+		return { stores: listStores(deps.db, request.tenantId) };
+	});
+
+	app.post<{ Body: { name?: string; address?: string; managerName?: string; managerPhone?: string } }>("/api/v1/stores", async (request, reply) => {
+		const name = request.body?.name?.trim();
+		if (!name) return reply.code(400).send({ error: "store name is required" });
+		const store = upsertStore(deps.db, request.tenantId, { name, address: request.body?.address });
+		if (request.body?.managerName?.trim()) {
+			upsertSalesperson(deps.db, request.tenantId, { storeId: store.id, name: request.body.managerName.trim(), phone: request.body.managerPhone, role: "manager" });
+		}
+		return { store };
+	});
+
+	app.get<{ Params: { id: string } }>("/api/v1/stores/:id", async (request, reply) => {
+		const store = getStore(deps.db, request.tenantId, request.params.id);
+		if (!store) return reply.code(404).send({ error: "store_not_found", message: "门店不存在" });
+		const { manager, sales } = getStoreManager(deps.db, request.tenantId, store.id);
+		return { store, manager, sales };
+	});
+
+	app.get<{ Params: { id: string }; Querystring: { from?: string; to?: string } }>("/api/v1/stores/:id/overview", async (request, reply) => {
+		const store = getStore(deps.db, request.tenantId, request.params.id);
+		if (!store) return reply.code(404).send({ error: "store_not_found", message: "门店不存在" });
+		const scope = await resolveManagerScope(deps.db, request.tenantId, request.headers, store.id);
+		if (scope.denied || (scope.storeId && scope.storeId !== store.id)) {
+			return reply.code(403).send({ error: "forbidden", message: "店长只能查看所属门店数据" });
+		}
+		return getStoreOverview(deps.db, request.tenantId, { storeId: store.id, from: request.query.from, to: request.query.to });
+	});
+
+	app.get<{ Querystring: { storeId?: string } }>("/api/v1/sales", async (request) => {
+		return { sales: listSales(deps.db, request.tenantId, request.query.storeId) };
+	});
+
+	app.post<{ Body: { storeId?: string; name?: string; phone?: string; role?: string } }>("/api/v1/sales", async (request, reply) => {
+		const name = request.body?.name?.trim();
+		if (!name) return reply.code(400).send({ error: "sales name is required" });
+		const salesperson = upsertSalesperson(deps.db, request.tenantId, { storeId: request.body?.storeId, name, phone: request.body?.phone, role: request.body?.role });
+		return { salesperson };
+	});
+
+	app.get<{ Querystring: { storeId?: string; from?: string; to?: string; limit?: string } }>("/api/v1/deals", async (request, reply) => {
+		const scope = await resolveManagerScope(deps.db, request.tenantId, request.headers, request.query.storeId);
+		if (scope.denied) return reply.code(403).send({ error: "forbidden", message: "店长只能查看所属门店数据" });
+		const limit = Number(request.query.limit ?? 100) || 100;
+		return { deals: listDeals(deps.db, request.tenantId, { storeId: scope.storeId, from: request.query.from, to: request.query.to, limit }) };
+	});
+
+	app.post<{ Body: { customerKey?: string; salesId?: string; storeId?: string; amount?: number; dealedAt?: string; status?: string } }>("/api/v1/deals", async (request, reply) => {
+		const body = request.body ?? {};
+		const amount = Number(body.amount);
+		if (!body.customerKey?.trim() || !Number.isFinite(amount) || amount <= 0) {
+			return reply.code(400).send({ error: "customerKey and amount are required" });
+		}
+		const customer = upsertCustomer(deps.db, { tenantId: request.tenantId, key: body.customerKey.trim() });
+		const salesRow = body.salesId ? getSalespersonById(deps.db, request.tenantId, body.salesId) : undefined;
+		if (body.salesId && !salesRow) return reply.code(400).send({ error: "sales_not_found", message: "销售不存在" });
+		const storeId = body.storeId ?? salesRow?.store_id ?? null;
+		if (!body.salesId && !storeId) return reply.code(400).send({ error: "storeId or salesId is required" });
+		const deal = createDeal(deps.db, request.tenantId, {
+			storeId: storeId ?? undefined,
+			salesId: salesRow?.id ?? body.salesId ?? undefined,
+			customerId: customer.id,
+			amount,
+			dealedAt: body.dealedAt,
+			status: body.status,
+		});
+		return { deal };
+	});
+
+	app.get<{ Params: { id: string } }>("/api/v1/conversations/:id/transcript", async (request, reply) => {
+		const meta = getConversation(deps.db, request.tenantId, request.params.id);
+		if (!meta) return reply.code(404).send({ error: "conversation_not_found", message: "会话不存在" });
+		const customer = meta.customerId
+			? (deps.db.prepare("SELECT id, key, name, phone FROM customers WHERE id = ?").get(meta.customerId) as unknown as { id: string; key: string; name: string | null; phone: string | null } | undefined)
+			: undefined;
+		return {
+			conversation: meta,
+			customer: customer ?? null,
+			transcript: messageRowsToPayload(listConvMessages(deps.db, request.tenantId, meta.id)),
+		};
+	});
 	app.get<{ Querystring: { limit?: string } }>("/api/v1/conversations", async (request) => {
 		const limit = Math.min(Number(request.query.limit ?? 30) || 30, 100);
 		return { conversations: listConversations(deps.db, request.tenantId, limit) };
 	});
 
-	app.post<{ Params: { id: string } }>("/api/v1/conversations/:id/analyze", async (request, reply) => {
+		app.post<{ Params: { id: string } }>("/api/v1/conversations/:id/analyze", async (request, reply) => {
 		const meta = getConversation(deps.db, request.tenantId, request.params.id);
 		if (!meta) return reply.code(404).send({ error: "conversation_not_found", message: "会话不存在" });
-		const session = await deps.store.openConversation(meta.id);
-		const transcript = await fetchTranscript(session);
-		if (transcript.length === 0) return reply.code(422).send({ error: "conversation_empty", message: "会话中无消息" });
-
-		const customer = upsertCustomer(deps.db, { tenantId: request.tenantId, key: meta.customerKey ?? `c_${randomUUID().slice(0, 8)}` });
-		const result = await runCopilotAnalysis(
-			{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
-			{ messages: transcript, customerKey: customer.key },
-		);
-		if (!result.details) return reply.code(502).send({ error: "agent produced no analysis" });
-
-		const saved = createAnalysis(deps.db, {
-			tenantId: request.tenantId,
-			customerId: customer.id,
-			conversationId: result.conversationId,
-			intent: result.details.intent,
-			summary: result.details.summary,
-			signals: result.details.signals,
-			suggestedReply: result.details.suggestedReply,
-			nextSteps: result.details.nextSteps,
-			followupAt: result.details.followupAt,
-		});
-
-		const firstStep = result.details.nextSteps[0];
-		if (result.details.followupAt || firstStep) {
-			const task = createTask(deps.db, {
-				tenantId: request.tenantId,
-				customerId: customer.id,
-				analysisId: saved.id,
-				action: firstStep ?? "跟进客户",
-				dueAt: result.details.followupAt,
-			});
-			const dueMs = task.dueAt ? Date.parse(task.dueAt) : Number.NaN;
-			void deps.reminders.add(task.id, Number.isFinite(dueMs) ? dueMs : null);
+		const dbMessages = listConvMessages(deps.db, request.tenantId, meta.id);
+		let messages: ConversationMessage[];
+		if (dbMessages.length > 0) {
+			messages = dbMessages.map((m) => ({
+				role: m.speaker_role === "sales" || m.speaker_role === "customer" || m.speaker_role === "other" ? m.speaker_role : "other",
+				content: m.content,
+				spokenAt: m.spoken_at ?? undefined,
+				speakerName: m.speaker_name ?? undefined,
+			}));
+		} else {
+			const session = await deps.store.openConversation(meta.id);
+			const transcript = await fetchTranscript(session);
+			if (transcript.length === 0) return reply.code(422).send({ error: "conversation_empty", message: "会话中无消息" });
+			messages = transcript;
 		}
 
-		refreshCustomerTags(deps.db, {
-			tenantId: request.tenantId,
-			customerId: customer.id,
-			analysisId: saved.id,
-			intent: saved.intent,
-			signals: (saved.signals as Array<{ kind?: string; quote?: string; note?: string }>) ?? [],
+		const out = await runAndPersistAnalysis(request, {
+			messages,
+			customerKey: meta.customerKey ?? `c_${randomUUID().slice(0, 8)}`,
+			customerName: meta.customerName ?? undefined,
+			conversationId: meta.id,
+			sales: { salesName: meta.salesName, salesId: meta.salesId ?? undefined, salesPhone: meta.salesPhone ?? undefined, storeId: meta.storeId ?? undefined },
 		});
-
-		if (result.details.suggestedReply && result.details.suggestedReply.length >= 40) {
-			const intent = (saved.intent ?? "通用").slice(0, 40);
-			createCandidate(deps.db, {
-				tenantId: request.tenantId,
-				analysisId: saved.id,
-				intent,
-				draftTitle: `话术·${intent}`.slice(0, 120),
-				draftContent: `【适用场景】${saved.summary.slice(0, 120)}\n【话术】${result.details.suggestedReply}`,
-			});
-		}
-
-		if (deps.mysqlSink) {
-			void deps.mysqlSink.appendAnalysis({
-				id: saved.id,
-				tenantId: request.tenantId,
-				customerId: customer.id,
-				conversationId: saved.conversationId,
-				intent: saved.intent,
-				summary: saved.summary,
-				signalsJson: JSON.stringify(saved.signals),
-				suggestedReply: saved.suggestedReply,
-				nextStepsJson: JSON.stringify(saved.nextSteps),
-				followupAt: saved.followupAt,
-				createdAt: saved.createdAt,
-			});
-		}
-
-		upsertConversation(deps.db, {
-			id: result.conversationId,
-			tenantId: request.tenantId,
-			customerId: customer.id,
-			salesName: meta.salesName,
-			messageCount: result.messages.filter((m) => (m as { role: string }).role !== "user").length,
-		});
-
-		return { analysisId: saved.id, conversationId: result.conversationId, analysis: saved };
+		if (out.status) return reply.code(out.status).send(out.body);
+		return out.body;
 	});
 
 	app.get<{ Params: { conversationId: string } }>("/api/v1/conversations/:conversationId/timeline", async (request) => {

@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS customers (
 	company TEXT,
 	stage TEXT,
 	notes TEXT,
+	phone TEXT,
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	UNIQUE (tenant_id, key)
@@ -68,9 +69,11 @@ CREATE TABLE IF NOT EXISTS analyses (
 	suggested_reply TEXT NOT NULL,
 	next_steps_json TEXT NOT NULL DEFAULT '[]',
 	followup_at TEXT,
+	request_hash TEXT,
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_analyses_customer ON analyses (tenant_id, customer_id, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_analyses_req_hash ON analyses (tenant_id, request_hash) WHERE request_hash IS NOT NULL;
 
 -- v2:跟进任务(loop F3:分析产出 nextSteps 自动生成任务,到期提醒)
 CREATE TABLE IF NOT EXISTS next_step_tasks (
@@ -191,6 +194,10 @@ CREATE TABLE IF NOT EXISTS conversations (
 	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
 	customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
 	sales_name TEXT NOT NULL DEFAULT '默认销售',
+	sales_id TEXT REFERENCES sales(id) ON DELETE SET NULL,
+	sales_phone TEXT,
+	store_id TEXT REFERENCES stores(id) ON DELETE SET NULL,
+	followup_advice TEXT,
 	channel TEXT NOT NULL DEFAULT 'chat',
 	message_count INTEGER NOT NULL DEFAULT 0,
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
@@ -199,3 +206,104 @@ CREATE TABLE IF NOT EXISTS conversations (
 CREATE INDEX IF NOT EXISTS idx_conv_tenant ON conversations (tenant_id, updated_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_kd_category ON knowledge_documents (tenant_id, category);
+-- v11:Agent 对话线程(可恢复的多轮会话)
+CREATE TABLE IF NOT EXISTS agent_threads (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	title TEXT NOT NULL DEFAULT '',
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_at_tenant ON agent_threads (tenant_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS agent_thread_messages (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	thread_id TEXT NOT NULL REFERENCES agent_threads(id) ON DELETE CASCADE,
+	seq INTEGER NOT NULL,
+	role TEXT NOT NULL,
+	content_json TEXT NOT NULL DEFAULT '[]',
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_atm_thread ON agent_thread_messages (tenant_id, thread_id, seq);
+
+-- v12:能力开关与工作流(云端编排端配置)
+CREATE TABLE IF NOT EXISTS agent_capabilities (
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	capability_name TEXT NOT NULL,
+	enabled INTEGER NOT NULL DEFAULT 1,
+	updated_at TEXT,
+	PRIMARY KEY (tenant_id, capability_name)
+);
+
+CREATE TABLE IF NOT EXISTS workflows (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	name TEXT NOT NULL,
+	description TEXT NOT NULL DEFAULT '',
+	steps_json TEXT NOT NULL DEFAULT '[]',
+	enabled INTEGER NOT NULL DEFAULT 1,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_wf_tenant ON workflows (tenant_id, updated_at DESC);
+
+-- v13:门店/销售/成交订单/对话原文/工具调用缓存
+CREATE TABLE IF NOT EXISTS stores (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	name TEXT NOT NULL,
+	address TEXT,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_stores_tenant ON stores (tenant_id, name);
+
+CREATE TABLE IF NOT EXISTS sales (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	store_id TEXT REFERENCES stores(id) ON DELETE SET NULL,
+	name TEXT NOT NULL,
+	phone TEXT,
+	role TEXT NOT NULL DEFAULT 'sales',
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_sales_tenant ON sales (tenant_id, store_id, role);
+
+CREATE TABLE IF NOT EXISTS conversation_messages (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+	seq INTEGER NOT NULL,
+	speaker_role TEXT NOT NULL,
+	speaker_name TEXT,
+	content TEXT NOT NULL,
+	spoken_at TEXT,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_cm_conv ON conversation_messages (tenant_id, conversation_id, seq);
+
+CREATE TABLE IF NOT EXISTS deals (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	store_id TEXT REFERENCES stores(id) ON DELETE SET NULL,
+	sales_id TEXT REFERENCES sales(id) ON DELETE SET NULL,
+	customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
+	conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+	amount REAL NOT NULL DEFAULT 0,
+	status TEXT NOT NULL DEFAULT 'closed',
+	dealed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_deals_tenant ON deals (tenant_id, store_id, dealed_at DESC);
+
+CREATE TABLE IF NOT EXISTS tool_call_cache (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	tool_name TEXT NOT NULL,
+	cache_key TEXT NOT NULL,
+	result_json TEXT NOT NULL,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	last_used_at TEXT,
+	UNIQUE (tenant_id, tool_name, cache_key)
+);
+CREATE INDEX IF NOT EXISTS idx_tcc_tenant ON tool_call_cache (tenant_id, tool_name);

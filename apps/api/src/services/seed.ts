@@ -1,5 +1,8 @@
 import type { DatabaseSync } from "node:sqlite";
 import { upsertVehicle, type VehicleInput } from "../repositories/vehicles.js";
+import { createDeal, upsertSalesperson, upsertStore } from "../repositories/store-ops.js";
+import { upsertCustomer } from "../repositories/customers.js";
+import { replaceConversationMessages } from "../repositories/conversation-data.js";
 
 /**
  * 示例车型种子数据:仅用于演示与联调,请替换为实际在售车型与真实价格。
@@ -65,4 +68,109 @@ export function seedVehicles(db: DatabaseSync, tenantIds: string[]): number {
 		}
 	}
 	return count;
+}
+
+// ── 门店管理示例数据:门店/店长/销售/客户/会话原文/成交 ──
+export interface DemoSalesSpec { name: string; phone: string; }
+export interface DemoStoreSpec {
+	name: string;
+	address: string;
+	managerName: string;
+	managerPhone: string;
+	sales: DemoSalesSpec[];
+}
+
+export const SEED_STORES: DemoStoreSpec[] = [
+	{
+		name: "苏州旗舰店",
+		address: "苏州市工业园区星湖街 328 号",
+		managerName: "张店长",
+		managerPhone: "13800000001",
+		sales: [
+			{ name: "李销售", phone: "13900000001" },
+			{ name: "王销售", phone: "13900000002" },
+		],
+	},
+	{
+		name: "上海闵行店",
+		address: "上海市闵行区吴中路 1588 号",
+		managerName: "刘店长",
+		managerPhone: "13800000002",
+		sales: [
+			{ name: "赵销售", phone: "13900000003" },
+			{ name: "孙销售", phone: "13900000004" },
+		],
+	},
+];
+
+function daysAgoIso(days: number, hourOffset = 9): string {
+	return new Date(Date.now() - days * 24 * 3600 * 1000 + hourOffset * 3600 * 1000).toISOString();
+}
+
+/** 门店台账 + 门店经营演示数据(客户/会话原文/成交),全部固定 id 幂等。 */
+export function seedStoreData(db: DatabaseSync, tenantIds: string[]): number {
+	let count = 0;
+	for (const tenantId of tenantIds) {
+		for (const [si, spec] of SEED_STORES.entries()) {
+			const store = upsertStore(db, tenantId, { name: spec.name, address: spec.address });
+			upsertSalesperson(db, tenantId, { storeId: store.id, name: spec.managerName, phone: spec.managerPhone, role: "manager" });
+			for (const s of spec.sales) {
+				upsertSalesperson(db, tenantId, { storeId: store.id, name: s.name, phone: s.phone });
+			}
+			count += 1 + spec.sales.length + 1; // 门店 + 销售 + 店长
+
+			// 3 位演示客户 + 4 段原文会话(近 12 天) + 3 笔成交(近 15 天)
+			for (let c = 0; c < 3; c++) {
+				upsertCustomer(db, {
+					tenantId,
+					key: `c_demo_${si}_${c}`,
+					name: `演示客户${si + 1}-${c + 1}`,
+					company: "智造科技",
+					stage: c === 2 ? "成交" : "洽谈中",
+					phone: `1360000000${si * 3 + c + 1}`,
+				});
+			}
+			for (let i = 0; i < 4; i++) {
+				const convId = `seed-conv-${tenantId}-${si}-${i}`;
+				const day = i * 3;
+				db.prepare(
+					`INSERT OR IGNORE INTO conversations (id, tenant_id, customer_id, sales_name, sales_id, sales_phone, store_id, followup_advice, channel, message_count, created_at, updated_at)
+					 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+				).run(
+					convId, tenantId,
+					(customerRow(db, tenantId, `c_demo_${si}_${i % 3}`))!.id,
+					spec.sales[i % 2].name,
+					(salesRow(db, tenantId, store.id, spec.sales[i % 2].name))!.id,
+					spec.sales[i % 2].phone,
+					store.id,
+					i === 2 ? "跟进:发送配置单并预约二次试驾" : null,
+					"chat", 4, daysAgoIso(day), daysAgoIso(day),
+				);
+				replaceConversationMessages(db, tenantId, convId, [
+					{ speakerRole: "customer", speakerName: `演示客户${si + 1}-${i % 3 + 1}`, content: `你好,想了解一下${si === 0 ? "汉EV 的优惠方案" : "Model Y 的现车情况"}。`, spokenAt: daysAgoIso(day, 9) },
+					{ speakerRole: "sales", speakerName: spec.sales[i % 2].name, content: "您好,很高兴为您服务。您平时主要通勤还是商务使用?", spokenAt: daysAgoIso(day, 9) },
+					{ speakerRole: "customer", speakerName: `演示客户${si + 1}-${i % 3 + 1}`, content: "主要是家庭用车,偶尔接送客户,预算 20-30 万。", spokenAt: daysAgoIso(day, 9) },
+					{ speakerRole: "sales", speakerName: spec.sales[i % 2].name, content: "明白了,我建议先看汉EV 冠军版,和您的需求非常匹配,这几天有试驾活动。", spokenAt: daysAgoIso(day, 9) },
+				]);
+			}
+			for (let d = 0; d < 3; d++) {
+				createDeal(db, tenantId, {
+					id: `seed-deal-${tenantId}-${si}-${d}`,
+					storeId: store.id,
+					salesId: (salesRow(db, tenantId, store.id, spec.sales[d % 2].name))!.id,
+					customerId: (customerRow(db, tenantId, `c_demo_${si}_${d % 3}`))!.id,
+					amount: [199900, 249900, 299900][d],
+					dealedAt: daysAgoIso(d * 5, 15),
+				});
+			}
+		}
+	}
+	return count;
+}
+
+function customerRow(db: DatabaseSync, tenantId: string, key: string): { id: string } | undefined {
+	return db.prepare("SELECT id FROM customers WHERE tenant_id = ? AND key = ?").get(tenantId, key) as unknown as { id: string } | undefined;
+}
+function salesRow(db: DatabaseSync, tenantId: string, storeId: string, name: string): { id: string } | undefined {
+	return db.prepare("SELECT id FROM sales WHERE tenant_id = ? AND store_id = ? AND name = ?").get(tenantId, storeId, name) as unknown as { id: string } | undefined;
 }

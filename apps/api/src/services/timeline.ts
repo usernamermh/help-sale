@@ -27,7 +27,7 @@ export function createTimelineRecorder(
 					eventType: clientEvent.type,
 					toolName: clientEvent.toolName,
 					payloadJson:
-						clientEvent.payload !== undefined ? JSON.stringify(clientEvent.payload).slice(0, 2000) : undefined,
+						clientEvent.payload !== undefined ? JSON.stringify(clientEvent.payload) : undefined,
 				});
 			}
 		},

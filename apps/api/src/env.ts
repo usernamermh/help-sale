@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 
+// 把所有 ? 去掉，变成必填
 export interface AppConfig {
 	host: string;
 	port: number;
@@ -34,12 +35,16 @@ export interface AppConfig {
 	notificationWebhookUrl: string;
 	companyName: string;
 	teamName: string;
-	tenantId: string; // MVP:固定演示租户,后续迁移到认证
+	tenantId: string;
 }
 
 export interface FileConfig {
 	server?: { host?: string; port?: number };
-	data?: { dataDir?: string };
+	data?: { 
+		dataDir?: string;
+		businessDbPath?: string;
+		sessionDbPath?: string;
+	};
 	tenant?: { defaultTenantId?: string };
 	model?: {
 		provider?: string;
@@ -59,14 +64,12 @@ export interface FileConfig {
 	company?: { name?: string; team?: string };
 }
 
-export const CONFIG_FILE_NAME = "help-sale.config.yaml";
-
 export function locateConfigFile(): string | undefined {
 	const override = process.env.CONFIG_PATH;
 	if (override) return override;
 	// 本文件位于 apps/api/src/env.ts,向上三级即仓库顶层
 	const here = path.dirname(fileURLToPath(import.meta.url));
-	const candidate = path.resolve(here, "..", "..", "..", CONFIG_FILE_NAME);
+	const candidate = path.resolve(here, "..", "..", "..", "help-sale.config.yaml");
 	return existsSync(candidate) ? candidate : undefined;
 }
 
@@ -141,7 +144,6 @@ function safeParseJson(raw: string): Record<string, unknown> | undefined {
 	}
 }
 
-
 function bool(value: unknown, fallback: boolean): boolean {
 	if (value === undefined || value === null || value === "") return fallback;
 	if (typeof value === "boolean") return value;
@@ -155,13 +157,14 @@ function num(value: unknown, fallback: number): number {
 
 export function loadConfig(): AppConfig {
 	const file = loadConfigFile();
+	// 配置优先级:默认值 < 配置文件 < 环境变量(CONFIG_PATH 可换文件)
 	const env = process.env;
 	return {
 		host: env.HOST ?? file.server?.host ?? defaults.host,
 		port: num(env.PORT ?? file.server?.port, defaults.port),
 		dataDir: env.DATA_DIR ?? file.data?.dataDir ?? defaults.dataDir,
-		businessDbPath: env.BUSINESS_DB ?? defaults.businessDbPath,
-		sessionDbPath: env.SESSION_DB ?? defaults.sessionDbPath,
+		businessDbPath: env.BUSINESS_DB ?? file.data?.businessDbPath ?? defaults.businessDbPath,
+		sessionDbPath: env.SESSION_DB ?? file.data?.sessionDbPath ?? defaults.sessionDbPath,
 		modelProvider: env.MODEL_PROVIDER ?? file.model?.provider ?? defaults.modelProvider,
 		modelId: env.MODEL_ID ?? file.model?.modelId ?? defaults.modelId,
 		modelBaseUrl: env.MODEL_BASE_URL ?? file.model?.baseUrl ?? defaults.modelBaseUrl,

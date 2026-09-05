@@ -1,11 +1,15 @@
 export interface ConversationMessage {
 	role: "customer" | "sales" | "other";
 	content: string;
+	spokenAt?: string;
+	speakerName?: string;
 }
 
 export interface RawMessageInput {
 	role?: string;
 	content: string;
+	spokenAt?: string;
+	speakerName?: string;
 }
 
 const CUSTOMER_RE = /^\s*(?:客户|顾客)[：:]\s*(.+)$/;
@@ -45,7 +49,10 @@ export function normalizeAnalyzeMessages(input: { transcript?: string; messages?
 	if (input.messages && input.messages.length > 0) {
 		return input.messages.map((m) => {
 			const role = m.role === "sales" || m.role === "customer" || m.role === "other" ? m.role : "customer";
-			return { role, content: m.content };
+			const out: ConversationMessage = { role, content: m.content };
+			if (m.spokenAt) out.spokenAt = m.spokenAt;
+			if (m.speakerName) out.speakerName = m.speakerName;
+			return out;
 		});
 	}
 	return parseTranscript(input.transcript ?? "");

@@ -8,6 +8,7 @@ export interface CustomerInput {
 	company?: string;
 	stage?: string;
 	notes?: string;
+	phone?: string;
 }
 
 export interface CustomerRow {
@@ -18,6 +19,7 @@ export interface CustomerRow {
 	company: string | null;
 	stage: string | null;
 	notes: string | null;
+	phone: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -30,14 +32,21 @@ export function upsertCustomer(db: DatabaseSync, input: CustomerInput): Customer
 	if (existing) {
 		db.prepare(
 			`UPDATE customers
-			 SET name = ?, company = ?, stage = ?, notes = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+			 SET name = ?, company = ?, stage = ?, notes = ?, phone = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
 			 WHERE id = ?`,
-		).run(input.name ?? existing.name, input.company ?? existing.company, input.stage ?? existing.stage, input.notes ?? existing.notes, existing.id);
+		).run(
+			input.name ?? existing.name,
+			input.company ?? existing.company,
+			input.stage ?? existing.stage,
+			input.notes ?? existing.notes,
+			input.phone ?? existing.phone ?? null,
+			existing.id,
+		);
 		return db.prepare("SELECT * FROM customers WHERE id = ?").get(existing.id) as unknown as CustomerRow;
 	}
 
 	const id = randomUUID();
-	db.prepare("INSERT INTO customers (id, tenant_id, key, name, company, stage, notes) VALUES (?,?,?,?,?,?,?)").run(
+	db.prepare("INSERT INTO customers (id, tenant_id, key, name, company, stage, notes, phone) VALUES (?,?,?,?,?,?,?,?)").run(
 		id,
 		input.tenantId,
 		input.key,
@@ -45,6 +54,7 @@ export function upsertCustomer(db: DatabaseSync, input: CustomerInput): Customer
 		input.company ?? null,
 		input.stage ?? null,
 		input.notes ?? null,
+		input.phone ?? null,
 	);
 	return db.prepare("SELECT * FROM customers WHERE id = ?").get(id) as unknown as CustomerRow;
 }

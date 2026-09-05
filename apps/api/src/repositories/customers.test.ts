@@ -33,4 +33,11 @@ describe("customers", () => {
 		upsertCustomer(db, { tenantId: "t2", key: "c_001" });
 		expect(db.prepare("SELECT COUNT(*) AS n FROM customers").get()).toEqual({ n: 2 });
 	});
+
+	it("upsert 支持客户联系方式(phone)更新", () => {
+		const first = upsertCustomer(db, { tenantId: "t1", key: "c_ph", name: "王经理", phone: "13700000000" });
+		expect(getCustomer(db, "t1", "c_ph")?.phone).toBe("13700000000");
+		const again = upsertCustomer(db, { tenantId: "t1", key: "c_ph", name: "王经理", phone: "13800000000" });
+		expect(again.phone).toBe("13800000000");
+	});
 });

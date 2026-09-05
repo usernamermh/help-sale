@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 10;
+export const MIGRATION_VERSION = 14;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -44,5 +44,27 @@ export function migrate(db: DatabaseSync): void {
 			);`,
 		);
 	}
+	// v13:门店/销售/成交/对话原文/工具缓存;并给 customers、conversations 补列
+	if (current.user_version < 13) {
+		const addCol = (table: string, col: string, ddl: string) => {
+			const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+			if (!cols.some((c) => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl};`);
+		};
+		addCol("customers", "phone", "TEXT");
+		addCol("conversations", "sales_id", "TEXT REFERENCES sales(id) ON DELETE SET NULL");
+		addCol("conversations", "sales_phone", "TEXT");
+		addCol("conversations", "store_id", "TEXT REFERENCES stores(id) ON DELETE SET NULL");
+		addCol("conversations", "followup_advice", "TEXT");
+	}
+
+	// v14:分析请求哈希缓存(相同请求直接复用分析结果,不再调用模型)
+	if (current.user_version < 14) {
+		const cols = db.prepare("PRAGMA table_info(analyses)").all() as Array<{ name: string }>;
+		if (!cols.some((col) => col.name === "request_hash")) {
+			db.exec("ALTER TABLE analyses ADD COLUMN request_hash TEXT;");
+		}
+		db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_analyses_req_hash ON analyses (tenant_id, request_hash) WHERE request_hash IS NOT NULL;");
+	}
+
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }

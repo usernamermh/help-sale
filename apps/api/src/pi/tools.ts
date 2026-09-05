@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { getCustomer, upsertCustomer } from "../repositories/customers.js";
 import { searchKnowledge } from "../repositories/knowledge.js";
+import { withToolCache } from "../repositories/conversation-data.js";
 
 export interface AgentDeps {
 	db: DatabaseSync;
@@ -32,18 +33,20 @@ export function createCopilotTools(deps: AgentDeps): Array<AgentTool<any, any>> 
 				limit: Type.Optional(Type.Number({ default: 5, minimum: 1, maximum: 10 })),
 			}),
 			async execute(_toolCallId, params: any) {
-				const hits = searchKnowledge(db, tenantId, params.query, params.limit ?? 5);
-				return {
-					content: [
-						{
-							type: "text",
-							text: hits.length
-								? hits.map((h) => `【${h.title}】\n${h.snippet}`).join("\n\n")
-								: "知识库未命中,请如实告知用户。",
-						},
-					],
-					details: hits,
-				};
+				return withToolCache(db, tenantId, "search_playbook", params, () => {
+					const hits = searchKnowledge(db, tenantId, params.query, params.limit ?? 5);
+					return {
+						content: [
+							{
+								type: "text",
+								text: hits.length
+									? hits.map((h) => `【${h.title}】\n${h.snippet}`).join("\n\n")
+									: "知识库未命中,请如实告知用户。",
+							},
+						],
+						details: hits,
+					};
+				});
 			},
 		},
 		{
@@ -54,19 +57,21 @@ export function createCopilotTools(deps: AgentDeps): Array<AgentTool<any, any>> 
 				customerKey: Type.String({ description: "客户唯一标识,如 c_001" }),
 			}),
 			async execute(_toolCallId, params: any) {
-				let row = getCustomer(db, tenantId, params.customerKey);
-				if (!row) {
-					row = upsertCustomer(db, { tenantId, key: params.customerKey });
-				}
-				return {
-					content: [
-						{
-							type: "text",
-							text: `客户:${row.name ?? params.customerKey}${row.company ? ` / ${row.company}` : ""}\n阶段:${row.stage ?? "未知"}\n备注:${row.notes ?? "无"}`,
-						},
-					],
-					details: row,
-				};
+				return withToolCache(db, tenantId, "get_customer_profile", params, () => {
+					let row = getCustomer(db, tenantId, params.customerKey);
+					if (!row) {
+						row = upsertCustomer(db, { tenantId, key: params.customerKey });
+					}
+					return {
+						content: [
+							{
+								type: "text",
+								text: `客户:${row.name ?? params.customerKey}${row.company ? ` / ${row.company}` : ""}\n阶段:${row.stage ?? "未知"}\n备注:${row.notes ?? "无"}`,
+							},
+						],
+						details: row,
+					};
+				});
 			},
 		},
 		{
