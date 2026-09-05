@@ -7,7 +7,10 @@ import { parse as parseYaml } from "yaml";
 export interface AppConfig {
 	host: string;
 	port: number;
+	dataMode: "local" | "mysql";
 	dataDir: string;
+	databaseId: string;
+	tables: Record<string, string>;
 	businessDbPath: string;
 	sessionDbPath: string;
 	modelProvider: string;
@@ -59,6 +62,9 @@ export interface AppConfig {
 export interface FileConfig {
 	server?: { host?: string; port?: number };
 	data?: {
+		mode?: "local" | "mysql";
+		databaseId?: string;
+		tables?: Record<string, string>;
 		dataDir?: string;
 		businessDbPath?: string;
 		sessionDbPath?: string;
@@ -161,6 +167,35 @@ function num(value: unknown): number {
 	throw new Error("配置文件缺少数值字段(在 help-sale.config.yaml 中补齐)");
 }
 
+
+/** 数据存储模式枚举校验:只允许 local / mysql,缺省或非法抛错(不允许代码内默认)。 */
+function storageMode(value: unknown): "local" | "mysql" {
+	const v = String(value ?? "").trim().toLowerCase();
+	if (v === "local" || v === "mysql") return v as "local" | "mysql";
+	throw new Error(`配置项目 data.mode 必须为 local 或 mysql(当前:${String(value)})`);
+}
+
+/** 业务表名映射校验:必须覆盖全部逻辑表,缺失或非法抛错(yaml data.tables 是唯一事实源)。 */
+function parseTables(value: unknown): Record<string, string> {
+	if (!value || typeof value !== "object") {
+		throw new Error("配置项 data.tables 缺失:请在 help-sale.config.yaml 的 data.tables 中配置全部业务表名");
+	}
+	const inTables = value as Record<string, unknown>;
+	const required = [
+		"tenants", "customers", "conversations", "conversation_messages", "analyses", "next_step_tasks",
+		"knowledge_documents", "knowledge_chunks", "knowledge_candidates", "agent_events", "customer_tags",
+		"notification_logs", "stores", "sales", "deals", "tool_call_cache", "digests",
+	];
+	const out: Record<string, string> = {};
+	for (const key of required) {
+		const tableName = inTables[key];
+		if (typeof tableName !== "string" || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(tableName)) {
+			throw new Error(`配置项 data.tables.${key} 缺失或非法(应为合法表名):${String(tableName)}`);
+		}
+		out[key] = tableName;
+	}
+	return out;
+}
 export function loadConfig(): AppConfig {
 	const file = loadConfigFile();
 	// 优先级:配置文件 < 环境变量(可覆盖单项;CONFIG_PATH 可换文件)
@@ -168,6 +203,9 @@ export function loadConfig(): AppConfig {
 	return {
 		host: env.HOST ?? file.server!.host!,
 		port: num(env.PORT ?? file.server!.port!),
+		dataMode: storageMode(env.DATA_MODE ?? file.data!.mode!),
+		databaseId: env.DATABASE_ID ?? file.data!.databaseId!,
+		tables: parseTables(file.data!.tables!),
 		dataDir: env.DATA_DIR ?? file.data!.dataDir!,
 		businessDbPath: env.BUSINESS_DB ?? file.data!.businessDbPath!,
 		sessionDbPath: env.SESSION_DB ?? file.data!.sessionDbPath!,

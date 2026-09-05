@@ -105,5 +105,15 @@ describe("extra body", () => {
 			if (oldD === undefined) delete process.env.LOG_DIR; else process.env.LOG_DIR = oldD;
 			if (oldE === undefined) delete process.env.LOG_ENABLED; else process.env.LOG_ENABLED = oldE;
 		}
+
+
+	});
+	it("数据存储元信息:databaseId 与 tables 表名映射来自配置", () => {
+		const cfg = loadConfig();
+		expect(cfg.databaseId).toBe("help_sale");
+		expect(cfg.tables.customers).toBe("customers");
+		expect(cfg.tables.stores).toBe("stores");
+		expect(cfg.tables.digests).toBe("digests");
+		expect(Object.keys(cfg.tables).length).toBeGreaterThanOrEqual(10);
 	});
 });

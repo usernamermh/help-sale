@@ -33,6 +33,13 @@ export interface AppOptions {
 export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const app = Fastify({ logger: options.logger ?? false });
 
+	// 数据存储模式二选一:mysql 主库需先完成仓库层 MySQL 迁移,未迁移前拒绝启动,避免两套存储同时生效
+	if (config.dataMode === "mysql") {
+		throw new Error(
+			"data.mode=mysql 尚未支持:仓库层仍为 SQLite 专用,需先完成 MySQL 迁移(见 AGENTS.md 迁移路线)。当前请保持 data.mode=local",
+		);
+	}
+
 	const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 	const apiRoot = path.join(repoRoot, "apps", "api");
 	const configured = options.dataDir ?? config.dataDir;
@@ -59,14 +66,8 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		request.tenantId = (request.headers["x-tenant-id"] as string | undefined) ?? config.tenantId;
 	});
 
-	const mysqlSink = options.mysqlSink ?? createMysqlSink({
-		enabled: config.mysqlEnabled,
-		host: config.mysqlHost,
-		port: config.mysqlPort,
-		user: config.mysqlUser,
-		password: config.mysqlPassword,
-		database: config.mysqlDatabase,
-	});
+	// local 单一存储:默认不启用 MySQL 归档双写(测试可通过 options.mysqlSink 注入观察器)
+	const mysqlSink = options.mysqlSink ?? undefined;
 	const reminders = options.reminders ?? createReminderQueue({
 		enabled: config.redisEnabled,
 		host: config.redisHost,
@@ -121,7 +122,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	});
 
 	app.addHook("onClose", async () => {
-		const closeTasks: Promise<void>[] = [store.close(), mysqlSink.close(), reminders.close()];
+		const closeTasks: Array<Promise<void> | undefined> = [store.close(), mysqlSink?.close(), reminders.close()];
 		await Promise.allSettled(closeTasks);
 		db.close();
 	});
