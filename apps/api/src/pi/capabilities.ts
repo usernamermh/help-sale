@@ -8,6 +8,8 @@ export interface CapabilityDef {
 	label: string;
 	description: string;
 	category: string;
+	/** 来源目录:tools(业务逻辑功能) / tools_system(系统基础能力) */
+	root?: "tools" | "tools_system";
 }
 
 const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -30,6 +32,7 @@ function buildCapabilities(): CapabilityDef[] {
 				label: t.label ?? t.name,
 				description: t.description || t.name,
 				category: t.category ?? "其他",
+				root: t.root === "tools" ? "tools" : "tools_system",
 			});
 		}
 	}

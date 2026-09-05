@@ -135,7 +135,7 @@ describe("api", () => {
 		expect(client.statusCode).toBe(200);
 		expect(client.headers["content-type"]).toContain("text/html");
 		expect(client.body).toContain("销售军师");
-		expect(client.body).toContain("可用能力");
+		expect(client.body).toContain("业务逻辑功能");
 
 		const consolePage = await app.inject({ method: "GET", url: "/console" });
 		expect(consolePage.statusCode).toBe(200);
@@ -685,5 +685,20 @@ describe("api", () => {
 		const finals = events.filter((e: { type: string }) => e.type === "final");
 		expect(finals).toHaveLength(1);
 		expect(finals[0].final.answer).toContain("陈静");
+	});
+
+	it("历史会话一键清理:DELETE /agent/threads 清空线程", async () => {
+		dir = tmpDataDir("api-threads-clear");
+		app = buildApp({ dataDir: dir, mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+		const created = await app.inject({ method: "POST", url: "/api/v1/agent/threads", headers });
+		expect(created.statusCode).toBe(200);
+		const list1 = await app.inject({ method: "GET", url: "/api/v1/agent/threads", headers });
+		expect(list1.json().threads.length).toBeGreaterThan(0);
+		const del = await app.inject({ method: "DELETE", url: "/api/v1/agent/threads", headers });
+		expect(del.statusCode).toBe(200);
+		expect(del.json().removed).toBeGreaterThan(0);
+		const list2 = await app.inject({ method: "GET", url: "/api/v1/agent/threads", headers });
+		expect(list2.json().threads).toHaveLength(0);
 	});
 });

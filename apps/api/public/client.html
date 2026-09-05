@@ -13,7 +13,7 @@ header h1 { font-size:18px; margin:0; }
 header .sub { font-size:12px; opacity:.85; }
 header .nav { margin-left:auto; font-size:12px; }
 header .nav a { color:#fff; opacity:.9; text-decoration:none; }
-.client-layout { display:flex; gap:14px; max-width:1200px; margin:18px auto; padding:0 18px; height:calc(100vh - 82px); min-height:520px; }
+.client-layout { display:flex; gap:14px; width:100%; max-width:none; margin:18px auto; padding:0 24px; height:calc(100vh - 82px); min-height:520px; }
 .side { width:250px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; overflow:hidden; min-height:0; }
 .side-block { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px; display:flex; flex-direction:column; min-height:0; flex:1 1 0; overflow:hidden; }
 #capList, #threadList { flex:1; min-height:0; overflow:auto; }
@@ -50,6 +50,19 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .thread-item:hover { background:#f1f5f9; }
 .thread-item.selected { background:#eff6ff; border:1px solid #bfdbfe; }
 .thread-item .t { font-size:11px; color:var(--muted); margin-top:2px; }
+.side-head { display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:600; margin-bottom:4px; }
+.side-fold, .clear-btn { border:0; background:#eef2ff; color:var(--brand); border-radius:6px; cursor:pointer; font-size:12px; padding:3px 8px; }
+.clear-btn { float:right; margin-left:8px; background:#fee2e2; color:#b91c1c; }
+.side.collapsed { display:none; }
+#expandSideBtn { display:none; position:fixed; left:12px; top:96px; z-index:30; border:0; background:var(--brand); color:#fff; border-radius:8px; padding:8px 9px; cursor:pointer; }
+.show-btn { position:fixed; right:20px; bottom:24px; z-index:40; border:0; background:var(--brand); color:#fff; border-radius:999px; padding:9px 16px; font-size:13px; cursor:pointer; box-shadow:0 3px 10px rgba(37,99,235,.35); }
+.show-btn.hide { display:none; }
+.right-col { width:272px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; min-height:0; }
+.run-item { font-size:12px; border:1px solid var(--line); border-radius:8px; padding:7px 9px; background:#fff; }
+.run-item .run-head { display:flex; justify-content:space-between; gap:6px; font-weight:600; color:#334155; }
+.run-item .run-time { font-weight:400; color:var(--muted); font-size:11px; }
+.run-item .run-sum { margin-top:3px; color:#64748b; white-space:pre-wrap; word-break:break-word; }
+.run-item.run-done { border-color:#bbf7d0; background:#f0fdf4; }
 .tr-panel { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
 .tr-head { display:flex; align-items:center; justify-content:space-between; font-size:12px; color:var(--muted); letter-spacing:1px; margin:0 0 8px; }
 .tr-close { border:0; background:transparent; color:var(--muted); cursor:pointer; font-size:15px; }
@@ -75,19 +88,28 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 <body>
 <header><h1>销售军师</h1><span class="sub">客户端 · 对话助销</span><span class="nav"><a href="/console">进入编排端</a></span></header>
 <div class="client-layout">
-<aside class="side">
-<div class="side-block grow"><div class="side-title">可用能力</div><div id="capList">加载中…</div></div>
-<div class="side-block"><div class="side-title">会话</div><button id="newBtn" class="secondary" style="width:100%;margin-bottom:8px">+ 新会话</button><div id="threadList"></div></div>
+<aside class="side" id="side">
+<div class="side-head"><span>业务逻辑功能</span><button id="collapseSideBtn" class="side-fold" title="收起侧栏">◀ 收起</button></div>
+<div class="side-block grow"><div class="side-title">业务逻辑功能</div><div id="capList">加载中…</div></div>
+<div class="side-block"><div class="side-title">历史会话<button id="clearThreadsBtn" class="clear-btn" title="一键清理全部历史会话">清理</button></div><button id="newBtn" class="secondary" style="width:100%;margin-bottom:8px">+ 新会话</button><div id="threadList"></div></div>
 </aside>
+<button id="expandSideBtn" title="展开侧栏">▶</button>
 <section class="chat">
 <div class="agent-chat" id="chat"><div class="agent-msg agent-assist"><div class="agent-body">你好，我是销售军师。用一句话告诉我要做什么、查什么，我会自己调用左侧这些能力来帮你完成。</div></div></div>
 <div class="agent-input"><textarea id="goal" placeholder="下达目标，例如：列出当前待办并告诉我最该先跟进哪一条"></textarea><button id="sendBtn">发送</button></div>
 </section>
+<div class="right-col">
+<aside class="side-block tr-panel" id="runPanel">
+<div class="tr-head"><span>本轮任务</span><button class="tr-close" onclick="hideRunPanel()">×</button></div>
+<div class="tr-meta" id="runMeta"></div>
+<div class="tr-list" id="runList"></div>
+</aside>
 <aside class="side-block tr-panel" id="trPanel" style="display:none">
 <div class="tr-head"><span>对话原文</span><button class="tr-close" onclick="hideTrPanel()">×</button></div>
 <div class="tr-meta" id="trMeta"></div>
 <div class="tr-list" id="trList"></div>
 </aside>
+</div>
 </div>
 <script src="/vendor/marked.min.js"></script>
 <script src="/vendor/purify.min.js"></script>
@@ -105,8 +127,10 @@ function renderTrPanel(meta, list) {
     box.appendChild(d);
   }
   $("trPanel").style.display = "flex";
+  $("showTrBtn").classList.add("hide");
 }
-function hideTrPanel() { $("trPanel").style.display = "none"; }function renderMarkdown(text) {
+function hideTrPanel() { $("trPanel").style.display = "none"; $("showTrBtn").classList.remove("hide"); }
+function showTrPanel() { $("trPanel").style.display = "flex"; $("showTrBtn").classList.add("hide"); }function renderMarkdown(text) {
   try {
     if (typeof marked !== "undefined" && marked.parse) {
       const html = marked.parse(text);
@@ -155,7 +179,7 @@ async function loadCapabilities() {
   const box = $("capList");
   try {
     const r = await api("/api/v1/agent/capabilities");
-    const list = (r.capabilities || []).filter((c) => c.enabled);
+    const list = (r.capabilities || []).filter((c) => c.enabled && c.root === "tools");
     if (!list.length) { box.innerHTML = "<div class=\"cap-item\">暂无启用能力</div>"; return; }
     const cats = {};
     for (const c of list) { (cats[c.category] = cats[c.category] || []).push(c); }
@@ -170,7 +194,34 @@ async function loadCapabilities() {
     }
   } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
 }
-let running = false; let currentThreadId = null; let deltaBuf = "";
+// ── 本轮任务栏 ──
+function resetRunPanel() { $("runList").innerHTML = ""; $("runMeta").textContent = ""; $("runPanel").style.display = "flex"; $("showRunBtn").classList.add("hide"); }
+function addRunTask(label, status, summary) {
+  const d = document.createElement("div"); d.className = "run-item run-" + status;
+  d.innerHTML = '<div class="run-head"><span>' + escapeHtml(label) + '</span><span class="run-time">' + new Date().toLocaleTimeString() + '</span></div>' + (summary ? '<div class="run-sum">' + escapeHtml(summary.slice(0, 140)) + '</div>' : '');
+  $("runList").appendChild(d); $("runList").scrollTop = $("runList").scrollHeight;
+  $("runPanel").style.display = "flex";
+}
+function hideRunPanel() { $("runPanel").style.display = "none"; $("showRunBtn").classList.remove("hide"); }
+function showRunPanel() { $("runPanel").style.display = "flex"; $("showRunBtn").classList.add("hide"); $("runList").scrollTop = $("runList").scrollHeight; }
+function runTaskCount() { return $("runList").querySelectorAll(".run-item").length; }
+// ── 侧栏折叠 ──
+function toggleSide(collapsed) {
+  $("side").classList.toggle("collapsed", collapsed);
+  $("expandSideBtn").style.display = collapsed ? "block" : "none";
+  $("collapseSideBtn").style.display = collapsed ? "none" : "inline-block";
+}
+// ── 历史会话一键清理 ──
+async function clearThreads() {
+  if (!window.confirm("确认清空全部历史会话吗?此操作不可恢复。")) return;
+  try {
+    await api("/api/v1/agent/threads", { method: "DELETE" });
+    currentThreadId = null;
+    clearChat();
+    loadThreads();
+    hideTrPanel();
+  } catch (e) { alert("清理失败:" + e.message); }
+}let running = false; let currentThreadId = null; let deltaBuf = "";
 function appendAgentMsg(role, text) {
   const chat = $("chat");
   const div = document.createElement("div");
@@ -241,6 +292,11 @@ async function selectThread(id) {
 $("sendBtn").addEventListener("click", send);
 $("goal").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
 $("newBtn").addEventListener("click", newThread);
+$("clearThreadsBtn").addEventListener("click", clearThreads);
+$("collapseSideBtn").addEventListener("click", () => toggleSide(true));
+$("expandSideBtn").addEventListener("click", () => toggleSide(false));
+$("showRunBtn").addEventListener("click", showRunPanel);
+$("showTrBtn").addEventListener("click", showTrPanel);
 async function send() {
   const goal = $("goal").value.trim();
   if (!goal || running) return;
@@ -264,6 +320,7 @@ async function send() {
 }
 async function streamRun(goal, wait, steps) {
   deltaBuf = "";
+  resetRunPanel();
   const res = await fetch("/api/v1/agent/threads/" + currentThreadId + "/run-stream", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-tenant-id": "t_demo" },
@@ -292,10 +349,12 @@ function handleStreamEvent(evt, wait, steps) {
   if (evt.type === "tool_start") {
     const name = evt.label || evt.toolName || "工具";
     steps.push({ eventType: "tool_start", toolName: evt.toolName, label: name, summary: prettyPayload(evt.payload) });
+    addRunTask(name, "start", prettyPayload(evt.payload));
     wait.body.textContent = "正在调用 " + name + "…";
   } else if (evt.type === "tool_end") {
     const name = evt.label || evt.toolName || "工具";
     steps.push({ eventType: "tool_end", toolName: evt.toolName, label: name, summary: prettyPayload(evt.payload) });
+    addRunTask(name, "done", prettyPayload(evt.payload));
     wait.body.textContent = name + " 完成，正在整理结果…";
     const det = evt.payload && evt.payload.details;
     if (det && Array.isArray(det.messages) && det.messages.length) {
@@ -313,8 +372,10 @@ function handleStreamEvent(evt, wait, steps) {
     wait.body.innerHTML = '<div class="md">' + renderMarkdown(answer) + '</div>'; renderMermaidBlocks(wait.body);
     wait.meta.textContent = (evt.final && evt.final.nextSteps && evt.final.nextSteps.length) ? ("下一步：" + evt.final.nextSteps.join(" · ")) : "";
     attachAgentSteps(wait, steps);
+    $("runMeta").textContent = "本轮任务完成 · " + runTaskCount() + " 项";
   } else if (evt.type === "error") {
     wait.body.textContent = "出错了：" + (evt.error || "未知错误");
+    $("runMeta").textContent = "本轮出错:" + (evt.error || "未知错误");
   }
 }
 function prettyPayload(p) {
@@ -328,5 +389,7 @@ function prettyPayload(p) {
   try { return typeof p === "string" ? p : JSON.stringify(p); } catch { return String(p); }
 }loadCapabilities(); loadThreads();
 </script>
+<button id="showRunBtn" class="show-btn hide" title="打开本轮任务">⏱ 本轮任务</button>
+<button id="showTrBtn" class="show-btn hide" title="打开对话原文" style="bottom:76px">💬 对话原文</button>
 </body>
 </html>

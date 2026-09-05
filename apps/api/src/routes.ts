@@ -36,7 +36,7 @@ import { runSalesAgent } from "./pi/agent-runtime.js";
 import { CAPABILITIES, getCapabilityDef } from "./pi/capabilities.js";
 import { createWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled } from "./repositories/agent-capabilities.js";
 import { queryConsoleLogs } from "./services/console-logs.js";
-import { appendThreadMessage, createThread, getThread, listThreadMessages, listThreads, setThreadTitle } from "./repositories/agent-threads.js";
+import { appendThreadMessage, createThread, deleteAllThreads, getThread, listThreadMessages, listThreads, setThreadTitle } from "./repositories/agent-threads.js";
 import type { SessionStore } from "./pi/sessions.js";
 
 export interface RouteDeps {
@@ -321,6 +321,7 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 				label: c.label,
 				description: c.description,
 				category: c.category,
+				root: c.root,
 				enabled: states.has(c.name) ? states.get(c.name)! : true,
 			})),
 		};
@@ -375,6 +376,11 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 
 	app.post("/api/v1/agent/threads", async (request) => {
 		return createThread(deps.db, request.tenantId);
+	});
+
+	app.delete("/api/v1/agent/threads", async (request) => {
+		const removed = deleteAllThreads(deps.db, request.tenantId);
+		return { removed };
 	});
 
 	app.get("/api/v1/agent/threads", async (request) => {

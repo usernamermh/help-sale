@@ -103,3 +103,13 @@ function mapMessage(row: Record<string, unknown>): AgentThreadMessageRecord {
 		createdAt: String(row.created_at),
 	};
 }
+
+/** 清空某租户全部线程(历史会话一键清理):先删消息,再删线程,返回删除线程数。 */
+export function deleteAllThreads(db: DatabaseSync, tenantId: string): number {
+	const rows = db.prepare("SELECT id FROM agent_threads WHERE tenant_id = ?").all(tenantId) as unknown as Array<{ id: string }>;
+	for (const row of rows) {
+		db.prepare("DELETE FROM agent_thread_messages WHERE tenant_id = ? AND thread_id = ?").run(tenantId, row.id);
+	}
+	const result = db.prepare("DELETE FROM agent_threads WHERE tenant_id = ?").run(tenantId);
+	return Number(result.changes ?? 0);
+}
