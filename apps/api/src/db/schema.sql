@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS customers (
 	stage TEXT,
 	notes TEXT,
 	phone TEXT,
+	intended_vehicles TEXT,
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	UNIQUE (tenant_id, key)

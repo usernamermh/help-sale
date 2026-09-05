@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 14;
+export const MIGRATION_VERSION = 15;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -31,6 +31,16 @@ export function migrate(db: DatabaseSync): void {
 			const anaCols = db.prepare("PRAGMA table_info(analyses)").all() as Array<{ name: string }>;
 			if (!anaCols.some((col) => col.name === "request_hash")) {
 				db.exec("ALTER TABLE analyses ADD COLUMN request_hash TEXT;");
+			}
+		}
+	}
+	// v15:客户意向车型列表(customers.intended_vehicles,JSON 数组)
+	if (current.user_version < 15) {
+		const hasCustomers = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'customers'").get();
+		if (hasCustomers) {
+			const custCols = db.prepare("PRAGMA table_info(customers)").all() as Array<{ name: string }>;
+			if (!custCols.some((col) => col.name === "intended_vehicles")) {
+				db.exec("ALTER TABLE customers ADD COLUMN intended_vehicles TEXT;");
 			}
 		}
 	}

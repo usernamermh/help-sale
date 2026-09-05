@@ -9,6 +9,8 @@ export interface CustomerInput {
 	stage?: string;
 	notes?: string;
 	phone?: string;
+	/** 意向车型列表(如 ["汉EV 冠军版","Model Y 后驱版"]),落库为 JSON 数组 */
+	intendedVehicles?: string[];
 }
 
 export interface CustomerRow {
@@ -20,6 +22,7 @@ export interface CustomerRow {
 	stage: string | null;
 	notes: string | null;
 	phone: string | null;
+	intended_vehicles: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -30,9 +33,10 @@ export function upsertCustomer(db: DatabaseSync, input: CustomerInput): Customer
 		.get(input.tenantId, input.key) as unknown as CustomerRow | undefined;
 
 	if (existing) {
+		const nextVehicles = input.intendedVehicles !== undefined ? JSON.stringify(input.intendedVehicles) : existing.intended_vehicles;
 		db.prepare(
 			`UPDATE customers
-			 SET name = ?, company = ?, stage = ?, notes = ?, phone = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+			 SET name = ?, company = ?, stage = ?, notes = ?, phone = ?, intended_vehicles = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
 			 WHERE id = ?`,
 		).run(
 			input.name ?? existing.name,
@@ -40,13 +44,16 @@ export function upsertCustomer(db: DatabaseSync, input: CustomerInput): Customer
 			input.stage ?? existing.stage,
 			input.notes ?? existing.notes,
 			input.phone ?? existing.phone ?? null,
+			nextVehicles,
 			existing.id,
 		);
 		return db.prepare("SELECT * FROM customers WHERE id = ?").get(existing.id) as unknown as CustomerRow;
 	}
 
 	const id = randomUUID();
-	db.prepare("INSERT INTO customers (id, tenant_id, key, name, company, stage, notes, phone) VALUES (?,?,?,?,?,?,?,?)").run(
+	db.prepare(
+		"INSERT INTO customers (id, tenant_id, key, name, company, stage, notes, phone, intended_vehicles) VALUES (?,?,?,?,?,?,?,?,?)",
+	).run(
 		id,
 		input.tenantId,
 		input.key,
@@ -55,6 +62,7 @@ export function upsertCustomer(db: DatabaseSync, input: CustomerInput): Customer
 		input.stage ?? null,
 		input.notes ?? null,
 		input.phone ?? null,
+		input.intendedVehicles !== undefined ? JSON.stringify(input.intendedVehicles) : null,
 	);
 	return db.prepare("SELECT * FROM customers WHERE id = ?").get(id) as unknown as CustomerRow;
 }
@@ -76,15 +84,16 @@ export interface CustomerBriefRow {
 	name: string | null;
 	phone: string | null;
 	stage: string | null;
+	intendedVehicles: string[] | null;
 	lastAnalysisAt: string | null;
 	conversationCount: number;
 }
 
-/** 客户清单:key/姓名/电话/阶段 + 最近分析时间与会话数,按最近分析倒序(供表格展示)。 */
+/** 客户清单:key/姓名/电话/阶段/意向车型 + 最近分析时间与会话数,按最近分析倒序(供表格展示)。 */
 export function listCustomers(db: DatabaseSync, tenantId: string, limit: number): CustomerBriefRow[] {
 	const rows = db
 		.prepare(
-			`SELECT cu.id, cu.key, cu.name, cu.phone, cu.stage,
+			`SELECT cu.id, cu.key, cu.name, cu.phone, cu.stage, cu.intended_vehicles,
 			        (SELECT MAX(a.created_at) FROM analyses a WHERE a.customer_id = cu.id) AS last_analysis_at,
 			        (SELECT COUNT(*) FROM conversations c WHERE c.customer_id = cu.id) AS conversation_count
 			 FROM customers cu
@@ -99,7 +108,18 @@ export function listCustomers(db: DatabaseSync, tenantId: string, limit: number)
 		name: r.name != null ? String(r.name) : null,
 		phone: r.phone != null ? String(r.phone) : null,
 		stage: r.stage != null ? String(r.stage) : null,
+		intendedVehicles: parseVehicles(r.intended_vehicles),
 		lastAnalysisAt: r.last_analysis_at != null ? String(r.last_analysis_at) : null,
 		conversationCount: Number(r.conversation_count ?? 0),
 	}));
+}
+
+export function parseVehicles(raw: unknown): string[] | null {
+	if (raw == null || raw === "") return null;
+	try {
+		const parsed = JSON.parse(String(raw)) as unknown;
+		return Array.isArray(parsed) ? parsed.map(String) : null;
+	} catch {
+		return null;
+	}
 }

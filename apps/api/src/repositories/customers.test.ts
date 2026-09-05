@@ -63,4 +63,14 @@ describe("customers", () => {
 		// 跨租户隔离
 		expect(listCustomers(db, "t2", 50)).toHaveLength(1);
 	});
+
+	it("upsert 支持意向车型列表(listCustomers 可读回)", () => {
+		upsertCustomer(db, { tenantId: "t1", key: "c_iv", name: "孙悦", intendedVehicles: ["汉EV 冠军版", "Model Y 后驱版"] });
+		const row = getCustomer(db, "t1", "c_iv")!;
+		expect(JSON.parse(row.intended_vehicles!)).toEqual(["汉EV 冠军版", "Model Y 后驱版"]);
+		const again = upsertCustomer(db, { tenantId: "t1", key: "c_iv", intendedVehicles: [] });
+		expect(JSON.parse(again.intended_vehicles!)).toEqual([]);
+		const brief = listCustomers(db, "t1", 50).find((c) => c.key === "c_iv");
+		expect(brief?.intendedVehicles).toEqual([]);
+	});
 });
