@@ -27,7 +27,7 @@ export async function runVoiceDigest(deps: VoiceDigestDeps, input: { text: strin
 	const { session, conversationId } = await store.createConversation();
 	await appendUserMessage(session, input.text);
 
-	const tools = createVoiceDigestTools({ db, tenantId });
+	const tools = await createVoiceDigestTools({ db, tenantId });
 	const systemPrompt = getVoiceDigestPrompt({ companyName: config.companyName });
 	const agent = makeAgent({ sessionId: conversationId, systemPrompt, tools, streamFn, model });
 	const recorder = createTimelineRecorder(db, { tenantId, conversationId });

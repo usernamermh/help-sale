@@ -33,7 +33,7 @@ export async function runResponseEvaluation(deps: EvaluatorDeps, input: { text: 
 	const { session, conversationId } = await store.createConversation();
 	await appendUserMessage(session, input.text);
 
-	const tools = createEvaluatorTools({ db, tenantId });
+	const tools = await createEvaluatorTools({ db, tenantId });
 	const systemPrompt = getEvaluatorPrompt({ companyName: config.companyName });
 	const agent = makeAgent({ sessionId: conversationId, systemPrompt, tools, streamFn, model });
 	const recorder = createTimelineRecorder(db, { tenantId, conversationId });

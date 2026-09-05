@@ -2,7 +2,19 @@
   "name": "list_knowledge_candidates",
   "description": "查看系统从历史会话自动抽取、待确认入库的知识候选。",
   "category": "知识",
-  "parameters": { "type": "object", "properties": { "limit": { "type": "number", "default": 20, "maximum": 50 } } },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "limit": {
+        "type": "number",
+        "default": 20,
+        "maximum": 50
+      }
+    }
+  },
   "entry": "main.ts",
-  "function_list": ["main.execute"]
+  "function_list": [
+    "main.execute"
+  ],
+  "label": "查看知识候选"
 }

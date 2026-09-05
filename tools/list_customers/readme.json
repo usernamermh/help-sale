@@ -2,7 +2,20 @@
   "name": "list_customers",
   "description": "列出当前租户全部客户(标识/姓名/电话/阶段/最近分析时间/会话数),直接返回完整清单表格,内容可原样展示;查询客户概况时优先使用。",
   "category": "客户",
-  "parameters": { "type": "object", "properties": { "limit": { "type": "number", "default": 50, "minimum": 1, "maximum": 100 } } },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "limit": {
+        "type": "number",
+        "default": 50,
+        "minimum": 1,
+        "maximum": 100
+      }
+    }
+  },
   "entry": "main.ts",
-  "function_list": ["main.execute"]
+  "function_list": [
+    "main.execute"
+  ],
+  "label": "列出客户"
 }

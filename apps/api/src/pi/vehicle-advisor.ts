@@ -38,7 +38,7 @@ export async function runVehicleMatch(deps: VehicleAdvisorDeps, input: VehicleMa
 	const { session, conversationId } = await store.createConversation();
 	await appendUserMessage(session, input.requirementsText);
 
-	const tools = createVehicleTools({ db, tenantId });
+	const tools = await createVehicleTools({ db, tenantId });
 	const systemPrompt = getVehicleAdvisorPrompt({ companyName: config.companyName });
 	const agent = makeAgent({ sessionId: conversationId, systemPrompt, tools, streamFn, model });
 	const recorder = createTimelineRecorder(db, { tenantId, conversationId });

@@ -2,7 +2,39 @@
   "name": "ingest_knowledge",
   "description": "把话术/政策/竞品资料写入知识库(可指定分类与多条)。",
   "category": "知识",
-  "parameters": { "type": "object", "required": ["entries"], "properties": { "category": { "type": "string" }, "entries": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["title", "content"], "properties": { "title": { "type": "string" }, "content": { "type": "string" } } } } } },
+  "parameters": {
+    "type": "object",
+    "required": [
+      "entries"
+    ],
+    "properties": {
+      "category": {
+        "type": "string"
+      },
+      "entries": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": [
+            "title",
+            "content"
+          ],
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
   "entry": "main.ts",
-  "function_list": ["main.execute"]
+  "function_list": [
+    "main.execute"
+  ],
+  "label": "沉淀话术知识"
 }

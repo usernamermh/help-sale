@@ -2,7 +2,19 @@
   "name": "list_conversations",
   "description": "列出最近的会话(时间/ID/销售/客户/消息数),便于定位需要分析的会话。",
   "category": "会话",
-  "parameters": { "type": "object", "properties": { "limit": { "type": "number", "default": 20, "maximum": 50 } } },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "limit": {
+        "type": "number",
+        "default": 20,
+        "maximum": 50
+      }
+    }
+  },
   "entry": "main.ts",
-  "function_list": ["main.execute"]
+  "function_list": [
+    "main.execute"
+  ],
+  "label": "列出会话"
 }

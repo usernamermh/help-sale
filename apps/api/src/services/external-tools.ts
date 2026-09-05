@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type { AgentTool, AgentToolResult } from "@earendil-works/pi-agent-core";
 
 /**
@@ -18,6 +18,8 @@ export interface ExternalToolInfo {
 	functions: string[];
 	/** 可选:readme.json 声明的分类(前端能力清单用) */
 	category?: string;
+	/** 可选:readme.json 声明的中文展示名 */
+	label?: string;
 	/** 可选:readme.json 声明的参数 JSON Schema(缺省时从 main.ts 的 schema 导出取) */
 	parameters?: Record<string, unknown>;
 	/** 实现入口:优先 readme.json entry,否则 main.ts */
@@ -42,7 +44,7 @@ export function scanExternalTools(roots: string[]): ExternalToolInfo[] {
 			const dirPath = path.join(root, entry.name);
 			const readmePath = path.join(dirPath, "readme.json");
 			if (!existsSync(readmePath)) continue;
-			let meta: { name?: string; description?: string; function_list?: string[]; category?: string; parameters?: unknown; entry?: string };
+			let meta: { name?: string; description?: string; function_list?: string[]; category?: string; label?: string; parameters?: unknown; entry?: string };
 			try {
 				meta = JSON.parse(readFileSync(readmePath, "utf8")) as typeof meta;
 			} catch {
@@ -59,6 +61,7 @@ export function scanExternalTools(roots: string[]): ExternalToolInfo[] {
 						? meta.function_list.map(String)
 						: extractMainFunctions(dirPath),
 				category: typeof meta.category === "string" ? meta.category : undefined,
+				label: typeof meta.label === "string" ? meta.label : undefined,
 				parameters: meta.parameters && typeof meta.parameters === "object" ? (meta.parameters as Record<string, unknown>) : undefined,
 				entry: typeof meta.entry === "string" ? meta.entry : undefined,
 			});
@@ -137,7 +140,7 @@ export async function loadExternalAgentTools(
 		const schema = tool.parameters ?? mod.schema ?? mod.default?.schema ?? {};
 		out.push({
 			name: tool.name,
-			label: tool.name,
+			label: tool.label ?? tool.name,
 			description: tool.description,
 			parameters: schema as never,
 			async execute(_toolCallId, params: any): Promise<AgentToolResult<any>> {
@@ -149,6 +152,20 @@ export async function loadExternalAgentTools(
 	}
 	}
 	return out;
+}
+
+/** 仓库根下 tools / tools_system 的绝对路径列表。 */
+export function externalToolPaths(): string[] {
+	const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+	return TOOL_ROOTS.map((r) => path.join(repoRoot, r));
+}
+
+/** 加载外部工具并按名称取一个;缺失时抛错(目录内应有对应实现)。 */
+export async function externalToolByName(roots: string[], ctx: ExternalToolContext, name: string): Promise<ExternalAgentTool> {
+	const tools = await loadExternalAgentTools(roots, ctx);
+	const tool = tools.find((t) => t.name === name);
+	if (!tool) throw new Error(`外部工具 ${name} 未加载(tools 目录缺少实现?)`);
+	return tool;
 }
 /** 生成追加到 system prompt 的外部工具说明块;无工具时返回空串。 */
 export function buildExternalToolsText(tools: ExternalToolInfo[]): string {

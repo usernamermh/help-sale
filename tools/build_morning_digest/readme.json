@@ -2,7 +2,13 @@
   "name": "build_morning_digest",
   "description": "生成本日晨报:待办/到期任务、关键跟进客户、近24h分析数。",
   "category": "经营",
-  "parameters": { "type": "object", "properties": {} },
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  },
   "entry": "main.ts",
-  "function_list": ["main.execute"]
+  "function_list": [
+    "main.execute"
+  ],
+  "label": "生成晨报"
 }

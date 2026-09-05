@@ -2,7 +2,27 @@
   "name": "search_playbook",
   "description": "在团队知识库检索话术、竞品资料、价格政策、售后FAQ。优先用客户原话或具体词(产品名、价格数字、功能名),无命中时如实说明。",
   "category": "知识",
-  "parameters": { "type": "object", "required": ["query"], "properties": { "query": { "type": "string", "description": "检索关键词" }, "limit": { "type": "number", "default": 5, "minimum": 1, "maximum": 10 } } },
+  "parameters": {
+    "type": "object",
+    "required": [
+      "query"
+    ],
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "检索关键词"
+      },
+      "limit": {
+        "type": "number",
+        "default": 5,
+        "minimum": 1,
+        "maximum": 10
+      }
+    }
+  },
   "entry": "main.ts",
-  "function_list": ["main.execute"]
+  "function_list": [
+    "main.execute"
+  ],
+  "label": "检索话术库"
 }

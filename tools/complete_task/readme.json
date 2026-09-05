@@ -2,7 +2,20 @@
   "name": "complete_task",
   "description": "把某个跟进任务标记为已完成。",
   "category": "任务",
-  "parameters": { "type": "object", "required": ["taskId"], "properties": { "taskId": { "type": "string" } } },
+  "parameters": {
+    "type": "object",
+    "required": [
+      "taskId"
+    ],
+    "properties": {
+      "taskId": {
+        "type": "string"
+      }
+    }
+  },
   "entry": "main.ts",
-  "function_list": ["main.execute"]
+  "function_list": [
+    "main.execute"
+  ],
+  "label": "完成任务"
 }

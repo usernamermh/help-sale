@@ -1,7 +1,7 @@
 import { Type } from "typebox";
 import type { DatabaseSync } from "node:sqlite";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import { searchKnowledge } from "../repositories/knowledge.js";
+import { externalToolByName, externalToolPaths } from "../services/external-tools.js";
 
 export interface EvaluationDetails {
 	score: number;
@@ -11,26 +11,9 @@ export interface EvaluationDetails {
 	suggestedReply: string;
 }
 
-export function createEvaluatorTools(deps: { db: DatabaseSync; tenantId: string }): Array<AgentTool<any, any>> {
-	const { db, tenantId } = deps;
-
-	const searchTool: AgentTool<any, any> = {
-		name: "search_playbook",
-		label: "检索团队话术库",
-		description: "在团队知识库中检索与当前场景相关的话术/政策,作为评估基准;无命中时如实说明。",
-		parameters: Type.Object({ query: Type.String({ description: "检索关键词或客户原话" }) }),
-		async execute(_toolCallId, params: any) {
-			const hits = searchKnowledge(db, tenantId, params.query, 5);
-			return {
-				content: [
-					{ type: "text", text: hits.length ? hits.map((h) => `【${h.title}】${h.snippet}`).join("\n\n") : "知识库无命中" },
-				],
-				details: hits,
-			};
-		},
-	};
-
-	const emitTool: AgentTool<any, any> = {
+/** 系统收口工具:输出评估结论(不随 tools 目录加载)。 */
+export function emitEvaluationTool(): AgentTool<any, any> {
+	return {
 		name: "emit_evaluation",
 		label: "输出评估结论",
 		description: "输出话术评估的结构化结论,作为最终结果。调用后立即停止。",
@@ -49,12 +32,16 @@ export function createEvaluatorTools(deps: { db: DatabaseSync; tenantId: string 
 		}),
 		async execute(_toolCallId, params: any) {
 			return {
-				content: [{ type: "text", text: `评估完成:${params.score} 分` }],
+				content: [{ type: "text" as const, text: `评估完成:${params.score} 分` }],
 				details: params as EvaluationDetails,
 				terminate: true,
 			};
 		},
 	};
+}
 
-	return [searchTool, emitTool];
+/** 话术评估工具:search_playbook 来自 tools 目录,emit_evaluation 系统收口。 */
+export async function createEvaluatorTools(deps: { db: DatabaseSync; tenantId: string }): Promise<Array<AgentTool<any, any>>> {
+	const search = await externalToolByName(externalToolPaths(), { db: deps.db, tenantId: deps.tenantId }, "search_playbook");
+	return [search, emitEvaluationTool()];
 }

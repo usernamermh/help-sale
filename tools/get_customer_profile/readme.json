@@ -2,7 +2,21 @@
   "name": "get_customer_profile",
   "description": "按客户 key 获取客户资料(名称/公司/阶段/备注/电话)。",
   "category": "客户",
-  "parameters": { "type": "object", "required": ["customerKey"], "properties": { "customerKey": { "type": "string", "description": "客户标识,如 c_001" } } },
+  "parameters": {
+    "type": "object",
+    "required": [
+      "customerKey"
+    ],
+    "properties": {
+      "customerKey": {
+        "type": "string",
+        "description": "客户标识,如 c_001"
+      }
+    }
+  },
   "entry": "main.ts",
-  "function_list": ["main.execute"]
+  "function_list": [
+    "main.execute"
+  ],
+  "label": "查询客户档案"
 }
