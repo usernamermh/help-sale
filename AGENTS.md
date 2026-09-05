@@ -2,7 +2,12 @@
 
 本文件面向在此项目内继续工作的 agent 会话,帮助快速恢复上下文。
 
-## 项目状态(2026-08-25)
+## 项目状态(2026-09-05)
+
+- 门店管理完成:stores/sales/deals/conversation_messages/tool_call_cache(v13 骨架补齐)+ v14 分析请求缓存;GET/POST 门店/销售/成交接口 + 店长按时间周期看经营概况(接客次数/成交量/成交额/成交率/成交订单);前端「门店管理」标签页;启动对默认租户播种演示门店数据。
+- 对话原文落库:analyze / evaluate-response / voice-digest 把每句(时间/角色/内容)写入 conversation_messages;GET /api/v1/conversations/:id/transcript;分析响应带 transcript;工作台与聊天端右侧「对话原文」侧栏展示。
+- 缓存:确定性工具结果进 tool_call_cache;相同 analyze 请求(哈希)直接复用分析记录不调模型。
+- 121/121 测试 + typecheck 零错误。
 
 - MVP 后端 Task 1-20 完成,Task 21(真实模型冒烟)已使用内网 U21-Preview 端点完成,Task 22-23(文档/验收)完成。
 - 前端工具页已上线(Fastify 根路由 /,单页 HTML,无构建链):对话分析、车型优选、知识上传、跟进任务、历史查询。
