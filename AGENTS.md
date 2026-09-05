@@ -39,6 +39,7 @@
 
 - 全量测试:`npm test`;类型检查:`npm run typecheck`
 - 启动服务:`npm run dev`(监听 help-sale.config.yaml 的 host:port,当前 3101;请求头 x-tenant-id)
+- 按配置重启服务(杀老进程树 + 后台启动 + 健康检查):`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\restart-service.ps1`(-DryRun 预览 / -Port 覆盖端口 / -NoWait 跳过检查;日志追加 apps/api/log/service.log,PID 见 service.pid)
 - 重建 pi:`npm ci --prefix pi --ignore-scripts` → `node scripts/gen-minimal-model-data.mjs` → `npm run build:offline --prefix pi` → `npm install --ignore-scripts`
 - 恢复官方模型数据:网络可用时在 pi 根目录 `npm run generate-models` 后重建 pi。
 
