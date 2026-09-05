@@ -47,21 +47,88 @@ button.secondary:hover { background:#f1f5f9; }
 .error { background:#fef2f2; color:var(--danger); border:1px solid #fecaca; border-radius:8px; padding:8px 10px; margin-top:10px; font-size:12px; }
 .hidden { display:none; }
 .digest-content { white-space:pre-wrap; font-size:12px; color:#334155; background:#f8fafc; border-radius:8px; padding:10px; }
+.tr-panel { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; min-width:0; display:flex; flex-direction:column; max-height:100%; overflow:hidden; }
+.panel#panel-workspace.show-tr { grid-template-columns:230px 1fr 300px; }
+.tr-head { display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:600; margin-bottom:8px; }
+.tr-close { border:0; background:transparent; color:var(--muted); cursor:pointer; font-size:16px; }
+.tr-meta { font-size:11px; color:var(--muted); margin-bottom:8px; word-break:break-all; }
+.tr-list { flex:1; overflow:auto; display:flex; flex-direction:column; gap:8px; min-height:0; }
+.tr-line { font-size:12px; border:1px solid var(--line); border-radius:8px; padding:7px 9px; background:#fff; }
+.tr-line .tr-time { font-size:11px; color:var(--muted); }
+.tr-line .tr-role { display:inline-block; padding:1px 7px; border-radius:999px; font-size:11px; margin:0 6px; background:#eef2ff; color:var(--brand); }
+.tr-line .tr-role.sales { background:#ecfdf5; color:var(--ok); }
+.tr-line .tr-role.other { background:#f1f5f9; color:var(--muted); }
+.tr-line .tr-text { margin-top:3px; white-space:pre-wrap; word-break:break-word; color:#334155; }
+.stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:6px; }
+.stat-card { background:#f8fafc; border:1px solid var(--line); border-radius:10px; padding:12px; }
+.stat-card .k { font-size:12px; color:var(--muted); }
+.stat-card .v { font-size:20px; font-weight:700; color:var(--text); margin-top:4px; }
+.mini-table { border-collapse:collapse; width:100%; margin-top:8px; }
+.mini-table th, .mini-table td { border:1px solid var(--line); padding:6px 8px; font-size:12px; text-align:left; }
+.mini-table th { background:#f1f5f9; }
 .mini { font-size:12px; color:var(--muted); }
 .section-note { font-size:12px; color:var(--muted); margin-bottom:10px; }
 @media (max-width:860px){ .panel.active { grid-template-columns:1fr; } .func-menu { position:static; display:flex; flex-wrap:wrap; gap:6px; } .menu-title { display:none; } .func-btn { width:auto; margin:0; } }
-</style>
+.agent-wrap { display:flex; flex-direction:column; height:calc(100vh - 170px); min-height:480px; }
+.agent-chat { flex:1; overflow:auto; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; max-width:860px; width:100%; margin:0 auto; }
+.agent-msg { margin:0 0 14px; padding:10px 12px; border-radius:12px; max-width:86%; line-height:1.55; }
+.agent-user { background:#eff6ff; border:1px solid #bfdbfe; margin-left:auto; }
+.agent-assist { background:#f8fafc; border:1px solid #e2e8f0; }
+.agent-body { white-space:pre-wrap; word-break:break-word; }
+.agent-meta { font-size:11px; color:var(--muted); margin-top:6px; }
+.step-line { font-size:11px; color:var(--brand); margin-top:8px; }
+.agent-input { max-width:860px; width:100%; margin:12px auto 0; display:flex; gap:8px; align-items:flex-end; }
+.agent-input textarea { flex:1; min-height:56px; resize:none; padding:10px; border:1px solid #cbd5e1; border-radius:10px; font-family:inherit; font-size:14px; }.panel#panel-agent.active { display:block; }.agent-layout { display:flex; gap:12px; height:calc(100vh - 170px); min-height:480px; max-width:1000px; margin:0 auto; }
+.agent-layout .agent-wrap { flex:1; min-width:0; }
+.agent-side { width:220px; flex-shrink:0; display:flex; flex-direction:column; gap:8px; }
+.agent-thread-list { flex:1; overflow:auto; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:8px; }
+.thread-item { padding:8px 10px; border-radius:8px; font-size:13px; cursor:pointer; color:#334155; }
+.thread-item:hover { background:#f1f5f9; }
+.thread-item.selected { background:#eff6ff; border:1px solid #bfdbfe; }
+.thread-item .t { font-size:11px; color:var(--muted); margin-top:2px; }.agent-details { margin-top:8px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; overflow:hidden; }
+.agent-footnote { cursor:pointer; padding:6px 10px; font-size:12px; color:var(--brand); user-select:none; list-style:none; }
+.agent-footnote::-webkit-details-marker { display:none; }
+.agent-footnote .arrow { display:inline-block; transition:transform .15s; }
+.agent-details[open] .arrow { transform:rotate(90deg); }
+.agent-steps { padding:8px 10px; border-top:1px solid #e2e8f0; display:flex; flex-direction:column; gap:6px; }
+.agent-step { font-size:12px; }
+.agent-step-head { font-weight:600; color:#334155; }
+.agent-step-body { margin-top:2px; color:#64748b; white-space:pre-wrap; word-break:break-word; max-height:120px; overflow:auto; background:#f8fafc; border-radius:6px; padding:6px 8px; }</style>
 </head>
 <body>
 <header><h1>销售军师</h1><span class="sub">助销 Agent</span><span id="health"><span class="dot" id="healthDot"></span><span id="healthText">检查中…</span></span></header>
 <div class="tabs">
-<span class="tab active" data-tab="workspace">工作台</span>
+<span class="tab active" data-tab="agent">AI 助销</span>
+<span class="tab" data-tab="workspace">工作台</span>
 <span class="tab" data-tab="knowledge">知识库</span>
 <span class="tab" data-tab="tasks">跟进与通知</span>
 <span class="tab" data-tab="insights">洞察晨报</span>
+<span class="tab" data-tab="stores">门店管理</span>
 </div>
 <main>
-<section class="panel active" id="panel-workspace">
+<section class="panel active" id="panel-agent">
+<div class="agent-layout">
+<aside class="agent-side">
+<button id="agentNewBtn" class="btn primary" style="width:100%">+ 新会话</button>
+<div class="agent-thread-list" id="agentThreadList"></div>
+</aside>
+<div class="agent-wrap">
+<div class="agent-chat" id="agentChat">
+<div class="agent-msg agent-assist"><div class="agent-body">你好，我是销售军师。给我一个目标，我会自己查数据、分析并给结论。例如：给 c_001 出一套 20-30 万的纯电车型方案。</div></div>
+</div>
+<div class="agent-input">
+<textarea id="agentGoal" placeholder="下达目标，例如：列出当前待办并告诉我最该先跟进哪一条"></textarea>
+<button id="agentSendBtn" class="btn primary">发送</button>
+</div>
+</div>
+<aside class="tr-panel" id="agentTranscript" style="display:none">
+<div class="tr-head"><span>对话原文</span><button class="tr-close" onclick="hideTranscript('agentTranscript')">×</button></div>
+<div class="tr-meta" id="agentTrMeta"></div>
+<div class="tr-list" id="agentTrList"></div>
+</aside>
+</div>
+</section>
+<section class="panel" id="panel-workspace">
 <aside class="func-menu">
 <div class="menu-title">工作台</div>
 <button class="func-btn active" data-card="convCard">会话库分析</button>
@@ -129,6 +196,11 @@ button.secondary:hover { background:#f1f5f9; }
 <p class="mini" id="evalMeta"></p>
 </div>
 </div>
+<aside class="tr-panel" id="wsTranscript" style="display:none">
+<div class="tr-head"><span>对话原文</span><button class="tr-close" onclick="hideTranscript('wsTranscript')">×</button></div>
+<div class="tr-meta" id="wsTrMeta"></div>
+<div class="tr-list" id="wsTrList"></div>
+</aside>
 </section>
 <section class="panel" id="panel-knowledge">
 <aside class="func-menu">
@@ -196,6 +268,53 @@ button.secondary:hover { background:#f1f5f9; }
 </div>
 </div>
 </section>
+<section class="panel" id="panel-stores">
+<aside class="func-menu">
+<div class="menu-title">门店管理</div>
+<button class="func-btn active" data-card="storeOvCard">门店概览</button>
+<button class="func-btn" data-card="storeMgmtCard">门店与成员</button>
+<button class="func-btn" data-card="storeDealCard">成交登记</button>
+</aside>
+<div class="func-body">
+<div class="card func-card active" id="storeOvCard">
+<h2>门店经营概览</h2>
+<div class="section-note">店长选定门店与时间周期,查看经营概况:接客次数 / 成交量 / 成交额 / 成交率 / 成交订单。</div>
+<div class="row" style="align-items:flex-end">
+<div style="flex:1"><label>门店</label><select id="storeSel"></select></div>
+<div style="flex:1"><label>开始日期</label><input id="storeFrom" type="date"></div>
+<div style="flex:1"><label>结束日期</label><input id="storeTo" type="date"></div>
+<div style="flex:0 0 auto"><button id="storeQueryBtn" class="secondary">查询</button></div>
+</div>
+<p class="mini" id="storeOvMeta" style="margin-top:8px"></p>
+<div class="stat-grid" id="storeStats"></div>
+<div style="margin-top:12px"><b>每日明细</b></div><div id="storeDaily"></div>
+<div style="margin-top:14px"><b>成交订单</b></div><div id="storeOrders"></div>
+</div>
+<div class="card func-card" id="storeMgmtCard">
+<h2>门店与成员 <button id="storeRefreshBtn" class="secondary" style="padding:4px 10px;font-size:12px;float:right">刷新</button></h2>
+<div id="storeList"></div>
+<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px">
+<h2 style="font-size:14px">新增门店(可同时登记店长)</h2>
+<div class="row"><input id="sName" placeholder="门店名称"><input id="sAddress" placeholder="地址"></div>
+<div class="row"><input id="mName" placeholder="店长姓名"><input id="mPhone" placeholder="店长电话"></div>
+<div style="margin-top:12px"><button id="storeAddBtn" class="primary">新增门店</button></div>
+</div>
+<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px">
+<h2 style="font-size:14px">新增销售/店长</h2>
+<div class="row"><select id="addStoreSel"></select><input id="salesName" placeholder="姓名"><input id="salesPhone" placeholder="电话"></div>
+<div style="margin-top:8px"><select id="salesRole" style="width:auto"><option value="sales">销售</option><option value="manager">店长</option></select><button id="salesAddBtn" class="primary" style="margin-left:8px">新增成员</button></div>
+</div>
+</div>
+<div class="card func-card" id="storeDealCard">
+<h2>成交登记</h2>
+<div class="section-note">登记一笔成交订单,计入门店经营概况(成交率/成交量/成交额/订单列表)。</div>
+<div class="row"><input id="dealKey" placeholder="客户标识 e.g. c_001"><select id="dealStoreSel"></select></div>
+<div class="row"><input id="dealAmount" type="number" placeholder="成交额(元)"><input id="dealDate" type="date"></div>
+<div style="margin-top:12px"><button id="dealAddBtn" class="primary">登记成交</button></div>
+<div id="dealResult" class="mini" style="margin-top:8px"></div>
+</div>
+</div>
+</section>
 </main>
 
 <script>
@@ -240,6 +359,7 @@ async function analyzeConversation() {
   try {
     const r = await api("/api/v1/conversations/" + selectedConvId + "/analyze", { method: "POST" });
     renderResult(r.analysis); box.textContent = "分析完成:" + r.analysisId;
+    showConversationTranscript(r.conversationId || selectedConvId);
     loadTasks(); loadCandidates(); loadDigests(); loadInsights();
   } catch (e) { box.textContent = "分析失败:" + e.message; }
 }
@@ -443,6 +563,254 @@ document.querySelectorAll(".func-btn").forEach((btn) => btn.addEventListener("cl
 checkHealth(); loadConversations(); loadCandidates(); loadTasks(); loadNotifications(); loadDigests(); loadInsights();
 
 
-</script>
+let agentRunning = false;
+let currentThreadId = null;
+function appendAgentMsg(role, text) {
+  const chat = $("agentChat");
+  const div = document.createElement("div");
+  div.className = "agent-msg " + (role === "user" ? "agent-user" : "agent-assist");
+  const body = document.createElement("div"); body.className = "agent-body"; body.textContent = text;
+  div.appendChild(body);
+  const step = document.createElement("div"); step.className = "step-line";
+  const meta = document.createElement("div"); meta.className = "agent-meta";
+  div.appendChild(step);
+  div.appendChild(meta);
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return { div, body, step, meta };
+}
+function attachAgentSteps(wait, steps) {
+  if (!wait || !Array.isArray(steps) || !steps.length) return;
+  wait.step.style.display = "none";
+  const details = document.createElement("details");
+  details.className = "agent-details";
+  const summary = document.createElement("summary");
+  summary.className = "agent-footnote";
+  const names = steps.filter((s) => s.eventType === "tool_start").map((s) => s.toolName);
+  summary.innerHTML = "<span class=\"arrow\">▸</span> 过程 · " + escapeHtml(names.join(" → ") || "无工具调用");
+  details.appendChild(summary);
+  const list = document.createElement("div"); list.className = "agent-steps";
+  for (const s of steps) {
+    const line = document.createElement("div"); line.className = "agent-step";
+    const head = document.createElement("div"); head.className = "agent-step-head";
+    head.textContent = (s.eventType === "tool_start" ? "调用 " : "返回 ") + (s.toolName || "…");
+    line.appendChild(head);
+    if (s.summary) {
+      const body = document.createElement("div"); body.className = "agent-step-body"; body.textContent = s.summary;
+      line.appendChild(body);
+    }
+    list.appendChild(line);
+  }
+  details.appendChild(list);
+  wait.div.appendChild(details);
+}
+function extractAgentText(content) {
+  if (!Array.isArray(content)) return "";
+  return content.map((c) => (c && c.type === "text" ? c.text : "")).join("");
+}
+function clearAgentChat() {
+  $("agentChat").innerHTML = "";
+  appendAgentMsg("assist", "你好，我是销售军师。给我一个目标，我会自己查数据、分析并给结论。");
+}
+async function loadAgentThreads() {
+  const list = $("agentThreadList");
+  try {
+    const r = await api("/api/v1/agent/threads");
+    const threads = r.threads || [];
+    if (!threads.length) { list.innerHTML = "<div class=\"mini\" style=\"padding:8px\">暂无会话</div>"; return; }
+    list.innerHTML = "";
+    for (const t of threads) {
+      const d = document.createElement("div");
+      d.className = "thread-item" + (t.id === currentThreadId ? " selected" : "");
+      d.innerHTML = "<div>" + escapeHtml(t.title || "未命名会话") + "</div><div class=\"t\">" + escapeHtml(new Date(t.updatedAt).toLocaleString()) + "</div>";
+      d.addEventListener("click", () => selectThread(t.id));
+      list.appendChild(d);
+    }
+  } catch (e) { list.innerHTML = "加载失败:" + escapeHtml(e.message); }
+}
+async function newThread() {
+  const t = await api("/api/v1/agent/threads", { method: "POST" });
+  currentThreadId = t.id;
+  clearAgentChat();
+  hideTranscript("agentTranscript");
+  loadAgentThreads();
+}
+async function selectThread(id) {
+  currentThreadId = id;
+  loadAgentThreads();
+  const chat = $("agentChat"); chat.innerHTML = "<div class=\"mini\">加载中…</div>";
+  try {
+    const r = await api("/api/v1/agent/threads/" + id);
+    chat.innerHTML = "";
+    for (const m of r.messages || []) {
+      if (m.role === "user" || m.role === "assistant") appendAgentMsg(m.role, extractAgentText(m.content));
+    }
+    if (!(r.messages || []).length) appendAgentMsg("assist", "这是一个新会话，把目标告诉我吧。");
+  } catch (e) { chat.innerHTML = "加载失败:" + escapeHtml(e.message); }
+}
+$("agentSendBtn").addEventListener("click", sendAgent);
+$("agentGoal").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAgent(); } });
+$("agentNewBtn").addEventListener("click", newThread);
+async function sendAgent() {
+  const goal = $("agentGoal").value.trim();
+  if (!goal || agentRunning) return;
+  agentRunning = true;
+  $("agentSendBtn").disabled = true;
+  $("agentGoal").value = "";
+  appendAgentMsg("user", goal);
+  const wait = appendAgentMsg("assist", "正在规划任务…");
+  try {
+    if (!currentThreadId) { const t = await api("/api/v1/agent/threads", { method: "POST" }); currentThreadId = t.id; }
+    const r = await api("/api/v1/agent/threads/" + currentThreadId + "/run", { method: "POST", body: JSON.stringify({ goal }) });
+    let agentSteps = [];
+    try {
+      const s = await api("/api/v1/agent/" + r.runId + "/steps");
+      agentSteps = s.steps || [];
+    } catch {}
+    const answer = r.final && r.final.answer ? r.final.answer : "（未生成答复）";
+    wait.body.textContent = answer;
+    wait.meta.textContent = (r.final && r.final.nextSteps && r.final.nextSteps.length) ? ("下一步：" + r.final.nextSteps.join(" · ")) : "";
+    attachAgentSteps(wait, agentSteps);
+    for (const s of agentSteps) {
+      if (s.details && Array.isArray(s.details.messages) && s.details.messages.length) {
+        renderTranscript($("agentTrMeta"), $("agentTrList"), "会话 " + String(s.details.conversationId || "").slice(0, 10) + "…", s.details.messages);
+        $("agentTranscript").style.display = "flex";
+      }
+    }
+    loadAgentThreads();
+  } catch (e) {
+    wait.body.textContent = "出错了：" + e.message;
+  } finally {
+    agentRunning = false;
+    $("agentSendBtn").disabled = false;
+    $("agentGoal").focus();
+  }
+}
+
+// ── 门店管理 ──
+function fmtDate(d) { return d.toISOString().slice(0, 10); }
+let currentStoreId = null;
+async function loadStores() {
+  try {
+    const r = await api("/api/v1/stores");
+    const list = r.stores || [];
+    const sel = $("storeSel"); const addSel = $("addStoreSel"); const dealSel = $("dealStoreSel");
+    sel.innerHTML = ""; addSel.innerHTML = ""; dealSel.innerHTML = "";
+    if (!list.length) { sel.innerHTML = '<option value="">暂无门店</option>'; }
+    for (const s of list) {
+      const o = document.createElement("option"); o.value = s.id; o.textContent = s.name;
+      sel.appendChild(o); addSel.appendChild(o.cloneNode(true)); dealSel.appendChild(o.cloneNode(true));
+    }
+    if (list.length) { if (!currentStoreId) currentStoreId = list[0].id; sel.value = currentStoreId; }
+    const box = $("storeList"); box.innerHTML = "";
+    if (!list.length) { box.innerHTML = '<div class="mini">暂无门店,先新增一个</div>'; }
+    for (const s of list) {
+      const d = document.createElement("div"); d.className = "item";
+      d.innerHTML = "<div><b>" + escapeHtml(s.name) + "</b></div><div class=\"t\">" + escapeHtml(s.address || "未设置地址") + "</div>";
+      box.appendChild(d);
+    }
+    if (list.length) loadStoreOverview();
+  } catch (e) { $("storeList").innerHTML = "加载失败:" + escapeHtml(e.message); }
+}
+async function loadStoreOverview() {
+  const storeId = $("storeSel").value; if (!storeId) return;
+  const qs = [];
+  if ($("storeFrom").value) qs.push("from=" + encodeURIComponent($("storeFrom").value + "T00:00:00Z"));
+  if ($("storeTo").value) qs.push("to=" + encodeURIComponent($("storeTo").value + "T23:59:59Z"));
+  try {
+    const r = await api("/api/v1/stores/" + storeId + "/overview" + (qs.length ? "?" + qs.join("&") : ""));
+    const stats = $("storeStats"); stats.innerHTML = "";
+    const cards = [["接客次数", r.visits], ["成交量", r.deals], ["成交额", "¥" + Number(r.amount).toLocaleString()], ["成交率", r.conversionRate + "%"]];
+    for (const item of cards) {
+      const d = document.createElement("div"); d.className = "stat-card";
+      d.innerHTML = '<div class="k">' + item[0] + '</div><div class="v">' + escapeHtml(String(item[1])) + '</div>';
+      stats.appendChild(d);
+    }
+    $("storeOvMeta").textContent = (r.from ? new Date(r.from).toLocaleString() : "近30天") + " ~ " + (r.to ? new Date(r.to).toLocaleString() : "现在");
+    const daily = $("storeDaily"); daily.innerHTML = "";
+    if (!r.daily.length) { daily.innerHTML = '<div class="mini">暂无每日数据</div>'; }
+    else {
+      const t = document.createElement("table"); t.className = "mini-table";
+      t.innerHTML = "<tr><th>日期</th><th>接客</th><th>成交</th><th>成交额</th></tr>";
+      for (const d of r.daily) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = "<td>" + escapeHtml(d.date) + "</td><td>" + d.visits + "</td><td>" + d.deals + "</td><td>¥" + Number(d.amount).toLocaleString() + "</td>";
+        t.appendChild(tr);
+      }
+      daily.appendChild(t);
+    }
+    const orders = $("storeOrders"); orders.innerHTML = "";
+    if (!r.orders || !r.orders.length) { orders.innerHTML = '<div class="mini">暂无成交订单</div>'; }
+    else for (const o of r.orders) {
+      const d = document.createElement("div"); d.className = "item";
+      d.innerHTML = "<div><b>" + escapeHtml(o.customerName || "未知客户") + "</b> <span class=\"badge\">¥" + Number(o.amount).toLocaleString() + "</span></div><div class=\"t\">销售:" + escapeHtml(o.salesName || "—") + " · " + escapeHtml(new Date(o.dealed_at).toLocaleString()) + "</div>";
+      orders.appendChild(d);
+    }
+  } catch (e) { $("storeStats").innerHTML = '<div class="error">概览加载失败:' + escapeHtml(e.message) + '</div>'; }
+}
+async function submitNewStore() {
+  const name = $("sName").value.trim(); if (!name) { alert("请输入门店名称"); return; }
+  try {
+    await api("/api/v1/stores", { method: "POST", body: JSON.stringify({ name, address: $("sAddress").value.trim(), managerName: $("mName").value.trim(), managerPhone: $("mPhone").value.trim() }) });
+    $("sName").value = ""; $("sAddress").value = ""; $("mName").value = ""; $("mPhone").value = "";
+    loadStores();
+  } catch (e) { alert("创建失败:" + e.message); }
+}
+async function submitNewSales() {
+  const name = $("salesName").value.trim(); const storeId = $("addStoreSel").value;
+  if (!name || !storeId) { alert("请选择门店并填写姓名"); return; }
+  try {
+    await api("/api/v1/sales", { method: "POST", body: JSON.stringify({ storeId, name, phone: $("salesPhone").value.trim(), role: $("salesRole").value }) });
+    $("salesName").value = ""; $("salesPhone").value = "";
+    loadStores();
+  } catch (e) { alert("新增失败:" + e.message); }
+}
+async function submitDeal() {
+  const customerKey = $("dealKey").value.trim(); const storeId = $("dealStoreSel").value;
+  const amount = Number($("dealAmount").value);
+  if (!customerKey || !storeId || !amount || amount <= 0) { $("dealResult").textContent = "请填写客户标识、门店与成交额"; return; }
+  try {
+    const payload = { customerKey, storeId, amount, dealedAt: $("dealDate").value ? new Date($("dealDate").value + "T12:00:00").toISOString() : undefined };
+    const r = await api("/api/v1/deals", { method: "POST", body: JSON.stringify(payload) });
+    $("dealResult").textContent = "成交已登记:¥" + Number(r.deal.amount).toLocaleString();
+    $("dealAmount").value = "";
+    loadStoreOverview();
+  } catch (e) { $("dealResult").textContent = "登记失败:" + e.message; }
+}
+// ── 右侧对话原文面板 ──
+function renderTranscript(metaBox, listBox, meta, list) {
+  metaBox.textContent = meta || "";
+  listBox.innerHTML = "";
+  if (!list || !list.length) { listBox.innerHTML = '<div class="mini">暂无原文</div>'; return; }
+  for (const m of list) {
+    const d = document.createElement("div"); d.className = "tr-line";
+    const role = m.speakerRole === "customer" ? "客户" : m.speakerRole === "sales" ? "销售" : "其他";
+    const name = m.speakerName ? "·" + escapeHtml(m.speakerName) : "";
+    d.innerHTML = '<div><span class="tr-time">' + (m.spokenAt ? escapeHtml(new Date(m.spokenAt).toLocaleString()) : "—") + '</span><span class="tr-role ' + escapeHtml(m.speakerRole || "") + '">' + role + name + '</span></div><div class="tr-text">' + escapeHtml(m.content) + '</div>';
+    listBox.appendChild(d);
+  }
+}
+function hideTranscript(id) {
+  const box = $(id); box.style.display = "none";
+  document.getElementById("panel-workspace").classList.remove("show-tr");
+}
+function showConversationTranscript(convId) {
+  api("/api/v1/conversations/" + convId + "/transcript").then((r) => {
+    const meta = r.conversation ? ("会话 " + r.conversation.id.slice(0, 10) + "… · " + (r.conversation.customerName || r.conversation.customerKey || "未知客户") + (r.conversation.storeName ? " · " + r.conversation.storeName : "")) : "";
+    renderTranscript($("wsTrMeta"), $("wsTrList"), meta, r.transcript);
+    $("wsTranscript").style.display = "flex";
+    document.getElementById("panel-workspace").classList.add("show-tr");
+  }).catch(() => {});
+}
+$("storeQueryBtn").addEventListener("click", loadStoreOverview);
+$("storeRefreshBtn").addEventListener("click", loadStores);
+$("storeAddBtn").addEventListener("click", submitNewStore);
+$("salesAddBtn").addEventListener("click", submitNewSales);
+$("dealAddBtn").addEventListener("click", submitDeal);
+$("storeSel").addEventListener("change", () => { currentStoreId = $("storeSel").value; loadStoreOverview(); });
+var now = new Date(); $("storeTo").value = fmtDate(now);
+var ago30 = new Date(now.getTime() - 30 * 24 * 3600 * 1000); $("storeFrom").value = fmtDate(ago30);
+loadStores();
+loadAgentThreads();</script>
 </body>
 </html>
