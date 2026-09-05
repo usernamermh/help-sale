@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
-import { loadConfig } from "../env.js";
+import { config } from "../env.js";
 import { createModelRegistry, type ModelRuntime } from "./models.js";
 import { getVoiceDigestPrompt } from "../prompts/voice-digest.js";
 import { createVoiceDigestTools, type VoiceDigestDetails } from "./voice-digest-tools.js";
@@ -20,7 +20,7 @@ export async function runVoiceDigest(deps: VoiceDigestDeps, input: { text: strin
 	const { db, tenantId, store } = deps;
 	const runtime = deps.runtime ?? createModelRegistry();
 	const streamFn = deps.streamFn ?? runtime.streamFn;
-	const config = loadConfig();
+
 	const model = runtime.models.getModel(config.modelProvider, config.modelId);
 	if (!model) throw new Error(`model not found: ${config.modelProvider}/${config.modelId}`);
 

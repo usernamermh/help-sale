@@ -1,9 +1,9 @@
-import { loadConfig, loadEnv } from "./env.js";
+import { config, loadEnv } from "./env.js";
 import { buildApp } from "./app.js";
 
 loadEnv();
 
-const config = loadConfig();
+
 const app = buildApp({ logger: true });
 
 app

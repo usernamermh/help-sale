@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { config } from "../env.js";
 import { getTask } from "../repositories/tasks.js";
 import { createNotificationLog, listNotificationLogs } from "../repositories/notification-logs.js";
 import type { ReminderQueue } from "../integrations/reminder-queue.js";
@@ -12,7 +13,6 @@ export interface NotifyResult {
 	reason?: string;
 }
 
-const MAX_LOG_SCAN = 50;
 
 /**
  * 扫描到期提醒并推送通知(webhook),记录发送日志,基于最近日志去重避免重复推送。
@@ -36,7 +36,7 @@ export async function notifyOverdue(
 
 	// 已通知去重:扫最近日志的内容(task_ids)
 	const notified = new Set<string>();
-	for (const log of listNotificationLogs(db, input.tenantId, MAX_LOG_SCAN)) {
+	for (const log of listNotificationLogs(db, input.tenantId, config.notificationScanLimit)) {
 		try {
 			const parsed = JSON.parse(log.contentJson) as { task_ids?: string[] };
 			for (const taskId of parsed.task_ids ?? []) notified.add(taskId);

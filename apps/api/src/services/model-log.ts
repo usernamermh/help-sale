@@ -12,8 +12,9 @@ export interface ModelCallLogEntry {
 	/** 一次模型调用唯一 ID,request/response/error 三行通过它关联 */
 	requestId?: string;
 	modelId?: string;
-	request?: string;
-	response?: string;
+	/** 完整请求/响应,直接落对象(可由 JSON 解析时);无法解析时保留原文本 */
+	request?: unknown;
+	response?: unknown;
 	status?: number;
 	durationMs?: number;
 	error?: string;
@@ -22,10 +23,9 @@ export interface ModelCallLogEntry {
 export interface ModelLogConfig {
 	enabled: boolean;
 	dir: string;
-	maxBytes?: number;
+	/** 轮转上限(字节),必填:由 help-sale.config.yaml logging.maxBytes 提供 */
+	maxBytes: number;
 }
-
-const DEFAULT_MAX_BYTES = 8 * 1024 * 1024;
 
 function rotateIfNeeded(file: string, maxBytes: number): void {
 	try {
@@ -39,7 +39,7 @@ function rotateIfNeeded(file: string, maxBytes: number): void {
 }
 
 /** 追加一条模型调用日志(NDJSON),自动创建目录并在超过上限时保留最近一半。 */
-export function appendModelCallLog(dir: string, entry: Omit<ModelCallLogEntry, "ts">, maxBytes = DEFAULT_MAX_BYTES): void {
+export function appendModelCallLog(dir: string, entry: Omit<ModelCallLogEntry, "ts">, maxBytes: number): void {
 	try {
 		mkdirSync(dir, { recursive: true });
 		const file = path.join(dir, MODEL_LOG_FILE);
@@ -77,6 +77,16 @@ export function readModelCallLogs(dir: string): ModelCallLogEntry[] {
  * 解析 `data: {...}` 块,合并 content/reasoning_content/tool_calls(按 index 拼接 arguments),
  * 记录 finish_reason 与 usage;非 SSE 文本原样返回。
  */
+
+/** 请求/响应体按 JSON 落对象;解析失败保留原文本。 */
+function asJsonObject(text: string): unknown {
+	try {
+		const parsed = JSON.parse(text) as unknown;
+		return parsed !== null && typeof parsed === "object" ? parsed : text;
+	} catch {
+		return text;
+	}
+}
 export function aggregateSseResponse(raw: string): unknown {
 	const text = raw.trim();
 	if (!text.includes("data:")) return raw;
@@ -134,7 +144,7 @@ export function wrapFetchWithModelLog(
 	meta: { modelId?: string },
 ): typeof fetch {
 	if (!cfg.enabled) return fetchImpl;
-	const maxBytes = cfg.maxBytes ?? DEFAULT_MAX_BYTES;
+	const maxBytes = cfg.maxBytes;
 	return async (input, init) => {
 		const bodyText = typeof init?.body === "string" ? init.body : null;
 		const modelId = meta.modelId;
@@ -153,7 +163,7 @@ export function wrapFetchWithModelLog(
 					event: "error",
 					requestId,
 					modelId,
-					request: bodyText,
+					request: asJsonObject(bodyText),
 					error: error instanceof Error ? error.message : String(error),
 					durationMs: Date.now() - started,
 				}, maxBytes);
@@ -172,8 +182,8 @@ export function wrapFetchWithModelLog(
 					event: "response",
 					requestId,
 					modelId,
-					request: bodyText,
-					response: typeof finalResponse === "string" ? finalResponse : JSON.stringify(finalResponse),
+					request: asJsonObject(bodyText),
+					response: typeof finalResponse === "string" ? asJsonObject(finalResponse) : finalResponse,
 					status: res.status,
 					durationMs: Date.now() - started,
 				}, maxBytes);

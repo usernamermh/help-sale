@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
+import { config } from "../env.js";
 
 export interface StoreRow {
 	id: string; tenant_id: string; name: string; address: string | null; created_at: string;
@@ -172,7 +173,7 @@ export interface StoreOverview {
 
 export function getStoreOverview(db: DatabaseSync, tenantId: string, query: StoreOverviewQuery): StoreOverview {
 	const to = query.to ?? new Date().toISOString();
-	const from = query.from ?? new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+	const from = query.from ?? new Date(Date.now() - config.storeOverviewDays * 24 * 3600 * 1000).toISOString();
 	// 默认取第一个门店(用于无 storeId 时的整体口径)
 	const stores = listStores(db, tenantId);
 	const store = query.storeId ? (db.prepare("SELECT * FROM stores WHERE tenant_id = ? AND id = ?").get(tenantId, query.storeId) as unknown as StoreRow | undefined) ?? null : (stores[0] ?? null);

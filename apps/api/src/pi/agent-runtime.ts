@@ -4,7 +4,7 @@ import { Agent, type AgentMessage, type StreamFn } from "@earendil-works/pi-agen
 import { createModelRegistry, type ModelRuntime } from "./models.js";
 import { getSalesAgentSystemPrompt } from "../prompts/sales-agent.js";
 import { createSalesAgentTools } from "./agent-tools.js";
-import { loadConfig } from "../env.js";
+import { config } from "../env.js";
 import { createTimelineRecorder } from "../services/timeline.js";
 import { listCapabilityStates } from "../repositories/agent-capabilities.js";
 import { toClientEvents } from "./events-adapter.js";
@@ -15,8 +15,6 @@ export interface SalesAgentDeps {
 	db: DatabaseSync;
 	tenantId: string;
 	store: SessionStore;
-	companyName?: string;
-	teamName?: string;
 	runtime?: ModelRuntime;
 	streamFn?: StreamFn;
 }
@@ -55,17 +53,17 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 
 	const runtime = deps.runtime ?? createModelRegistry();
 	const streamFn = deps.streamFn ?? runtime.streamFn;
-	const config = loadConfig();
+
 	const model = runtime.models.getModel(config.modelProvider, config.modelId);
 	if (!model) throw new Error(`model not found: ${config.modelProvider}/${config.modelId}`);
 
 	const systemPrompt = getSalesAgentSystemPrompt({
-		companyName: deps.companyName ?? config.companyName,
-		teamName: deps.teamName ?? config.teamName,
+		companyName: config.companyName,
+		teamName: config.teamName,
 	});
 	const capabilityStates = listCapabilityStates(db, tenantId);
 	const disabled = new Set(capabilityStates.filter((c) => !c.enabled).map((c) => c.name));
-	const tools = createSalesAgentTools({ db, tenantId, store, searchLimit: config.knowledgeSearchLimit }).filter(
+	const tools = createSalesAgentTools({ db, tenantId, store }).filter(
 		(t) => t.name === "emit_final" || !disabled.has(t.name),
 	);
 

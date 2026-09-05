@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
-import { loadConfig } from "../env.js";
+import { config } from "../env.js";
 import { createModelRegistry, type ModelRuntime } from "./models.js";
 import { getVehicleAdvisorPrompt } from "../prompts/vehicle-advisor.js";
 import { createVehicleTools, type VehiclePlanDetails } from "./vehicle-tools.js";
@@ -12,7 +12,6 @@ export interface VehicleAdvisorDeps {
 	db: DatabaseSync;
 	tenantId: string;
 	store: SessionStore;
-	companyName?: string;
 	runtime?: ModelRuntime;
 	streamFn?: StreamFn;
 }
@@ -32,7 +31,7 @@ export async function runVehicleMatch(deps: VehicleAdvisorDeps, input: VehicleMa
 	const { db, tenantId, store } = deps;
 	const runtime = deps.runtime ?? createModelRegistry();
 	const streamFn = deps.streamFn ?? runtime.streamFn;
-	const config = loadConfig();
+
 	const model = runtime.models.getModel(config.modelProvider, config.modelId);
 	if (!model) throw new Error(`model not found: ${config.modelProvider}/${config.modelId}`);
 
@@ -40,7 +39,7 @@ export async function runVehicleMatch(deps: VehicleAdvisorDeps, input: VehicleMa
 	await appendUserMessage(session, input.requirementsText);
 
 	const tools = createVehicleTools({ db, tenantId });
-	const systemPrompt = getVehicleAdvisorPrompt({ companyName: deps.companyName ?? config.companyName });
+	const systemPrompt = getVehicleAdvisorPrompt({ companyName: config.companyName });
 	const agent = makeAgent({ sessionId: conversationId, systemPrompt, tools, streamFn, model });
 	const recorder = createTimelineRecorder(db, { tenantId, conversationId });
 	agent.subscribe((event) => recorder.listen(event));

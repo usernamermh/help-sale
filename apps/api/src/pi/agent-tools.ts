@@ -1,6 +1,7 @@
 import { Type } from "typebox";
 import type { DatabaseSync } from "node:sqlite";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
+import { config } from "../env.js";
 import { getCustomer, listCustomers, upsertCustomer } from "../repositories/customers.js";
 import { searchKnowledge } from "../repositories/knowledge.js";
 import { listAnalysesByCustomer } from "../repositories/analyses.js";
@@ -20,13 +21,12 @@ export interface SalesAgentToolDeps {
 	db: DatabaseSync;
 	tenantId: string;
 	store: SessionStore;
-	searchLimit?: number;
 }
 
 const text = (content: string, details?: unknown) => ({ content: [{ type: "text" as const, text: content }], details });
 
 export function createSalesAgentTools(deps: SalesAgentToolDeps): Array<AgentTool<any, any>> {
-	const { db, tenantId, store, searchLimit = 5 } = deps;
+	const { db, tenantId, store } = deps;
 
 	const resolveCustomer = (customerKey: string) => {
 		let row = getCustomer(db, tenantId, customerKey);
@@ -45,7 +45,7 @@ export function createSalesAgentTools(deps: SalesAgentToolDeps): Array<AgentTool
 			}),
 			async execute(_id, params: any) {
 				return withToolCache(db, tenantId, "search_playbook", params, () => {
-					const hits = searchKnowledge(db, tenantId, params.query, params.limit ?? searchLimit);
+					const hits = searchKnowledge(db, tenantId, params.query, params.limit ?? config.knowledgeSearchLimit);
 				return text(
 					hits.length
 						? hits.map((h) => `【${h.title}】${h.category ? `(${h.category})` : ""}\n${h.snippet}`).join("\n\n")
@@ -63,7 +63,7 @@ export function createSalesAgentTools(deps: SalesAgentToolDeps): Array<AgentTool
 				limit: Type.Optional(Type.Number({ default: 50, minimum: 1, maximum: 100 })),
 			}),
 			async execute(_id, params: any) {
-				const rows = listCustomers(db, tenantId, params.limit ?? 50);
+				const rows = listCustomers(db, tenantId, params.limit ?? config.customersLimit);
 				if (!rows.length) return text("暂无客户档案。", rows);
 				const lines = ["| 客户标识 | 姓名 | 电话 | 阶段 | 最近分析 | 会话数 |", "| --- | --- | --- | --- | --- | --- |"];
 				for (const r of rows) {
@@ -96,7 +96,7 @@ export function createSalesAgentTools(deps: SalesAgentToolDeps): Array<AgentTool
 			}),
 			async execute(_id, params: any) {
 				const row = resolveCustomer(params.customerKey);
-				const items = listAnalysesByCustomer(db, tenantId, row.id, params.limit ?? 5);
+				const items = listAnalysesByCustomer(db, tenantId, row.id, params.limit ?? config.analysisHistoryLimit);
 				return text(
 					items.length
 						? items.map((a) => `[${a.createdAt.slice(0, 10)}] ${a.intent}: ${a.summary}`).join("\n")
@@ -122,7 +122,7 @@ export function createSalesAgentTools(deps: SalesAgentToolDeps): Array<AgentTool
 			description: "列出最近的会话(时间/ID/销售/客户/消息数),便于定位需要分析的会话。",
 			parameters: Type.Object({ limit: Type.Optional(Type.Number({ default: 20, maximum: 50 })) }),
 			async execute(_id, params: any) {
-				const list = listConversations(db, tenantId, params.limit ?? 20);
+				const list = listConversations(db, tenantId, params.limit ?? config.agentListLimit);
 				return text(
 					list.length
 						? list.map((c) => `${c.id.slice(0, 10)}… ${c.customerName ?? c.customerKey ?? "未知客户"} | 销售:${c.salesName} | ${c.messageCount}条 | ${c.createdAt}`).join("\n")
@@ -146,7 +146,7 @@ export function createSalesAgentTools(deps: SalesAgentToolDeps): Array<AgentTool
 					return text(`会话 ${meta.id.slice(0, 10)}… 原文:\n${lines}`, { conversationId: meta.id, messages });
 				}
 				const session = await store.openConversation(meta.id);
-				const transcript = await fetchTranscript(session);
+				const transcript = await fetchTranscript(session, config.transcriptLimit);
 				if (transcript.length === 0) return text("会话为空。");
 				const content = buildConversationText(transcript);
 				return text(`会话 ${meta.id.slice(0, 10)}… 原文:\n${content}`, { conversationId: meta.id, messages: transcript });
@@ -173,7 +173,7 @@ export function createSalesAgentTools(deps: SalesAgentToolDeps): Array<AgentTool
 						seats: params.seats,
 						energyType: params.energyType,
 						keyword: params.keyword,
-						limit: params.limit ?? 10,
+						limit: params.limit ?? config.vehicleSearchLimit,
 					});
 				return text(
 					rows.length
@@ -193,7 +193,7 @@ export function createSalesAgentTools(deps: SalesAgentToolDeps): Array<AgentTool
 				limit: Type.Optional(Type.Number({ default: 20, maximum: 50 })),
 			}),
 			async execute(_id, params: any) {
-				const rows = listTasks(db, { tenantId, status: (params.status === "done" ? "done" : "pending") as "done" | "pending", limit: params.limit ?? 20 });
+				const rows = listTasks(db, { tenantId, status: (params.status === "done" ? "done" : "pending") as "done" | "pending", limit: params.limit ?? config.agentListLimit });
 				return text(
 					rows.length ? rows.map((t) => `${t.customerName ?? t.customerKey ?? "未知"} | ${t.action} | ${t.dueAt ?? "无期限"} | ${t.status}`).join("\n") : "暂无任务。",
 					rows,
@@ -245,7 +245,7 @@ export function createSalesAgentTools(deps: SalesAgentToolDeps): Array<AgentTool
 			description: "查看系统从历史会话自动抽取、待确认入库的知识候选。",
 			parameters: Type.Object({ limit: Type.Optional(Type.Number({ default: 20, maximum: 50 })) }),
 			async execute(_id, params: any) {
-				const items = listCandidates(db, tenantId, "pending", params.limit ?? 20);
+				const items = listCandidates(db, tenantId, "pending", params.limit ?? config.agentListLimit);
 				return text(
 					items.length ? items.map((c) => `${c.id.slice(0, 10)}… [${c.intent}] ${c.draftTitle}: ${c.draftContent.slice(0, 120)}`).join("\n") : "暂无待沉淀候选。",
 					items,

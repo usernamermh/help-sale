@@ -81,7 +81,7 @@ export interface CustomerBriefRow {
 }
 
 /** 客户清单:key/姓名/电话/阶段 + 最近分析时间与会话数,按最近分析倒序(供表格展示)。 */
-export function listCustomers(db: DatabaseSync, tenantId: string, limit = 50): CustomerBriefRow[] {
+export function listCustomers(db: DatabaseSync, tenantId: string, limit: number): CustomerBriefRow[] {
 	const rows = db
 		.prepare(
 			`SELECT cu.id, cu.key, cu.name, cu.phone, cu.stage,

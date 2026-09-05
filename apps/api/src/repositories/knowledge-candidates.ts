@@ -35,7 +35,7 @@ export function getCandidate(db: DatabaseSync, tenantId: string, id: string): Ca
 	return row ? mapRow(row) : undefined;
 }
 
-export function listCandidates(db: DatabaseSync, tenantId: string, status?: CandidateStatus, limit = 50): CandidateRecord[] {
+export function listCandidates(db: DatabaseSync, tenantId: string, status: CandidateStatus | undefined, limit: number): CandidateRecord[] {
 	const rows = status
 		? (db
 				.prepare(

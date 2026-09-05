@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { config } from "../env.js";
 
 export interface Insights {
 	days: number;
@@ -16,7 +17,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** 经营洞察:近 N 天的分析量/意图分布/任务完成率/车型偏好。 */
 export function collectInsights(db: DatabaseSync, input: { tenantId: string; days?: number; now?: Date }): Insights {
-	const days = Math.min(Math.max(input.days ?? 7, 1), 90);
+	const days = Math.min(Math.max(input.days ?? config.insightsDays, 1), 90);
 	const now = input.now ?? new Date();
 	const since = new Date(now.getTime() - days * DAY_MS);
 

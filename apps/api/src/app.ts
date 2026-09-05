@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import { openDatabase } from "./db/database.js";
-import { loadConfig } from "./env.js";
+import { config } from "./env.js";
 import { openSessionStore } from "./pi/sessions.js";
 import { requireTenant } from "./repositories/customers.js";
 import type { ModelRuntime } from "./pi/models.js";
@@ -32,15 +32,17 @@ export interface AppOptions {
 
 export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const app = Fastify({ logger: options.logger ?? false });
-	const config = loadConfig();
+
 	const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 	const apiRoot = path.join(repoRoot, "apps", "api");
 	const configured = options.dataDir ?? config.dataDir;
 	const dataDir = path.isAbsolute(configured) ? configured : path.join(repoRoot, configured);
 	mkdirSync(dataDir, { recursive: true });
 
-	const businessDbPath = path.join(dataDir, "business.db");
-	const sessionDbPath = path.join(dataDir, "pi-sessions.db");
+	// 数据库路径默认来自配置文件(businessDbPath/sessionDbPath);测试显式指定 dataDir 时仍落在临时目录
+	const resolveDbPath = (p: string) => (path.isAbsolute(p) ? p : path.join(repoRoot, p));
+	const businessDbPath = options.dataDir ? path.join(dataDir, "business.db") : resolveDbPath(config.businessDbPath);
+	const sessionDbPath = options.dataDir ? path.join(dataDir, "pi-sessions.db") : resolveDbPath(config.sessionDbPath);
 	const db = openDatabase(businessDbPath);
 	const store = openSessionStore(dataDir, sessionDbPath);
 

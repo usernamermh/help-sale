@@ -18,14 +18,14 @@ describe("model-log", () => {
 	it("appendModelCallLog 自动创建目录并写 NDJSON 行", () => {
 		const dir = tmpDir("model-log-");
 		const file = path.join(dir, "model-calls.log");
-		appendModelCallLog(dir, { modelId: "m1", request: "{\"q\":1}", response: "{\"a\":2}", status: 200, durationMs: 12 });
-		appendModelCallLog(dir, { modelId: "m1", request: "{}", response: "{}", status: 200 });
+		appendModelCallLog(dir, { modelId: "m1", request: { q: 1 }, response: { a: 2 }, status: 200, durationMs: 12 }, 8388608);
+		appendModelCallLog(dir, { modelId: "m1", request: {}, response: {}, status: 200 }, 8388608);
 		expect(fs.existsSync(file)).toBe(true);
 		const lines = fs.readFileSync(file, "utf8").split("\n").filter(Boolean);
 		expect(lines).toHaveLength(2);
-		const first = JSON.parse(lines[0]) as { modelId: string; request: string; response: string; ts: string };
+		const first = JSON.parse(lines[0]) as { modelId: string; request: { q: number }; response: { a: number }; ts: string };
 		expect(first.modelId).toBe("m1");
-		expect(first.request).toBe('{"q":1}');
+		expect(first.request).toEqual({ q: 1 });
 		expect(first.ts).toBeTruthy();
 	});
 
@@ -43,7 +43,7 @@ describe("model-log", () => {
 	it("wrapFetchWithModelLog 请求行只记 ID,响应行写完整请求/返回并带同一 ID", async () => {
 		const dir = tmpDir("model-log-wrap-");
 		const fakeFetch = async () => new Response(JSON.stringify({ choices: [{ message: { content: "hello" } }] }), { status: 200, headers: { "content-type": "application/json" } });
-		const wrapped = wrapFetchWithModelLog(fakeFetch as typeof fetch, { enabled: true, dir }, { modelId: "deepseek-v4-flash" });
+		const wrapped = wrapFetchWithModelLog(fakeFetch as typeof fetch, { enabled: true, dir, maxBytes: 8388608 }, { modelId: "deepseek-v4-flash" });
 		const res = await wrapped("http://example.test/v1/chat/completions", { method: "POST", body: JSON.stringify({ model: "m", messages: [{ role: "user", content: "hi" }] }) });
 		expect(res.status).toBe(200);
 		// 请求行在 fetch 返回前已同步写入:只有请求 ID,不落完整请求体
@@ -61,8 +61,8 @@ describe("model-log", () => {
 		expect(lines[1].event).toBe("response");
 		expect(lines[1].requestId).toBe(lines[0].requestId);
 		expect(lines[1].status).toBe(200);
-		expect(lines[1].request).toContain("hi");
-		expect(lines[1].response).toContain("hello");
+		expect((lines[1].request as { messages: Array<{ content: string }> }).messages[0].content).toBe("hi");
+		expect((lines[1].response as { choices: Array<{ message: { content: string } }> }).choices[0].message.content).toBe("hello");
 		expect(lines[1].durationMs).toBeGreaterThanOrEqual(0);
 	});
 
@@ -71,7 +71,7 @@ describe("model-log", () => {
 		const fakeFetch = async () => {
 			throw new Error("connection refused");
 		};
-		const wrapped = wrapFetchWithModelLog(fakeFetch as typeof fetch, { enabled: true, dir }, { modelId: "deepseek-v4-flash" });
+		const wrapped = wrapFetchWithModelLog(fakeFetch as typeof fetch, { enabled: true, dir, maxBytes: 8388608 }, { modelId: "deepseek-v4-flash" });
 		await expect(wrapped("http://example.test/v1/chat/completions", { method: "POST", body: '{"q":1}' })).rejects.toThrow("connection refused");
 		await new Promise((r) => setTimeout(r, 20));
 		const lines = readModelCallLogs(dir);
@@ -81,13 +81,13 @@ describe("model-log", () => {
 		expect(lines[1].event).toBe("error");
 		expect(lines[1].requestId).toBe(lines[0].requestId);
 		expect(lines[1].error).toContain("connection refused");
-		expect(lines[1].request).toBe('{"q":1}');
+		expect(lines[1].request).toEqual({ q: 1 });
 	});
 
 	it("关闭日志时不写文件", async () => {
 		const dir = tmpDir("model-log-off-");
 		const fakeFetch = async () => new Response("{}", { status: 200 });
-		const wrapped = wrapFetchWithModelLog(fakeFetch as typeof fetch, { enabled: false, dir }, { modelId: "m" });
+		const wrapped = wrapFetchWithModelLog(fakeFetch as typeof fetch, { enabled: false, dir, maxBytes: 8388608 }, { modelId: "m" });
 		await wrapped("http://x/chat/completions", { method: "POST", body: "{}" });
 		await new Promise((r) => setTimeout(r, 20));
 		expect(fs.existsSync(path.join(dir, "model-calls.log"))).toBe(false);

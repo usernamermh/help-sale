@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { config } from "../env.js";
 
 export interface ImprovementSuggestion {
 	topic: string;

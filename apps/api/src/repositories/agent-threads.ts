@@ -31,7 +31,7 @@ export function getThread(db: DatabaseSync, tenantId: string, id: string): Agent
 	return row ? mapThread(row) : undefined;
 }
 
-export function listThreads(db: DatabaseSync, tenantId: string, limit = 30): AgentThreadRecord[] {
+export function listThreads(db: DatabaseSync, tenantId: string, limit: number): AgentThreadRecord[] {
 	const rows = db.prepare("SELECT * FROM agent_threads WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT ?").all(tenantId, Math.min(limit, 100)) as Record<string, unknown>[];
 	return rows.map(mapThread);
 }

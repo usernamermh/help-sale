@@ -7,7 +7,7 @@ import { openaiProvider } from "@earendil-works/pi-ai/providers/openai";
 import { deepseekProvider } from "@earendil-works/pi-ai/providers/deepseek";
 import { createLocalProvider } from "./local-provider.js";
 import { ProxyAgent, fetch as undiciFetch } from "undici";
-import { loadConfig, type AppConfig } from "../env.js";
+import { config as appConfig, type AppConfig } from "../env.js";
 import { wrapFetchWithModelLog } from "../services/model-log.js";
 
 const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -17,46 +17,31 @@ export interface ModelRuntime {
 	streamFn: StreamFn;
 }
 
-export interface ModelRegistryOptions {
-	baseUrl: string;
-	modelId: string;
-	apiKey: string;
-	proxy?: string;
-	contextWindow?: number;
-	maxTokens?: number;
-	extraBody?: Record<string, unknown>;
-	logEnabled?: boolean;
-	logDir?: string;
-	logMaxBytes?: number;
-}
-
-export function createModelRegistry(options?: ModelRegistryOptions): ModelRuntime {
-	const appConfig = loadConfig();
-	const cfg = options ?? {
-		baseUrl: appConfig.modelBaseUrl,
-		modelId: appConfig.modelId,
-		apiKey: appConfig.modelApiKey,
-		proxy: appConfig.modelProxy,
-		contextWindow: appConfig.modelContextWindow,
-		maxTokens: appConfig.modelMaxTokens,
-	};
+/** 模型运行时:配置统一来自全局 config 实例,不经过入参传递。 */
+export function createModelRegistry(): ModelRuntime {
 	const providers: Record<string, Provider> = {
 		deepseek: deepseekProvider(),
 		openai: openaiProvider(),
-		"local-llm": createLocalProvider(cfg),
+		"local-llm": createLocalProvider({
+			baseUrl: appConfig.modelBaseUrl,
+			modelId: appConfig.modelId,
+			apiKey: appConfig.modelApiKey,
+			contextWindow: appConfig.modelContextWindow,
+			maxTokens: appConfig.modelMaxTokens,
+		}),
 	};
 	const models = createModels();
 	for (const provider of Object.values(providers)) models.setProvider(provider);
 
-	const extraBody = cfg.extraBody ?? appConfig.modelExtraBody;
-	const proxy = cfg.proxy ?? appConfig.modelProxy;
-	const rawLogDir = cfg.logDir ?? appConfig.logDir;
+	const extraBody = appConfig.modelExtraBody;
+	const proxy = appConfig.modelProxy;
+	const rawLogDir = appConfig.logDir;
 	const logDir = path.isAbsolute(rawLogDir) ? rawLogDir : path.join(repoRoot, rawLogDir);
 
 	const logCfg = {
-		enabled: cfg.logEnabled ?? appConfig.logEnabled,
+		enabled: appConfig.logEnabled,
 		dir: logDir,
-		maxBytes: cfg.logMaxBytes ?? appConfig.logMaxBytes,
+		maxBytes: appConfig.logMaxBytes,
 	};
 
 	// 基础 fetch:需要代理时走 undici ProxyAgent,否则用全局 fetch。
@@ -102,7 +87,7 @@ export function createModelRegistry(options?: ModelRegistryOptions): ModelRuntim
 }
 
 export function resolveModel(config?: Pick<AppConfig, "modelProvider" | "modelId">) {
-	const cfg = config ?? loadConfig();
+	const cfg = config ?? appConfig;
 	return createModelRegistry().models.getModel(cfg.modelProvider, cfg.modelId);
 }
 /**

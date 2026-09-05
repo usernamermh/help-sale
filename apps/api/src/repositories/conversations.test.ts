@@ -30,7 +30,7 @@ describe("conversations", () => {
 		upsertConversation(db, { id: "c2", tenantId: "t1", salesName: "乙" });
 		requireTenant(db, "t2", "另一租户");
 		upsertConversation(db, { id: "c3", tenantId: "t2", salesName: "丙" });
-		expect(listConversations(db, "t1").map((r) => r.id).sort()).toEqual(["c1", "c2"]);
-		expect(listConversations(db, "t2")).toHaveLength(1);
+		expect(listConversations(db, "t1", 20).map((r) => r.id).sort()).toEqual(["c1", "c2"]);
+		expect(listConversations(db, "t2", 20)).toHaveLength(1);
 	});
 });

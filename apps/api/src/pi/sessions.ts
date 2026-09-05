@@ -68,7 +68,7 @@ export function cleanupDataDir(dir: string): void {
 }
 export async function fetchTranscript(
 	session: import("@earendil-works/pi-agent-core").Session<any>,
-	limit = 50,
+	limit: number,
 ): Promise<ConversationMessage[]> {
 	const entries = await session.findEntries({ limit });
 	const out: ConversationMessage[] = [];

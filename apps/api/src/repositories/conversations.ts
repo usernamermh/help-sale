@@ -85,7 +85,7 @@ export function getConversation(db: DatabaseSync, tenantId: string, id: string):
 	return row ? mapRow(row) : undefined;
 }
 
-export function listConversations(db: DatabaseSync, tenantId: string, limit = 30): ConversationMetaRow[] {
+export function listConversations(db: DatabaseSync, tenantId: string, limit: number): ConversationMetaRow[] {
 	const rows = db
 		.prepare(
 			`SELECT c.*, cu.key AS customer_key, cu.name AS customer_name, st.name AS store_name

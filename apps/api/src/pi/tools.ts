@@ -1,6 +1,7 @@
 import { Type } from "typebox";
 import type { DatabaseSync } from "node:sqlite";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
+import { config } from "../env.js";
 import { getCustomer, upsertCustomer } from "../repositories/customers.js";
 import { searchKnowledge } from "../repositories/knowledge.js";
 import { withToolCache } from "../repositories/conversation-data.js";
@@ -8,7 +9,6 @@ import { withToolCache } from "../repositories/conversation-data.js";
 export interface AgentDeps {
 	db: DatabaseSync;
 	tenantId: string;
-	searchLimit?: number;
 }
 
 export interface AnalysisDetails {
@@ -21,7 +21,7 @@ export interface AnalysisDetails {
 }
 
 export function createCopilotTools(deps: AgentDeps): Array<AgentTool<any, any>> {
-	const { db, tenantId, searchLimit = 5 } = deps;
+	const { db, tenantId } = deps;
 
 	return [
 		{
@@ -34,7 +34,7 @@ export function createCopilotTools(deps: AgentDeps): Array<AgentTool<any, any>> 
 			}),
 			async execute(_toolCallId, params: any) {
 				return withToolCache(db, tenantId, "search_playbook", params, () => {
-					const hits = searchKnowledge(db, tenantId, params.query, params.limit ?? 5);
+					const hits = searchKnowledge(db, tenantId, params.query, params.limit ?? config.knowledgeSearchLimit);
 					return {
 						content: [
 							{

@@ -22,7 +22,7 @@ import { notifyOverdue } from "./services/notifications.js";
 import { listNotificationLogs } from "./repositories/notification-logs.js";
 import { getConversation, listConversations, upsertConversation } from "./repositories/conversations.js";
 import { fetchTranscript } from "./pi/sessions.js";
-import { loadConfig } from "./env.js";
+import { config } from "./env.js";
 import { approveCandidate, createCandidate, listCandidates, rejectCandidate } from "./repositories/knowledge-candidates.js";
 import { listAgentEvents } from "./repositories/agent-events.js";
 import { runVehicleMatch } from "./pi/vehicle-advisor.js";
@@ -378,7 +378,7 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 	});
 
 	app.get("/api/v1/agent/threads", async (request) => {
-		const threads = listThreads(deps.db, request.tenantId, 50);
+		const threads = listThreads(deps.db, request.tenantId, config.agentThreadsLimit);
 		return { threads };
 	});
 
@@ -556,7 +556,7 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 	});
 
 	app.get("/api/v1/reminders/overdue", async (request) => {
-		const ids = await deps.reminders.due(Date.now(), 100);
+		const ids = await deps.reminders.due(Date.now(), config.remindersTakeLimit);
 		const overdue = ids
 			.map((id) => getTask(deps.db, request.tenantId, id))
 			.filter((task): task is NonNullable<typeof task> => !!task && task.status === "pending");
@@ -621,7 +621,7 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 		return collectImprovements(deps.db, { tenantId: request.tenantId, days });
 	});
 	app.get<{ Querystring: { days?: string } }>("/api/v1/assistant/insights", async (request) => {
-		const days = Number(request.query.days ?? 7) || 7;
+		const days = Number(request.query.days ?? config.insightsDays) || config.insightsDays;
 		return collectInsights(deps.db, { tenantId: request.tenantId, days });
 	});
 	app.post("/api/v1/assistant/digest", async (request, reply) => {
@@ -664,7 +664,7 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 
 	app.get<{ Querystring: { status?: string } }>("/api/v1/knowledge/candidates", async (request) => {
 		const status = request.query.status as "pending" | "approved" | "rejected" | undefined;
-		return { candidates: listCandidates(deps.db, request.tenantId, status) };
+		return { candidates: listCandidates(deps.db, request.tenantId, status, config.knowledgeCandidatesLimit) };
 	});
 
 	app.post<{ Params: { id: string } }>("/api/v1/knowledge/candidates/:id/approve", async (request, reply) => {
@@ -716,7 +716,6 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 
 
 	app.post("/api/v1/notifications/trigger", async (request, reply) => {
-		const config = loadConfig();
 		const result = await notifyOverdue(deps.db, {
 			tenantId: request.tenantId,
 			reminders: deps.reminders,
@@ -776,7 +775,7 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 	app.get<{ Querystring: { storeId?: string; from?: string; to?: string; limit?: string } }>("/api/v1/deals", async (request, reply) => {
 		const scope = await resolveManagerScope(deps.db, request.tenantId, request.headers, request.query.storeId);
 		if (scope.denied) return reply.code(403).send({ error: "forbidden", message: "店长只能查看所属门店数据" });
-		const limit = Number(request.query.limit ?? 100) || 100;
+		const limit = Number(request.query.limit ?? config.dealsLimit) || config.dealsLimit;
 		return { deals: listDeals(deps.db, request.tenantId, { storeId: scope.storeId, from: request.query.from, to: request.query.to, limit }) };
 	});
 
@@ -815,7 +814,7 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 		};
 	});
 	app.get<{ Querystring: { limit?: string } }>("/api/v1/conversations", async (request) => {
-		const limit = Math.min(Number(request.query.limit ?? 30) || 30, 100);
+		const limit = Math.min(Number(request.query.limit ?? config.conversationsLimit) || config.conversationsLimit, 100);
 		return { conversations: listConversations(deps.db, request.tenantId, limit) };
 	});
 
@@ -833,7 +832,7 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 			}));
 		} else {
 			const session = await deps.store.openConversation(meta.id);
-			const transcript = await fetchTranscript(session);
+			const transcript = await fetchTranscript(session, config.transcriptLimit);
 			if (transcript.length === 0) return reply.code(422).send({ error: "conversation_empty", message: "会话中无消息" });
 			messages = transcript;
 		}

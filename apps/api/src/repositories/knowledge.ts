@@ -46,7 +46,7 @@ export function findDocumentByTitle(db: DatabaseSync, tenantId: string, title: s
 		| undefined;
 }
 
-export function searchKnowledge(db: DatabaseSync, tenantId: string, query: string, limit = 5): KnowledgeHit[] {
+export function searchKnowledge(db: DatabaseSync, tenantId: string, query: string, limit: number): KnowledgeHit[] {
 	const clean = query.trim().replace(/[，。！？、；：,.!?;:""''()（）\s]+/g, " ").trim();
 	if (clean.length === 0) return [];
 

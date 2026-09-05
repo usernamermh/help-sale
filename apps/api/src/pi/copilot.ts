@@ -4,7 +4,7 @@ import type { Model } from "@earendil-works/pi-ai";
 import { createModelRegistry, type ModelRuntime } from "./models.js";
 import { getCopilotSystemPrompt } from "../prompts/sales-copilot.js";
 import { createCopilotTools, type AnalysisDetails } from "./tools.js";
-import { loadConfig } from "../env.js";
+import { config } from "../env.js";
 import { appendUserMessage, buildConversationText, type SessionStore } from "./sessions.js";
 import { parseTranscript, type ConversationMessage } from "../services/conversation.js";
 import { createTimelineRecorder } from "../services/timeline.js";
@@ -13,7 +13,6 @@ export interface CopilotDeps {
 	db: DatabaseSync;
 	tenantId: string;
 	store: SessionStore;
-	companyName?: string;
 	runtime?: ModelRuntime;
 	streamFn?: StreamFn;
 }
@@ -49,12 +48,12 @@ export async function runCopilotAnalysis(deps: CopilotDeps, input: RunAnalysisIn
 	const text = buildConversationText(convo);
 	await appendUserMessage(session, text);
 
-	const config = loadConfig();
+
 	const model = runtime.models.getModel(config.modelProvider, config.modelId);
 	if (!model) throw new Error(`model not found: ${config.modelProvider}/${config.modelId}`);
 
-	const tools = createCopilotTools({ db, tenantId, searchLimit: config.knowledgeSearchLimit });
-	const systemPrompt = getCopilotSystemPrompt({ companyName: deps.companyName ?? config.companyName, teamName: config.teamName });
+	const tools = createCopilotTools({ db, tenantId });
+	const systemPrompt = getCopilotSystemPrompt({ companyName: config.companyName, teamName: config.teamName });
 	const agent = makeAgent({ sessionId: conversationId, systemPrompt, tools, streamFn, model });
 	const recorder = createTimelineRecorder(db, { tenantId, conversationId });
 	agent.subscribe((event) => recorder.listen(event));
