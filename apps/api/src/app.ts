@@ -1,3 +1,4 @@
+import type { DatabaseSync } from "node:sqlite";
 import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,6 +11,7 @@ import { requireTenant } from "./repositories/customers.js";
 import type { ModelRuntime } from "./pi/models.js";
 import { registerRoutes } from "./routes.js";
 import { createMysqlSink, type MysqlSink } from "./integrations/mysql-sink.js";
+import { createSyncMysqlDb } from "./db/mysql/client.js";
 import { createReminderQueue, type ReminderQueue } from "./integrations/reminder-queue.js";
 import { seedStoreData, seedVehicles } from "./services/seed.js";
 import { appendRuntimeLog } from "./services/runtime-log.js";
@@ -33,12 +35,6 @@ export interface AppOptions {
 export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const app = Fastify({ logger: options.logger ?? false });
 
-	// 数据存储模式二选一:mysql 主库需先完成仓库层 MySQL 迁移,未迁移前拒绝启动,避免两套存储同时生效
-	if (config.dataMode === "mysql") {
-		throw new Error(
-			"data.mode=mysql 尚未支持:仓库层仍为 SQLite 专用,需先完成 MySQL 迁移(见 AGENTS.md 迁移路线)。当前请保持 data.mode=local",
-		);
-	}
 
 	const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 	const apiRoot = path.join(repoRoot, "apps", "api");
@@ -50,7 +46,10 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const resolveDbPath = (p: string) => (path.isAbsolute(p) ? p : path.join(repoRoot, p));
 	const businessDbPath = options.dataDir ? path.join(dataDir, "business.db") : resolveDbPath(config.businessDbPath);
 	const sessionDbPath = options.dataDir ? path.join(dataDir, "pi-sessions.db") : resolveDbPath(config.sessionDbPath);
-	const db = openDatabase(businessDbPath);
+	// 数据存储二选一:local = SQLite 业务库;mysql = 远程 MySQL 业务库(同步桥,仓库层零改动)
+	// 注:pi 会话库(sessionDbPath)为本地运行态存储,仅记录 agent 会话;业务数据全部在所选模式数据库
+	const db: DatabaseSync =
+		config.dataMode === "mysql" ? (createSyncMysqlDb() as unknown as DatabaseSync) : openDatabase(businessDbPath);
 	const store = openSessionStore(dataDir, sessionDbPath);
 
 	// 为默认租户播种示例车型与门店经营数据(门店/店长/销售/客户/会话原文/成交;测试/定制可传 false 或指定租户)

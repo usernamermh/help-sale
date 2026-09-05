@@ -26,6 +26,8 @@ export interface AppConfig {
 	logMaxBytes: number;
 	knowledgeSearchLimit: number;
 	mysqlEnabled: boolean;
+	mysqlSchemaRebuild: boolean;
+	mysqlConnectTimeout: number;
 	mysqlHost: string;
 	mysqlPort: number;
 	mysqlUser: string;
@@ -83,7 +85,7 @@ export interface FileConfig {
 	chunker?: { size?: number; overlap?: number };
 	knowledge?: { searchLimit?: number };
 	logging?: { enabled?: boolean; dir?: string; maxBytes?: number };
-	mysql?: { enabled?: boolean; host?: string; port?: number; user?: string; password?: string; database?: string };
+	mysql?: { enabled?: boolean; schemaRebuild?: boolean; connectTimeout?: number; host?: string; port?: number; user?: string; password?: string; database?: string };
 	redis?: { enabled?: boolean; host?: string; port?: number; password?: string };
 	notification?: { enabled?: boolean; webhookUrl?: string };
 	company?: { name?: string; team?: string };
@@ -223,6 +225,8 @@ export function loadConfig(): AppConfig {
 		logMaxBytes: num(env.LOG_MAX_BYTES ?? file.logging!.maxBytes!),
 		knowledgeSearchLimit: num(env.KNOWLEDGE_SEARCH_LIMIT ?? file.knowledge!.searchLimit!),
 		mysqlEnabled: bool(env.MYSQL_ENABLED ?? file.mysql!.enabled!),
+		mysqlSchemaRebuild: bool(env.MYSQL_SCHEMA_REBUILD ?? file.mysql!.schemaRebuild!),
+		mysqlConnectTimeout: num(env.MYSQL_CONNECT_TIMEOUT ?? file.mysql!.connectTimeout!),
 		mysqlHost: env.MYSQL_HOST ?? file.mysql!.host!,
 		mysqlPort: num(env.MYSQL_PORT ?? file.mysql!.port!),
 		mysqlUser: env.MYSQL_USER ?? file.mysql!.user!,
