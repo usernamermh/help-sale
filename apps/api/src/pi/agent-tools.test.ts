@@ -53,4 +53,24 @@ describe("list_customers", () => {
 		const out = (await tool.execute({} as never, {})) as { content: Array<{ text: string }> };
 		expect(out.content.map((c) => c.text).join("")).toContain("暂无客户档案");
 	});
+
+	it("list_customers 每页 10 行,支持翻页", async () => {
+		for (let i = 1; i <= 12; i++) {
+			upsertCustomer(db, { tenantId: "t1", key: "c_page_" + i, name: "客户" + i });
+		}
+		const tools = await createSalesAgentTools({ db, tenantId: "t1", store: stubStore });
+		const tool = tools.find((t) => t.name === "list_customers")!;
+		const p1 = (await tool.execute("p1", { limit: 100 })) as { content: Array<{ text: string }>; details: { customers: unknown[]; page: number; pageSize: number; totalRows: number; totalPages: number; hasMore: boolean } };
+		expect(p1.details.totalRows).toBe(12);
+		expect(p1.details.pageSize).toBe(10);
+		expect(p1.details.page).toBe(1);
+		expect(p1.details.totalPages).toBe(2);
+		expect(p1.details.hasMore).toBe(true);
+		expect(p1.details.customers).toHaveLength(10);
+		expect(p1.content.map((c) => c.text).join("")).toContain("第 1/2 页");
+		const p2 = (await tool.execute("p2", { page: 2 })) as { details: { customers: unknown[]; page: number; hasMore: boolean } };
+		expect(p2.details.customers).toHaveLength(2);
+		expect(p2.details.page).toBe(2);
+		expect(p2.details.hasMore).toBe(false);
+	});
 });

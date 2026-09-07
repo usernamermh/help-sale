@@ -27,12 +27,16 @@ export async function execute(_ctx: ToolContext, params: any) {
 	if (want !== "") sheetName = wb.SheetNames.find((n: string) => n === want) ?? wb.SheetNames[Number(want)] ?? wb.SheetNames[0];
 	const ws = wb.Sheets[sheetName];
 	const allRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }) as unknown[][];
-	const max = Math.min(Number(params?.maxRows ?? 20) || 20, 200);
-	const head = allRows.slice(0, max);
+	const pageSize = 10;
+	const page = Math.max(Number(params?.page ?? 1) || 1, 1);
+	const totalPages = Math.max(Math.ceil(allRows.length / pageSize), 1);
+	const p = Math.min(page, totalPages);
+	const head = allRows.slice((p - 1) * pageSize, p * pageSize);
 	const textRows = head.map((r) => (Array.isArray(r) ? r.map((v) => String(v ?? "")).join("\t") : String(r)));
-	const text = textRows.join("\n") + (allRows.length > max ? `\n…(共 ${allRows.length} 行,仅显示前 ${max} 行)` : "");
+	const footer = totalPages > 1 ? `\n(第 ${p}/${totalPages} 页 · 共 ${allRows.length} 行;查看下一页请传 page=${p + 1})` : "";
+	const text = textRows.join("\n") + footer;
 	return {
-		content: [{ type: "text", text: `Excel(${path.basename(file)}, 表:${sheetName})\n${text.slice(0, 8000)}` }],
-		details: { path: file, sheet: sheetName, rowCount: allRows.length, rows: head },
+		content: [{ type: "text", text: `Excel(${path.basename(file)}, 表:${sheetName},第 ${p}/${totalPages} 页)\n${text.slice(0, 8000)}` }],
+		details: { path: file, sheet: sheetName, page: p, pageSize, totalRows: allRows.length, totalPages, hasMore: p < totalPages, rows: head },
 	};
 }

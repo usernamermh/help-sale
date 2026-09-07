@@ -23,8 +23,15 @@ export function execute(_ctx: ToolContext, params: any) {
 	const parts: string[] = [];
 	if (params?.title) parts.push(`### ${params.title}`);
 	const chartType = params?.chartType ?? "table";
-	const tableText = toMarkdownTable(params?.rows ?? []);
-	if (chartType === "table" || chartType === "both") parts.push(tableText);
+	const allRows = Array.isArray(params?.rows) ? (params.rows as unknown[]) : [];
+	const pageSize = 10;
+	const page = Math.max(Number(params?.page ?? 1) || 1, 1);
+	const totalPages = Math.max(Math.ceil(allRows.length / pageSize), 1);
+	const p = Math.min(page, totalPages);
+	const pageRows = allRows.slice((p - 1) * pageSize, p * pageSize);
+	const tableText = toMarkdownTable(pageRows);
+	const footer = totalPages > 1 ? `\n(第 ${p}/${totalPages} 页 · 共 ${allRows.length} 行;查看下一页请传 page=${p + 1})` : "";
+	if (chartType === "table" || chartType === "both") parts.push(tableText + footer);
 	if (chartType === "mermaid" || chartType === "both") {
 		if (Array.isArray(params?.graph) && params.graph.length > 0) {
 			const edges = params.graph.map((g: any, i: number) => `  n${i}[${String(g.from)}] --> n${i}x[${String(g.to)}]${g.label ? `|${String(g.label)}|` : ""}`).join("\n");
@@ -36,5 +43,8 @@ export function execute(_ctx: ToolContext, params: any) {
 		}
 		if (!Array.isArray(params?.graph) && !Array.isArray(params?.pie)) parts.push("(未提供 graph/pie 数据,仅生成表格)");
 	}
-	return { content: [{ type: "text", text: parts.join("\n") || "(无内容)" }], details: { table: tableText } };
+	return {
+		content: [{ type: "text", text: parts.join("\n") || "(无内容)" }],
+		details: { table: tableText, page: p, pageSize, totalRows: allRows.length, totalPages, hasMore: p < totalPages },
+	};
 }

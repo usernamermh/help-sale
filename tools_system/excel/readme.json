@@ -3,7 +3,7 @@
   "label": "读取 Excel/CSV",
   "description": "读取仓库内的 .xlsx/.xls/.csv 文件,按工作表转为表格文本(路径仅限仓库内)。",
   "category": "文件读取",
-  "parameters": { "type": "object", "required": ["filePath"], "properties": { "filePath": { "type": "string", "description": "仓库内路径,如 data/报价.xlsx" }, "sheet": { "type": "string", "description": "工作表名或序号(从 0),缺省第一个" }, "maxRows": { "type": "number", "default": 20, "maximum": 200 } } },
+  "parameters": { "type": "object", "required": ["filePath"], "properties": { "filePath": { "type": "string", "description": "仓库内路径,如 data/报价.xlsx" }, "sheet": { "type": "string", "description": "工作表名或序号(从 0),缺省第一个" }, "page": { "type": "number", "default": 1, "description": "页码,每页最多 10 行;共多页时翻页请传 page" } } },
   "entry": "main.ts",
   "function_list": ["main.execute"]
 }

@@ -1,21 +1,27 @@
 {
+  "entry": "main.ts",
   "name": "list_customers",
-  "description": "列出当前租户全部客户(标识/姓名/电话/阶段/最近分析时间/会话数),直接返回完整清单表格,内容可原样展示;查询客户概况时优先使用。",
+  "label": "列出客户",
+  "function_list": [
+    "main.execute"
+  ],
+  "description": "列出当前租户客户(标识/姓名/电话/阶段/地区/意向车型/最近分析时间/会话数),直接返回 Markdown 表格,内容可原样展示;每页最多 10 行,超过时翻页请传 page;查询客户概况时优先使用。",
   "category": "客户",
   "parameters": {
-    "type": "object",
     "properties": {
       "limit": {
         "type": "number",
         "default": 50,
-        "minimum": 1,
-        "maximum": 100
+        "maximum": 100,
+        "description": "查询上限",
+        "minimum": 1
+      },
+      "page": {
+        "type": "number",
+        "default": 1,
+        "description": "页码,每页最多 10 行;共多页时翻页请传 page"
       }
-    }
-  },
-  "entry": "main.ts",
-  "function_list": [
-    "main.execute"
-  ],
-  "label": "列出客户"
+    },
+    "type": "object"
+  }
 }

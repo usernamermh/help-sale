@@ -188,10 +188,10 @@ describe("文件读取工具(txt/excel/ppt)", () => {
 		try {
 			const tools = await loadAll();
 			const tool = tools.find((t) => t.name === "excel")!;
-			const r = (await tool.execute("x", { filePath: file, sheet: "车型表" })) as { content: Array<{ text: string }>; details: { rowCount: number } };
+			const r = (await tool.execute("x", { filePath: file, sheet: "车型表" })) as { content: Array<{ text: string }>; details: { totalRows: number } };
 			const text = r.content.map((c) => c.text).join("");
 			expect(text).toContain("汉EV");
-			expect(r.details.rowCount).toBe(3);
+			expect(r.details.totalRows).toBe(3);
 		} finally {
 			fs.rmSync(file, { force: true });
 		}
@@ -214,4 +214,31 @@ describe("文件读取工具(txt/excel/ppt)", () => {
 		}
 	});
 });
+
+	it("excel 每页 10 行,支持翻页", async () => {
+		const XLSX = (await import("xlsx")) as typeof import("xlsx");
+		const rows = [["序号", "客户"]];
+		for (let i = 1; i <= 12; i++) rows.push([String(i), "客户" + i]);
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "名单");
+		const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+		const file = path.join(process.cwd(), ".tmp", `ft-xlsx-page-${Date.now()}.xlsx`);
+		fs.writeFileSync(file, buf);
+		try {
+			const tools = await loadAll();
+			const tool = tools.find((t) => t.name === "excel")!;
+			const p1 = (await tool.execute("x", { filePath: file })) as { details: { page: number; pageSize: number; totalRows: number; totalPages: number; hasMore: boolean; rows: unknown[] } };
+			expect(p1.details.totalRows).toBe(13);
+			expect(p1.details.pageSize).toBe(10);
+			expect(p1.details.totalPages).toBe(2);
+			expect(p1.details.hasMore).toBe(true);
+			expect(p1.details.rows).toHaveLength(10);
+			const p2 = (await tool.execute("x", { filePath: file, page: 2 })) as { details: { rows: unknown[]; page: number; hasMore: boolean } };
+			expect(p2.details.rows).toHaveLength(3);
+			expect(p2.details.page).toBe(2);
+			expect(p2.details.hasMore).toBe(false);
+		} finally {
+			fs.rmSync(file, { force: true });
+		}
+	});
 });
