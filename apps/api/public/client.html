@@ -251,21 +251,20 @@ async function clearThreads() {
     hideTrPanel();
   } catch (e) { alert("清理失败:" + e.message); }
 }
-// 导出单个历史会话的完整对话历史(Markdown 下载)
+// 导出单个历史会话:JSON 文件,保存每一轮对话的完整输入与输出(原始 content,含工具调用与结果)
 async function exportThread(id, title) {
   try {
     const r = await api("/api/v1/agent/threads/" + id + "/export");
-    const lines = ["# " + (r.thread.title || "销售军师会话"), "", "会话 ID: " + r.thread.id, "创建时间: " + r.thread.createdAt, "", "---", ""];
-    for (const m of r.messages || []) {
-      const text = extractAgentText(m.content);
-      if (!text.trim()) continue;
-      const who = m.role === "user" ? "用户" : m.role === "assistant" ? "销售军师" : m.role;
-      lines.push("**" + who + "** (" + new Date(m.createdAt).toLocaleString() + "):", text.trim(), "");
-    }
-    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      app: "sales-copilot",
+      thread: r.thread,
+      messages: r.messages || [],
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = "会话-" + String(id).slice(0, 8) + ".md";
+    a.href = url; a.download = "会话-" + String(id).slice(0, 8) + ".json";
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
   } catch (e) { alert("导出失败:" + e.message); }
