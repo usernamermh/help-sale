@@ -36,6 +36,7 @@ import { runSalesAgent } from "./pi/agent-runtime.js";
 import { CAPABILITIES, getCapabilityDef } from "./pi/capabilities.js";
 import { createWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled } from "./repositories/agent-capabilities.js";
 import { queryConsoleLogs } from "./services/console-logs.js";
+import { executeToolPage } from "./services/tool-pagination.js";
 import { appendThreadMessage, createThread, deleteAllThreads, deleteThread, getThread, listThreadMessages, listThreads, setThreadTitle } from "./repositories/agent-threads.js";
 import type { SessionStore } from "./pi/sessions.js";
 
@@ -486,6 +487,13 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 	});
 
 
+	app.post<{ Params: { name: string }; Body: { params?: Record<string, unknown> } }>("/api/v1/agent/tools/:name/page", async (request, reply) => {
+		try {
+			return await executeToolPage({ db: deps.db, tenantId: request.tenantId }, request.params.name, request.body?.params ?? {});
+		} catch (error) {
+			return reply.code(400).send({ error: "tool_page_failed", message: error instanceof Error ? error.message : String(error) });
+		}
+	});
 	app.get<{ Params: { runId: string } }>("/api/v1/agent/:runId/timeline", async (request) => {
 		const events = listAgentEvents(deps.db, request.tenantId, request.params.runId);
 		return { runId: request.params.runId, events };

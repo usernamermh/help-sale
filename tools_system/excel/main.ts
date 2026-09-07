@@ -4,6 +4,16 @@ import { resolveRepoPath } from "../_shared/file-utils.js";
 
 interface ToolContext { db: any; tenantId: string; }
 
+/** 二维数组转 Markdown 表格(首行视为表头),供表格保真原样展示。 */
+function toMarkdownTable(rows: unknown[][]): string {
+	if (!rows.length) return "";
+	const cells = (r: unknown[]) => r.map((v) => String(v ?? "").replace(/\|/g, "\\|")).join(" | ");
+	const lines = [`| ${cells(rows[0])} |`];
+	if (rows.length > 1) lines.push(`| ${rows[0].map(() => "---").join(" | ")} |`);
+	for (let i = 1; i < rows.length; i++) lines.push(`| ${cells(rows[i])} |`);
+	return lines.join("\n");
+}
+
 export async function execute(_ctx: ToolContext, params: any) {
 	const file = resolveRepoPath(String(params?.filePath ?? ""));
 	if (!file) return { content: [{ type: "text", text: "路径无效:仅允许仓库内文件,禁止越界读取。" }] };
@@ -37,6 +47,6 @@ export async function execute(_ctx: ToolContext, params: any) {
 	const text = textRows.join("\n") + footer;
 	return {
 		content: [{ type: "text", text: `Excel(${path.basename(file)}, 表:${sheetName},第 ${p}/${totalPages} 页)\n${text.slice(0, 8000)}` }],
-		details: { path: file, sheet: sheetName, page: p, pageSize, totalRows: allRows.length, totalPages, hasMore: p < totalPages, rows: head },
+		details: { path: file, sheet: sheetName, page: p, pageSize, totalRows: allRows.length, totalPages, hasMore: p < totalPages, rows: head, rawTable: toMarkdownTable(head) },
 	};
 }

@@ -162,6 +162,19 @@ describe("api", () => {
 		expect(legacy.body).toContain("panel-stores");
 	});
 
+	it("手动翻页接口:白名单表格工具 200,非白名单 400", async () => {
+		dir = tmpDataDir("api-page");
+		app = buildApp({ dataDir: dir, mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const bad = await app.inject({ method: "POST", url: "/api/v1/agent/tools/sql/page", payload: { params: { page: 1 } } });
+		expect(bad.statusCode).toBe(400);
+
+		const ok = await app.inject({ method: "POST", url: "/api/v1/agent/tools/list_customers/page", payload: { params: { page: 1 } } });
+		expect(ok.statusCode).toBe(200);
+		const body = ok.json();
+		expect(body.details.page).toBe(1);
+		expect(body.details.totalPages).toBeGreaterThanOrEqual(1);
+		expect(typeof body.details.rawTable).toBe("string");
+	});
 	it("health 可达", async () => {
 		dir = tmpDataDir("api");
 		app = buildApp({ dataDir: dir, mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });

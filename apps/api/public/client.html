@@ -107,6 +107,13 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .agent-step { font-size:12px; }
 .agent-step-head { font-weight:600; color:#334155; }
 .agent-step-body { margin-top:2px; color:#64748b; white-space:pre-wrap; word-break:break-word; max-height:120px; overflow:auto; background:#f8fafc; border-radius:6px; padding:6px 8px; }
+
+.pager-bar { display:flex; align-items:center; gap:10px; justify-content:center; margin:8px 0 2px; font-size:12px; color:var(--muted); }
+.pager-btn { border:1px solid var(--line); background:#fff; color:var(--brand); border-radius:8px; padding:3px 12px; font-size:12px; font-family:inherit; cursor:pointer; transition:background .15s, border-color .15s; }
+.pager-btn:hover:not(:disabled) { background:#eff6ff; border-color:#bfdbfe; }
+.pager-btn:disabled { opacity:.45; cursor:not-allowed; }
+.pager-info { white-space:nowrap; }
+.pager-pre { background:#f8fafc; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:12px; white-space:pre-wrap; word-break:break-word; margin:8px 0; }
 </style>
 </head>
 <body>
@@ -278,6 +285,7 @@ async function removeThread(id) {
     loadThreads();
   } catch (e) { alert("删除失败:" + e.message); }
 }let running = false; let currentThreadId = null; let deltaBuf = "";
+const PAGE_TOOLS = ["list_customers", "excel", "table_generate"];
 function appendAgentMsg(role, text) {
   const chat = $("chat");
   const div = document.createElement("div");
@@ -311,7 +319,7 @@ function attachAgentSteps(wait, steps) {
     const head = document.createElement("div"); head.className = "agent-step-head";
     head.textContent = (s.eventType === "tool_start" ? "调用 " : "返回 ") + (s.label || s.toolName || "…");
     line.appendChild(head);
-    if (s.summary) { const b = document.createElement("div"); b.className = "agent-step-body"; b.textContent = s.summary; line.appendChild(b); }
+
     list.appendChild(line);
   }
   details.appendChild(list);
@@ -386,6 +394,7 @@ async function send() {
   $("goal").value = "";
   appendAgentMsg("user", goal);
   const wait = appendAgentMsg("assist", "正在开始任务…");
+  wait.pageArgs = null; wait.pager = null;
   const steps = [];
   try {
     if (!currentThreadId) { const t = await api("/api/v1/agent/threads", { method: "POST" }); currentThreadId = t.id; }
@@ -429,17 +438,21 @@ async function streamRun(goal, wait, steps) {
 function handleStreamEvent(evt, wait, steps) {
   if (evt.type === "tool_start") {
     const name = evt.label || evt.toolName || "工具";
-    steps.push({ eventType: "tool_start", toolName: evt.toolName, label: name, summary: prettyPayload(evt.payload) });
+    steps.push({ eventType: "tool_start", toolName: evt.toolName, label: name });
+    if (PAGE_TOOLS.indexOf(evt.toolName) >= 0 && evt.payload && typeof evt.payload === "object") wait.pageArgs = evt.payload;
     addRunTask(name, "start");
     wait.body.textContent = "正在调用 " + name + "…";
   } else if (evt.type === "tool_end") {
     const name = evt.label || evt.toolName || "工具";
-    steps.push({ eventType: "tool_end", toolName: evt.toolName, label: name, summary: prettyPayload(evt.payload) });
+    steps.push({ eventType: "tool_end", toolName: evt.toolName, label: name });
     addRunTask(name, "done");
     wait.body.textContent = name + " 完成，正在整理结果…";
     const det = evt.payload && evt.payload.details;
     if (det && Array.isArray(det.messages) && det.messages.length) {
       renderTrPanel("会话 " + String(det.conversationId || "").slice(0, 10) + "…", det.messages);
+    }
+    if (det && PAGE_TOOLS.indexOf(evt.toolName) >= 0 && Number(det.totalPages) > 1) {
+      wait.pager = { toolName: evt.toolName, baseArgs: wait.pageArgs || {}, page: Number(det.page) || 1, totalPages: Number(det.totalPages) || 1, totalRows: Number(det.totalRows) || 0 };
     }
   } else if (evt.type === "tool_update") {
     wait.body.textContent = (evt.label || evt.toolName || "工具") + " 处理中…";
@@ -453,6 +466,7 @@ function handleStreamEvent(evt, wait, steps) {
     wait.body.innerHTML = '<div class="md">' + renderMarkdown(answer) + '</div>'; renderMermaidBlocks(wait.body);
     wait.meta.textContent = (evt.final && evt.final.nextSteps && evt.final.nextSteps.length) ? ("下一步：" + evt.final.nextSteps.join(" · ")) : "";
     attachAgentSteps(wait, steps);
+    if (wait.pager) attachPager(wait);
     $("runMeta").textContent = "本轮任务完成 · " + runTaskCount() + " 项";
   } else if (evt.type === "error") {
     wait.body.textContent = "出错了：" + (evt.error || "未知错误");
@@ -470,6 +484,58 @@ function prettyPayload(p) {
   try { return typeof p === "string" ? p : JSON.stringify(p); } catch { return String(p); }
 }
 
+// ── 表格手动翻页:直接执行工具翻页,只替换表格原文,不经过大模型 ──
+function attachPager(wait) {
+  const body = wait.body;
+  if (!body || !wait.pager) return;
+  const tables = body.querySelectorAll("table");
+  if (!tables.length) return;
+  const table = tables[tables.length - 1];
+  let bar = body.querySelector(".pager-bar");
+  if (!bar) { bar = document.createElement("div"); bar.className = "pager-bar"; table.after(bar); }
+  const st = wait.pager;
+  bar.innerHTML =
+    '<button class="pager-btn" data-dir="-1"' + (st.page <= 1 ? " disabled" : "") + '>上一页</button>' +
+    '<span class="pager-info">第 ' + st.page + '/' + st.totalPages + ' 页 · 共 ' + st.totalRows + ' 条</span>' +
+    '<button class="pager-btn" data-dir="1"' + (st.page >= st.totalPages ? " disabled" : "") + '>下一页</button>';
+  Array.from(bar.querySelectorAll("button")).forEach((b) => { b.onclick = () => flipPager(wait, Number(b.dataset.dir)); });
+}
+async function flipPager(wait, dir) {
+  const st = wait.pager;
+  if (!st) return;
+  const target = st.page + dir;
+  if (target < 1 || target > st.totalPages) return;
+  const bar = wait.body && wait.body.querySelector(".pager-bar");
+  if (bar) { bar.style.opacity = "0.55"; bar.style.pointerEvents = "none"; }
+  try {
+    const res = await api("/api/v1/agent/tools/" + encodeURIComponent(st.toolName) + "/page", {
+      method: "POST",
+      body: JSON.stringify({ params: Object.assign({}, st.baseArgs, { page: target }) }),
+    });
+    const det = res.details || {};
+    const md = (typeof det.rawTable === "string" && det.rawTable) ? det.rawTable : (typeof det.table === "string" ? det.table : "");
+    const tables = wait.body.querySelectorAll("table");
+    if (tables.length) {
+      const table = tables[tables.length - 1];
+      if (md) {
+        const wrap = document.createElement("div"); wrap.className = "md"; wrap.innerHTML = renderMarkdown(md);
+        table.replaceWith(wrap);
+      } else {
+        const txt = (res.content || []).map((c) => (c && c.text ? c.text : "")).join("\n");
+        const pre = document.createElement("pre"); pre.className = "pager-pre"; pre.textContent = txt;
+        table.replaceWith(pre);
+      }
+    }
+    st.page = target;
+    if (Number.isFinite(Number(det.totalPages)) && Number(det.totalPages) > 0) st.totalPages = Number(det.totalPages);
+    if (Number.isFinite(Number(det.totalRows))) st.totalRows = Number(det.totalRows);
+    attachPager(wait);
+  } catch (e) {
+    alert("翻页失败:" + e.message);
+  } finally {
+    if (bar) { bar.style.opacity = ""; bar.style.pointerEvents = ""; }
+  }
+}
 syncRightCol();
 loadCapabilities(); loadThreads();
 </script>
