@@ -59,8 +59,9 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .side.collapsed { width:0; padding:0; border:0; opacity:0; overflow:hidden; pointer-events:none; }
 #expandSideBtn { display:none; position:fixed; left:10px; top:50%; transform:translateY(-50%); z-index:40; border:0; background:var(--brand); color:#fff; border-radius:999px; width:34px; height:34px; cursor:pointer; box-shadow:0 3px 10px rgba(37,99,235,.35); }
 #expandSideBtn:hover { background:var(--brand2); }
-.show-btn { position:fixed; right:20px; bottom:96px; z-index:40; border:0; background:var(--brand); color:#fff; border-radius:999px; padding:9px 16px; font-size:13px; cursor:pointer; box-shadow:0 3px 10px rgba(37,99,235,.35); }
-.show-btn.hide { display:none; }
+
+.right-resizer { width:6px; flex-shrink:0; cursor:col-resize; border-radius:3px; background:transparent; }
+.right-resizer:hover { background:#bfdbfe; }
 .right-col { width:272px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; min-height:0; }
 .run-item { font-size:12px; border:1px solid var(--line); border-radius:8px; padding:7px 9px; background:#fff; }
 .run-item .run-head { display:flex; justify-content:space-between; gap:6px; font-weight:600; color:#334155; }
@@ -94,7 +95,7 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 </style>
 </head>
 <body>
-<header><h1>销售军师</h1><span class="sub">客户端 · 对话助销</span><span class="nav"><a href="/console">进入编排端</a></span></header>
+<header><h1>销售军师</h1><span class="sub">客户端 · 对话助销</span><span class="nav"><button id="headerRunBtn" class="hdr-btn" title="显示/隐藏本轮任务">本轮任务</button><button id="headerTrBtn" class="hdr-btn" title="显示/隐藏对话原文">对话原文</button><a href="/console">进入编排端</a></span></header>
 <div class="client-layout">
 <aside class="side" id="side">
 <div class="side-head"><button id="collapseSideBtn" class="side-fold" title="收起侧栏">«</button></div>
@@ -106,6 +107,7 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 <div class="agent-chat" id="chat"><div class="agent-msg agent-assist"><div class="agent-body">你好，我是销售军师。用一句话告诉我要做什么、查什么，我会自己调用左侧这些能力来帮你完成。</div></div></div>
 <div class="agent-input"><textarea id="goal" placeholder="下达目标，例如：列出当前待办并告诉我最该先跟进哪一条"></textarea><button id="sendBtn">发送</button></div>
 </section>
+<div id="rightResizer" class="right-resizer" title="拖动调整右侧面板宽度"></div>
 <div class="right-col" id="rightCol">
 <aside class="side-block tr-panel" id="runPanel">
 <div class="tr-head"><span>本轮任务</span><button class="tr-close" onclick="hideRunPanel()">×</button></div>
@@ -119,8 +121,6 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 </aside>
 </div>
 </div>
-<button id="showRunBtn" class="show-btn hide" title="打开本轮任务">⏱ 本轮任务</button>
-<button id="showTrBtn" class="show-btn hide" title="打开对话原文" style="right:128px">💬 对话原文</button>
 <script src="/vendor/marked.min.js"></script>
 <script src="/vendor/purify.min.js"></script>
 <script>const $ = (id) => document.getElementById(id);
@@ -137,11 +137,11 @@ function renderTrPanel(meta, list) {
     box.appendChild(d);
   }
   $("trPanel").style.display = "flex";
-  $("showTrBtn").classList.add("hide");
+  $("headerTrBtn").classList.add("active");
   syncRightCol();
 }
-function hideTrPanel() { $("trPanel").style.display = "none"; $("showTrBtn").classList.remove("hide"); syncRightCol(); }
-function showTrPanel() { $("trPanel").style.display = "flex"; $("showTrBtn").classList.add("hide"); syncRightCol(); }function renderMarkdown(text) {
+function hideTrPanel() { $("trPanel").style.display = "none"; $("headerTrBtn").classList.remove("active"); syncRightCol(); }
+function showTrPanel() { $("trPanel").style.display = "flex"; $("headerTrBtn").classList.add("active"); syncRightCol(); }function renderMarkdown(text) {
   try {
     if (typeof marked !== "undefined" && marked.parse) {
       const html = marked.parse(text);
@@ -206,7 +206,7 @@ async function loadCapabilities() {
   } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
 }
 // ── 本轮任务栏 ──
-function resetRunPanel() { $("runList").innerHTML = ""; $("runMeta").textContent = ""; $("runPanel").style.display = "flex"; $("showRunBtn").classList.add("hide"); syncRightCol(); }
+function resetRunPanel() { $("runList").innerHTML = ""; $("runMeta").textContent = ""; $("runPanel").style.display = "flex"; $("headerRunBtn").classList.add("active"); syncRightCol(); }
 function addRunTask(label, status, summary) {
   const d = document.createElement("div"); d.className = "run-item run-" + status;
   d.innerHTML = '<div class="run-head"><span>' + escapeHtml(label) + '</span><span class="run-time">' + new Date().toLocaleTimeString() + '</span></div>' + (summary ? '<div class="run-sum md">' + renderMarkdown(summary.slice(0, 2000)) + '</div>' : '');
@@ -216,9 +216,10 @@ function addRunTask(label, status, summary) {
 function syncRightCol() {
   const visible = $("runPanel").style.display !== "none" || $("trPanel").style.display !== "none";
   $("rightCol").style.display = visible ? "flex" : "none";
+  $("rightResizer").style.display = visible ? "block" : "none";
 }
-function hideRunPanel() { $("runPanel").style.display = "none"; $("showRunBtn").classList.remove("hide"); syncRightCol(); }
-function showRunPanel() { $("runPanel").style.display = "flex"; $("showRunBtn").classList.add("hide"); $("runList").scrollTop = $("runList").scrollHeight; syncRightCol(); }
+function hideRunPanel() { $("runPanel").style.display = "none"; $("headerRunBtn").classList.remove("active"); syncRightCol(); }
+function showRunPanel() { $("runPanel").style.display = "flex"; $("headerRunBtn").classList.add("active"); $("runList").scrollTop = $("runList").scrollHeight; syncRightCol(); }
 function runTaskCount() { return $("runList").querySelectorAll(".run-item").length; }
 // ── 侧栏折叠 ──
 function toggleSide(collapsed) {
@@ -310,8 +311,21 @@ $("newBtn").addEventListener("click", newThread);
 $("clearThreadsBtn").addEventListener("click", clearThreads);
 $("collapseSideBtn").addEventListener("click", () => toggleSide(true));
 $("expandSideBtn").addEventListener("click", () => toggleSide(false));
-$("showRunBtn").addEventListener("click", showRunPanel);
-$("showTrBtn").addEventListener("click", showTrPanel);
+// 顶部栏按钮:切换显示/隐藏
+$("headerRunBtn").addEventListener("click", () => { if ($("runPanel").style.display === "none") showRunPanel(); else hideRunPanel(); });
+$("headerTrBtn").addEventListener("click", () => { if ($("trPanel").style.display === "none") showTrPanel(); else hideTrPanel(); });
+// 右侧面板拖拽调宽
+let rightResizing = false;
+$("rightResizer").addEventListener("mousedown", (e) => { rightResizing = true; document.body.style.userSelect = "none"; e.preventDefault(); });
+document.addEventListener("mousemove", (e) => {
+  if (!rightResizing) return;
+  const layout = document.querySelector(".client-layout");
+  if (!layout) return;
+  const rect = layout.getBoundingClientRect();
+  const width = Math.min(Math.max(rect.right - e.clientX - 8, 220), 560);
+  $("rightCol").style.width = width + "px";
+});
+document.addEventListener("mouseup", () => { if (rightResizing) { rightResizing = false; document.body.style.userSelect = ""; } });
 async function send() {
   const goal = $("goal").value.trim();
   if (!goal || running) return;
