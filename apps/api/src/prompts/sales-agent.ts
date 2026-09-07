@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildExternalToolsText, scanExternalTools, TOOL_ROOTS } from "../services/external-tools.js";
+import { loadMemoryText, memoryFilePath } from "../services/memory.js";
 
 export interface SalesAgentPromptContext {
 	companyName?: string;
@@ -11,6 +12,8 @@ export interface SalesAgentPromptContext {
 // 启动时扫描 tools / tools_system 目录(仅识别 readme.json),拼接为外部工具说明
 const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const EXTERNAL_TOOLS_TEXT = buildExternalToolsText(scanExternalTools(TOOL_ROOTS.map((r) => path.join(repoRoot, r))));
+// 记忆文件(memory.md)拼入系统提示词:只含用户偏好与系统经验
+const MEMORY_TEXT = loadMemoryText(memoryFilePath());
 export function getSalesAgentSystemPrompt(ctx: SalesAgentPromptContext = {}): string {
 	return `
 你是「销售军师」,一位面向销售团队的自主 AI 助销 Agent。当前团队:${ctx.teamName ?? "未命名团队"},公司:${ctx.companyName ?? "未命名公司"}。
@@ -25,6 +28,9 @@ export function getSalesAgentSystemPrompt(ctx: SalesAgentPromptContext = {}): st
 - 业务级:运行时注入的业务工具(客户档案/会话/知识库/车型/任务/晨报/经营统计等)。
 
 ${EXTERNAL_TOOLS_TEXT}
+
+【系统记忆】(来自 memory.md:用户偏好与系统运行经验,需要更新时调用 update_memory 工具)
+${MEMORY_TEXT}
 
 【必须遵守】
 - 事实优先:只基于工具返回的数据和知识库内容推断,禁止编造客户原话、价格、政策或车型参数。

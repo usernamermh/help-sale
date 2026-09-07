@@ -1,0 +1,9 @@
+{
+  "name": "update_memory",
+  "label": "更新记忆",
+  "description": "把用户偏好/系统经验写入 memory.md(追加到指定小节,去重;文件拼入系统提示词)。业务数据不要写入记忆,请落库。",
+  "category": "记忆",
+  "parameters": { "type": "object", "required": ["section", "content"], "properties": { "section": { "type": "string", "enum": ["用户记忆", "系统记忆", "工具经验", "规则改进", "模型端点"] }, "content": { "type": "string", "description": "一条记忆,如:检索话术时优先用客户原话" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

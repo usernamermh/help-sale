@@ -9,6 +9,8 @@ describe("sales-agent prompt", () => {
 		expect(prompt).toContain("创建、细化、标记完成 todo list");
 		expect(prompt).toContain("main.createTodoList");
 		expect(prompt).toContain("week2date");
+		expect(prompt).toContain("【系统记忆】");
+		expect(prompt).toContain("## 工具经验");
 		expect(prompt).toContain("data.mode");
 	});
 

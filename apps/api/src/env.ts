@@ -10,6 +10,7 @@ export interface AppConfig {
 	port: number;
 	dataMode: "local" | "mysql";
 	dataDir: string;
+	memoryFile: string;
 	databaseId: string;
 	tables: Record<string, string>;
 	businessDbPath: string;
@@ -69,6 +70,7 @@ export interface FileConfig {
 		databaseId?: string;
 		tables?: Record<string, string>;
 		dataDir?: string;
+		memoryFile?: string;
 		businessDbPath?: string;
 		sessionDbPath?: string;
 	};
@@ -187,6 +189,7 @@ export function loadConfig(): AppConfig {
 		databaseId: file.data!.databaseId!,
 		tables: parseTables(file.data!.tables!),
 		dataDir: file.data!.dataDir!,
+		memoryFile: file.data!.memoryFile!,
 		businessDbPath: file.data!.businessDbPath!,
 		sessionDbPath: file.data!.sessionDbPath!,
 		modelProvider: file.model!.provider!,

@@ -20,7 +20,8 @@
 - 配置唯一来源:所有配置只从 help-sale.config.yaml 读取,不支持环境变量覆盖(CONFIG_PATH 仅用于指定配置文件路径);env.ts 纯 yaml 解析,缺失/非法字段显式抛错。
 - 客户端页面:历史会话一键清理(DELETE /agent/threads)、侧栏折叠、右侧本轮任务实时栏与对话原文栏(关闭后有浮动按钮可重开)、布局占满页面、能力清单仅展示 tools(业务逻辑功能)。
 - tools_system 新增文件读取工具 txt/excel/ppt(xlsx/adm-zip 依赖,路径仅限仓库根内,防越界读取);customers 增加 intended_vehicles 意向车型字段(v15,JSON 数组),清单/档案工具展示。
-- 164/164 测试 + typecheck 零错误。
+- 记忆模块:系统/用户记忆以 apps/api/data/memory.md 落盘(仅承载用户偏好与系统经验,业务数据一律走库),构建 Agent 系统提示词时拼接【系统记忆】段;tools_system/update_memory 工具受控追加(小节白名单+去重);yaml data.memoryFile 可配置路径。
+- 170/170 测试 + typecheck 零错误。
 
 - MVP 后端 Task 1-20 完成,Task 21(真实模型冒烟)已使用内网 U21-Preview 端点完成,Task 22-23(文档/验收)完成。
 - 前端工具页已上线(Fastify 根路由 /,单页 HTML,无构建链):对话分析、车型优选、知识上传、跟进任务、历史查询。
