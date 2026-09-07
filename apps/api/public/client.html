@@ -117,7 +117,7 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 <div class="side-block" id="threadsBlock"><div class="side-title">历史会话<button id="clearThreadsBtn" class="clear-btn" title="一键清理全部历史会话">清理</button></div><button id="newBtn" class="secondary" style="width:100%;margin-bottom:8px">+ 新会话</button><div id="threadList"></div></div>
 </aside>
 <section class="chat">
-<div class="agent-chat" id="chat"><div class="agent-msg agent-assist"><div class="agent-body">你好，我是销售军师。用一句话告诉我要做什么、查什么，我会自己调用左侧这些能力来帮你完成。</div></div></div>
+<div class="agent-chat" id="chat"></div>
 <div class="agent-input"><textarea id="goal" placeholder="下达目标，例如：列出当前待办并告诉我最该先跟进哪一条"></textarea><button id="sendBtn">发送</button></div>
 </section>
 <div id="rightResizer" class="right-resizer" title="拖动调整右侧面板宽度"></div>
@@ -220,9 +220,9 @@ async function loadCapabilities() {
 }
 // ── 本轮任务栏 ──
 function resetRunPanel() { $("runList").innerHTML = ""; $("runMeta").textContent = ""; $("runPanel").style.display = "flex"; $("headerRunBtn").classList.add("active"); syncRightCol(); }
-function addRunTask(label, status, summary) {
+function addRunTask(label, status) {
   const d = document.createElement("div"); d.className = "run-item run-" + status;
-  d.innerHTML = '<div class="run-head"><span>' + escapeHtml(label) + '</span><span class="run-time">' + new Date().toLocaleTimeString() + '</span></div>' + (summary ? '<div class="run-sum md">' + renderMarkdown(summary.slice(0, 2000)) + '</div>' : '');
+  d.innerHTML = '<div class="run-head"><span>' + escapeHtml(label) + '</span><span class="run-time">' + new Date().toLocaleTimeString() + '</span></div>';
   $("runList").appendChild(d); $("runList").scrollTop = $("runList").scrollHeight;
   $("runPanel").style.display = "flex";
 }
@@ -317,7 +317,7 @@ function attachAgentSteps(wait, steps) {
   details.appendChild(list);
   wait.div.appendChild(details);
 }
-function clearChat() { $("chat").innerHTML = ""; appendAgentMsg("assist", "你好，我是销售军师。用一句话告诉我要做什么、查什么。"); }
+function clearChat() { $("chat").innerHTML = ""; }
 async function loadThreads() {
   const box = $("threadList");
   try {
@@ -430,12 +430,12 @@ function handleStreamEvent(evt, wait, steps) {
   if (evt.type === "tool_start") {
     const name = evt.label || evt.toolName || "工具";
     steps.push({ eventType: "tool_start", toolName: evt.toolName, label: name, summary: prettyPayload(evt.payload) });
-    addRunTask(name, "start", prettyPayload(evt.payload));
+    addRunTask(name, "start");
     wait.body.textContent = "正在调用 " + name + "…";
   } else if (evt.type === "tool_end") {
     const name = evt.label || evt.toolName || "工具";
     steps.push({ eventType: "tool_end", toolName: evt.toolName, label: name, summary: prettyPayload(evt.payload) });
-    addRunTask(name, "done", prettyPayload(evt.payload));
+    addRunTask(name, "done");
     wait.body.textContent = name + " 完成，正在整理结果…";
     const det = evt.payload && evt.payload.details;
     if (det && Array.isArray(det.messages) && det.messages.length) {
