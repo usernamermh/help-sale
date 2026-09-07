@@ -740,4 +740,22 @@ describe("api", () => {
 		expect((answer.match(/\| 客户标识 \|/g) || []).length).toBe(1);
 		expect(answer).toContain("13800000001");
 	});
+
+	it("单个历史会话:导出完整对话与删除", async () => {
+		dir = tmpDataDir("api-thread-one");
+		app = buildApp({ dataDir: dir, streamFn: fakeAgentStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+		const t = await app.inject({ method: "POST", url: "/api/v1/agent/threads", headers });
+		const id = t.json().id;
+		await app.inject({ method: "POST", url: `/api/v1/agent/threads/${id}/run-stream`, payload: { goal: "用表格列出两款车型" }, headers });
+		const exp = await app.inject({ method: "GET", url: `/api/v1/agent/threads/${id}/export`, headers });
+		expect(exp.statusCode).toBe(200);
+		expect(exp.json().thread.id).toBe(id);
+		expect(exp.json().messages.length).toBeGreaterThan(0);
+		const del = await app.inject({ method: "DELETE", url: `/api/v1/agent/threads/${id}`, headers });
+		expect(del.statusCode).toBe(200);
+		expect(del.json().removed).toBe(true);
+		const again = await app.inject({ method: "GET", url: `/api/v1/agent/threads/${id}/export`, headers });
+		expect(again.statusCode).toBe(404);
+	});
 });

@@ -113,3 +113,12 @@ export function deleteAllThreads(db: DatabaseSync, tenantId: string): number {
 	const result = db.prepare("DELETE FROM agent_threads WHERE tenant_id = ?").run(tenantId);
 	return Number(result.changes ?? 0);
 }
+
+/** 删除单个线程(先删消息,再删线程);不存在返回 false。 */
+export function deleteThread(db: DatabaseSync, tenantId: string, id: string): boolean {
+	const row = db.prepare("SELECT id FROM agent_threads WHERE tenant_id = ? AND id = ?").get(tenantId, id);
+	if (!row) return false;
+	db.prepare("DELETE FROM agent_thread_messages WHERE tenant_id = ? AND thread_id = ?").run(tenantId, id);
+	db.prepare("DELETE FROM agent_threads WHERE tenant_id = ? AND id = ?").run(tenantId, id);
+	return true;
+}

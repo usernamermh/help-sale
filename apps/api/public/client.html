@@ -55,19 +55,19 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .agent-input textarea { flex:1; min-height:56px; resize:none; padding:11px 14px; border:1px solid #cbd5e1; border-radius:12px; font-family:inherit; font-size:14px; transition:border-color .2s, box-shadow .2s; }
 .agent-input button { border:0; border-radius:12px; padding:0 24px; background:linear-gradient(135deg,#2563eb,#4f46e5); color:#fff; font-size:14px; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,.25); transition:transform .15s, box-shadow .15s; }
 .agent-input button:disabled { opacity:.55; cursor:wait; }
-.thread-item { padding:8px 10px; border-radius:10px; font-size:13px; cursor:pointer; transition:background .15s; }
+.thread-item { position:relative; padding:8px 10px; padding-right:74px; border-radius:10px; font-size:13px; cursor:pointer; transition:background .15s; }
+.thread-actions { position:absolute; top:50%; right:6px; transform:translateY(-50%); display:flex; gap:4px; opacity:0; transition:opacity .15s; }
+.thread-item:hover .thread-actions { opacity:1; }
+.thread-act { border:0; background:#eef2ff; color:var(--brand); border-radius:6px; font-size:11px; padding:2px 7px; cursor:pointer; }
+.thread-act.del { background:#fee2e2; color:#b91c1c; }
+.thread-act:hover { filter:brightness(.96); }
 .thread-item:hover { background:#f1f5f9; }
 .thread-item.selected { background:linear-gradient(135deg,#eff6ff,#eef2ff); border:1px solid #bfdbfe; font-weight:500; }
 .thread-item .t { font-size:11px; color:var(--muted); margin-top:2px; }
-.side-head { display:flex; align-items:center; justify-content:flex-end; margin-bottom:6px; }
-.side-fold, .clear-btn { border:0; background:#eef2ff; color:var(--brand); border-radius:8px; cursor:pointer; font-size:13px; padding:4px 10px; line-height:1; }
-.side-fold:hover { background:#dbeafe; }
-.clear-btn { margin-left:8px; background:#fee2e2; color:#b91c1c; }
+.clear-btn { border:0; background:#fee2e2; color:#b91c1c; border-radius:8px; cursor:pointer; font-size:12px; padding:4px 10px; line-height:1; margin-left:8px; }
 .clear-btn:hover { background:#fecaca; }
 .side { transition:width .22s ease, opacity .18s ease; }
 .side.collapsed { width:0; padding:0; border:0; opacity:0; overflow:hidden; pointer-events:none; }
-#expandSideBtn { display:none; position:fixed; left:10px; top:50%; transform:translateY(-50%); z-index:40; border:0; background:var(--brand); color:#fff; border-radius:999px; width:34px; height:34px; cursor:pointer; box-shadow:0 3px 10px rgba(37,99,235,.35); }
-#expandSideBtn:hover { background:var(--brand2); }
 
 .right-resizer { width:6px; flex-shrink:0; cursor:col-resize; border-radius:3px; background:transparent; }
 .right-resizer:hover { background:#bfdbfe; }
@@ -113,11 +113,9 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 <header><h1>销售军师</h1><span class="sub">客户端 · 对话助销</span><span class="header-left"><button id="headerCapsBtn" class="hdr-btn active" title="显示/隐藏业务逻辑功能"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>业务逻辑功能</button><button id="headerThreadsBtn" class="hdr-btn active" title="显示/隐藏历史会话"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>历史会话</button></span><span class="nav"><button id="headerRunBtn" class="hdr-btn" title="显示/隐藏本轮任务"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>本轮任务</button><button id="headerTrBtn" class="hdr-btn" title="显示/隐藏对话原文"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>对话原文</button><a href="/console">进入编排端</a></span></header>
 <div class="client-layout">
 <aside class="side" id="side">
-<div class="side-head"><button id="collapseSideBtn" class="side-fold" title="收起侧栏">«</button></div>
 <div class="side-block grow" id="capsBlock"><div class="side-title">业务逻辑功能</div><div id="capList">加载中…</div></div>
 <div class="side-block" id="threadsBlock"><div class="side-title">历史会话<button id="clearThreadsBtn" class="clear-btn" title="一键清理全部历史会话">清理</button></div><button id="newBtn" class="secondary" style="width:100%;margin-bottom:8px">+ 新会话</button><div id="threadList"></div></div>
 </aside>
-<button id="expandSideBtn" title="展开侧栏">▶</button>
 <section class="chat">
 <div class="agent-chat" id="chat"><div class="agent-msg agent-assist"><div class="agent-body">你好，我是销售军师。用一句话告诉我要做什么、查什么，我会自己调用左侧这些能力来帮你完成。</div></div></div>
 <div class="agent-input"><textarea id="goal" placeholder="下达目标，例如：列出当前待办并告诉我最该先跟进哪一条"></textarea><button id="sendBtn">发送</button></div>
@@ -236,11 +234,11 @@ function syncRightCol() {
 function hideRunPanel() { $("runPanel").style.display = "none"; $("headerRunBtn").classList.remove("active"); syncRightCol(); }
 function showRunPanel() { $("runPanel").style.display = "flex"; $("headerRunBtn").classList.add("active"); $("runList").scrollTop = $("runList").scrollHeight; syncRightCol(); }
 function runTaskCount() { return $("runList").querySelectorAll(".run-item").length; }
-// ── 侧栏折叠 ──
-function toggleSide(collapsed) {
-  $("side").classList.toggle("collapsed", collapsed);
-  $("expandSideBtn").style.display = collapsed ? "block" : "none";
-  $("collapseSideBtn").style.display = collapsed ? "none" : "inline-block";
+// ── 侧栏自适应:业务逻辑功能与历史会话都隐藏时,聊天区向左扩展不留白 ──
+function syncSide() {
+  const capsHidden = $("capsBlock").style.display === "none";
+  const threadsHidden = $("threadsBlock").style.display === "none";
+  $("side").classList.toggle("collapsed", capsHidden && threadsHidden);
 }
 // ── 历史会话一键清理 ──
 async function clearThreads() {
@@ -252,6 +250,34 @@ async function clearThreads() {
     loadThreads();
     hideTrPanel();
   } catch (e) { alert("清理失败:" + e.message); }
+}
+// 导出单个历史会话的完整对话历史(Markdown 下载)
+async function exportThread(id, title) {
+  try {
+    const r = await api("/api/v1/agent/threads/" + id + "/export");
+    const lines = ["# " + (r.thread.title || "销售军师会话"), "", "会话 ID: " + r.thread.id, "创建时间: " + r.thread.createdAt, "", "---", ""];
+    for (const m of r.messages || []) {
+      const text = extractAgentText(m.content);
+      if (!text.trim()) continue;
+      const who = m.role === "user" ? "用户" : m.role === "assistant" ? "销售军师" : m.role;
+      lines.push("**" + who + "** (" + new Date(m.createdAt).toLocaleString() + "):", text.trim(), "");
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "会话-" + String(id).slice(0, 8) + ".md";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) { alert("导出失败:" + e.message); }
+}
+// 删除单个历史会话
+async function removeThread(id) {
+  if (!window.confirm("确认删除该历史会话?此操作不可恢复。")) return;
+  try {
+    await api("/api/v1/agent/threads/" + id, { method: "DELETE" });
+    if (currentThreadId === id) { currentThreadId = null; clearChat(); hideTrPanel(); }
+    loadThreads();
+  } catch (e) { alert("删除失败:" + e.message); }
 }let running = false; let currentThreadId = null; let deltaBuf = "";
 function appendAgentMsg(role, text) {
   const chat = $("chat");
@@ -303,8 +329,11 @@ async function loadThreads() {
     for (const t of threads) {
       const d = document.createElement("div");
       d.className = "thread-item" + (t.id === currentThreadId ? " selected" : "");
-      d.innerHTML = "<div>" + escapeHtml(t.title || "未命名会话") + "</div><div class=\"t\">" + escapeHtml(new Date(t.updatedAt).toLocaleString()) + "</div>";
+      d.innerHTML = "<div>" + escapeHtml(t.title || "未命名会话") + "</div><div class=\"t\">" + escapeHtml(new Date(t.updatedAt).toLocaleString()) + "</div>" +
+        '<div class="thread-actions"><button class="thread-act" title="导出完整对话历史">导出</button><button class="thread-act del" title="删除该历史会话">删除</button></div>';
       d.addEventListener("click", () => selectThread(t.id));
+      d.querySelector(".thread-actions button:first-child").addEventListener("click", (e) => { e.stopPropagation(); exportThread(t.id, t.title); });
+      d.querySelector(".thread-act.del").addEventListener("click", (e) => { e.stopPropagation(); removeThread(t.id); });
       box.appendChild(d);
     }
   } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
@@ -324,8 +353,7 @@ $("sendBtn").addEventListener("click", send);
 $("goal").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
 $("newBtn").addEventListener("click", newThread);
 $("clearThreadsBtn").addEventListener("click", clearThreads);
-$("collapseSideBtn").addEventListener("click", () => toggleSide(true));
-$("expandSideBtn").addEventListener("click", () => toggleSide(false));
+
 // 顶部栏按钮:切换显示/隐藏
 // 顶部左侧按钮:切换业务逻辑功能/历史会话面板
 function toggleLeftBlock(blockId, btn) {
@@ -333,6 +361,7 @@ function toggleLeftBlock(blockId, btn) {
   const hidden = el.style.display === "none";
   el.style.display = hidden ? "flex" : "none";
   btn.classList.toggle("active", hidden);
+  syncSide();
 }
 $("headerCapsBtn").addEventListener("click", function () { toggleLeftBlock("capsBlock", this); });
 $("headerThreadsBtn").addEventListener("click", function () { toggleLeftBlock("threadsBlock", this); });

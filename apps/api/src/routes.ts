@@ -36,7 +36,7 @@ import { runSalesAgent } from "./pi/agent-runtime.js";
 import { CAPABILITIES, getCapabilityDef } from "./pi/capabilities.js";
 import { createWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled } from "./repositories/agent-capabilities.js";
 import { queryConsoleLogs } from "./services/console-logs.js";
-import { appendThreadMessage, createThread, deleteAllThreads, getThread, listThreadMessages, listThreads, setThreadTitle } from "./repositories/agent-threads.js";
+import { appendThreadMessage, createThread, deleteAllThreads, deleteThread, getThread, listThreadMessages, listThreads, setThreadTitle } from "./repositories/agent-threads.js";
 import type { SessionStore } from "./pi/sessions.js";
 
 export interface RouteDeps {
@@ -399,6 +399,23 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 			createdAt: m.createdAt,
 		}));
 		return { thread, messages };
+	});	app.get<{ Params: { id: string } }>("/api/v1/agent/threads/:id/export", async (request, reply) => {
+		const thread = getThread(deps.db, request.tenantId, request.params.id);
+		if (!thread) return reply.code(404).send({ error: "thread_not_found", message: "会话不存在" });
+		const messages = listThreadMessages(deps.db, request.tenantId, thread.id).map((m) => ({
+			id: m.id,
+			seq: m.seq,
+			role: m.role,
+			content: m.content,
+			createdAt: m.createdAt,
+		}));
+		return { thread, messages };
+	});
+
+	app.delete<{ Params: { id: string } }>("/api/v1/agent/threads/:id", async (request, reply) => {
+		const removed = deleteThread(deps.db, request.tenantId, request.params.id);
+		if (!removed) return reply.code(404).send({ error: "thread_not_found", message: "会话不存在" });
+		return { removed: true };
 	});
 
 	app.post<{ Params: { id: string }; Body: { goal?: string } }>("/api/v1/agent/threads/:id/run", async (request, reply) => {
