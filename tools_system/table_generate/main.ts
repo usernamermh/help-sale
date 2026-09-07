@@ -30,7 +30,7 @@ export function execute(_ctx: ToolContext, params: any) {
 	const p = Math.min(page, totalPages);
 	const pageRows = allRows.slice((p - 1) * pageSize, p * pageSize);
 	const tableText = toMarkdownTable(pageRows);
-	const footer = totalPages > 1 ? `\n(第 ${p}/${totalPages} 页 · 共 ${allRows.length} 行;查看下一页请传 page=${p + 1})` : "";
+	const footer = totalPages > 1 ? `\n(第 ${p}/${totalPages} 页 · 共 ${allRows.length} 行;用户要求查看更多时再传 page=${p + 1})` : "";
 	if (chartType === "table" || chartType === "both") parts.push(tableText + footer);
 	if (chartType === "mermaid" || chartType === "both") {
 		if (Array.isArray(params?.graph) && params.graph.length > 0) {

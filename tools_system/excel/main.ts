@@ -33,7 +33,7 @@ export async function execute(_ctx: ToolContext, params: any) {
 	const p = Math.min(page, totalPages);
 	const head = allRows.slice((p - 1) * pageSize, p * pageSize);
 	const textRows = head.map((r) => (Array.isArray(r) ? r.map((v) => String(v ?? "")).join("\t") : String(r)));
-	const footer = totalPages > 1 ? `\n(第 ${p}/${totalPages} 页 · 共 ${allRows.length} 行;查看下一页请传 page=${p + 1})` : "";
+	const footer = totalPages > 1 ? `\n(第 ${p}/${totalPages} 页 · 共 ${allRows.length} 行;用户要求查看更多时再传 page=${p + 1})` : "";
 	const text = textRows.join("\n") + footer;
 	return {
 		content: [{ type: "text", text: `Excel(${path.basename(file)}, 表:${sheetName},第 ${p}/${totalPages} 页)\n${text.slice(0, 8000)}` }],

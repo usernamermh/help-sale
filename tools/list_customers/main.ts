@@ -16,7 +16,7 @@ export function execute(ctx: ToolContext, params: any) {
 	for (const r of slice as any[]) {
 		lines.push(`| ${r.key} | ${r.name ?? "—"} | ${r.phone ?? "—"} | ${r.stage ?? "—"} | ${r.region ?? "—"} | ${r.intendedVehicles?.join("、") ?? "—"} | ${r.lastAnalysisAt?.slice(0, 10) ?? "—"} | ${r.conversationCount} |`);
 	}
-	const footer = totalPages > 1 ? `\n(第 ${p}/${totalPages} 页 · 共 ${rows.length} 条;查看下一页请传 page=${p + 1})` : "";
+	const footer = totalPages > 1 ? `\n(第 ${p}/${totalPages} 页 · 共 ${rows.length} 条;用户要求查看更多时再传 page=${p + 1})` : "";
 	return {
 		content: [{ type: "text", text: `当前客户清单(${rows.length} 位,第 ${p}/${totalPages} 页):\n${lines.join("\n")}${footer}` }],
 		details: { customers: slice, rawTable: lines.join("\n"), page: p, pageSize: PAGE_SIZE, totalRows: rows.length, totalPages, hasMore: p < totalPages },

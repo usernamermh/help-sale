@@ -14,6 +14,14 @@ describe("sales-agent prompt", () => {
 		expect(prompt).toContain("data.mode");
 	});
 
+
+	it("表格分页规则:默认只展示第 1 页,禁止自动翻页取全量", () => {
+		const prompt = getSalesAgentSystemPrompt();
+		expect(prompt).toContain("每页最多 10 行");
+		expect(prompt).toContain("禁止自动连续翻页");
+		expect(prompt).toContain("用户明确要求");
+	});
+
 	it("模板不再残留 SYSTEM_TOOLS/TASKS_TOOLS 占位符", () => {
 		const prompt = getSalesAgentSystemPrompt();
 		expect(prompt).not.toContain("SYSTEM_TOOLS");
