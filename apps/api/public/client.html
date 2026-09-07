@@ -50,11 +50,15 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .thread-item:hover { background:#f1f5f9; }
 .thread-item.selected { background:#eff6ff; border:1px solid #bfdbfe; }
 .thread-item .t { font-size:11px; color:var(--muted); margin-top:2px; }
-.side-head { display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:600; margin-bottom:4px; }
-.side-fold, .clear-btn { border:0; background:#eef2ff; color:var(--brand); border-radius:6px; cursor:pointer; font-size:12px; padding:3px 8px; }
-.clear-btn { float:right; margin-left:8px; background:#fee2e2; color:#b91c1c; }
-.side.collapsed { display:none; }
-#expandSideBtn { display:none; position:fixed; left:12px; top:96px; z-index:30; border:0; background:var(--brand); color:#fff; border-radius:8px; padding:8px 9px; cursor:pointer; }
+.side-head { display:flex; align-items:center; justify-content:flex-end; margin-bottom:6px; }
+.side-fold, .clear-btn { border:0; background:#eef2ff; color:var(--brand); border-radius:8px; cursor:pointer; font-size:13px; padding:4px 10px; line-height:1; }
+.side-fold:hover { background:#dbeafe; }
+.clear-btn { margin-left:8px; background:#fee2e2; color:#b91c1c; }
+.clear-btn:hover { background:#fecaca; }
+.side { transition:width .22s ease, opacity .18s ease; }
+.side.collapsed { width:0; padding:0; border:0; opacity:0; overflow:hidden; pointer-events:none; }
+#expandSideBtn { display:none; position:fixed; left:10px; top:50%; transform:translateY(-50%); z-index:40; border:0; background:var(--brand); color:#fff; border-radius:999px; width:34px; height:34px; cursor:pointer; box-shadow:0 3px 10px rgba(37,99,235,.35); }
+#expandSideBtn:hover { background:var(--brand2); }
 .show-btn { position:fixed; right:20px; bottom:24px; z-index:40; border:0; background:var(--brand); color:#fff; border-radius:999px; padding:9px 16px; font-size:13px; cursor:pointer; box-shadow:0 3px 10px rgba(37,99,235,.35); }
 .show-btn.hide { display:none; }
 .right-col { width:272px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; min-height:0; }
@@ -89,7 +93,7 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 <header><h1>销售军师</h1><span class="sub">客户端 · 对话助销</span><span class="nav"><a href="/console">进入编排端</a></span></header>
 <div class="client-layout">
 <aside class="side" id="side">
-<div class="side-head"><span>业务逻辑功能</span><button id="collapseSideBtn" class="side-fold" title="收起侧栏">◀ 收起</button></div>
+<div class="side-head"><button id="collapseSideBtn" class="side-fold" title="收起侧栏">«</button></div>
 <div class="side-block grow"><div class="side-title">业务逻辑功能</div><div id="capList">加载中…</div></div>
 <div class="side-block"><div class="side-title">历史会话<button id="clearThreadsBtn" class="clear-btn" title="一键清理全部历史会话">清理</button></div><button id="newBtn" class="secondary" style="width:100%;margin-bottom:8px">+ 新会话</button><div id="threadList"></div></div>
 </aside>
@@ -98,7 +102,7 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 <div class="agent-chat" id="chat"><div class="agent-msg agent-assist"><div class="agent-body">你好，我是销售军师。用一句话告诉我要做什么、查什么，我会自己调用左侧这些能力来帮你完成。</div></div></div>
 <div class="agent-input"><textarea id="goal" placeholder="下达目标，例如：列出当前待办并告诉我最该先跟进哪一条"></textarea><button id="sendBtn">发送</button></div>
 </section>
-<div class="right-col">
+<div class="right-col" id="rightCol">
 <aside class="side-block tr-panel" id="runPanel">
 <div class="tr-head"><span>本轮任务</span><button class="tr-close" onclick="hideRunPanel()">×</button></div>
 <div class="tr-meta" id="runMeta"></div>
@@ -111,6 +115,8 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 </aside>
 </div>
 </div>
+<button id="showRunBtn" class="show-btn hide" title="打开本轮任务">⏱ 本轮任务</button>
+<button id="showTrBtn" class="show-btn hide" title="打开对话原文" style="bottom:76px">💬 对话原文</button>
 <script src="/vendor/marked.min.js"></script>
 <script src="/vendor/purify.min.js"></script>
 <script>const $ = (id) => document.getElementById(id);
@@ -128,9 +134,10 @@ function renderTrPanel(meta, list) {
   }
   $("trPanel").style.display = "flex";
   $("showTrBtn").classList.add("hide");
+  syncRightCol();
 }
-function hideTrPanel() { $("trPanel").style.display = "none"; $("showTrBtn").classList.remove("hide"); }
-function showTrPanel() { $("trPanel").style.display = "flex"; $("showTrBtn").classList.add("hide"); }function renderMarkdown(text) {
+function hideTrPanel() { $("trPanel").style.display = "none"; $("showTrBtn").classList.remove("hide"); syncRightCol(); }
+function showTrPanel() { $("trPanel").style.display = "flex"; $("showTrBtn").classList.add("hide"); syncRightCol(); }function renderMarkdown(text) {
   try {
     if (typeof marked !== "undefined" && marked.parse) {
       const html = marked.parse(text);
@@ -195,15 +202,19 @@ async function loadCapabilities() {
   } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
 }
 // ── 本轮任务栏 ──
-function resetRunPanel() { $("runList").innerHTML = ""; $("runMeta").textContent = ""; $("runPanel").style.display = "flex"; $("showRunBtn").classList.add("hide"); }
+function resetRunPanel() { $("runList").innerHTML = ""; $("runMeta").textContent = ""; $("runPanel").style.display = "flex"; $("showRunBtn").classList.add("hide"); syncRightCol(); }
 function addRunTask(label, status, summary) {
   const d = document.createElement("div"); d.className = "run-item run-" + status;
   d.innerHTML = '<div class="run-head"><span>' + escapeHtml(label) + '</span><span class="run-time">' + new Date().toLocaleTimeString() + '</span></div>' + (summary ? '<div class="run-sum">' + escapeHtml(summary.slice(0, 140)) + '</div>' : '');
   $("runList").appendChild(d); $("runList").scrollTop = $("runList").scrollHeight;
   $("runPanel").style.display = "flex";
 }
-function hideRunPanel() { $("runPanel").style.display = "none"; $("showRunBtn").classList.remove("hide"); }
-function showRunPanel() { $("runPanel").style.display = "flex"; $("showRunBtn").classList.add("hide"); $("runList").scrollTop = $("runList").scrollHeight; }
+function syncRightCol() {
+  const visible = $("runPanel").style.display !== "none" || $("trPanel").style.display !== "none";
+  $("rightCol").style.display = visible ? "flex" : "none";
+}
+function hideRunPanel() { $("runPanel").style.display = "none"; $("showRunBtn").classList.remove("hide"); syncRightCol(); }
+function showRunPanel() { $("runPanel").style.display = "flex"; $("showRunBtn").classList.add("hide"); $("runList").scrollTop = $("runList").scrollHeight; syncRightCol(); }
 function runTaskCount() { return $("runList").querySelectorAll(".run-item").length; }
 // ── 侧栏折叠 ──
 function toggleSide(collapsed) {
@@ -387,9 +398,10 @@ function prettyPayload(p) {
     }
   } catch {}
   try { return typeof p === "string" ? p : JSON.stringify(p); } catch { return String(p); }
-}loadCapabilities(); loadThreads();
+}
+
+syncRightCol();
+loadCapabilities(); loadThreads();
 </script>
-<button id="showRunBtn" class="show-btn hide" title="打开本轮任务">⏱ 本轮任务</button>
-<button id="showTrBtn" class="show-btn hide" title="打开对话原文" style="bottom:76px">💬 对话原文</button>
 </body>
 </html>
