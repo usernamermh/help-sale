@@ -12,7 +12,12 @@ header { display:flex; align-items:center; gap:14px; padding:14px 28px; backgrou
 header h1 { font-size:20px; margin:0; letter-spacing:.5px; display:flex; align-items:center; gap:9px; }
 header h1::before { content:""; width:11px; height:11px; border-radius:3px; background:linear-gradient(135deg,#60a5fa,#c4b5fd); box-shadow:0 0 10px rgba(147,197,253,.8); }
 header .sub { font-size:12px; opacity:.85; }
-header .nav { margin-left:auto; font-size:12px; }
+header .nav { margin-left:auto; font-size:12px; display:flex; align-items:center; gap:8px; }
+.hdr-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(255,255,255,.30); background:rgba(255,255,255,.12); color:#fff; border-radius:999px; padding:6px 14px; font-size:12.5px; font-family:inherit; cursor:pointer; backdrop-filter:blur(8px); box-shadow:0 1px 4px rgba(15,23,42,.16); transition:all .2s ease; }
+.hdr-btn svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.hdr-btn:hover { background:rgba(255,255,255,.26); border-color:rgba(255,255,255,.55); transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,.24); }
+.hdr-btn.active { background:#fff; color:#1d4ed8; border-color:#fff; box-shadow:0 4px 14px rgba(30,58,138,.35); }
+.hdr-btn.active svg { stroke:#1d4ed8; }
 header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .client-layout { display:flex; gap:14px; width:100%; max-width:none; margin:18px auto; padding:0 24px; height:calc(100vh - 82px); min-height:520px; }
 .side { width:250px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; overflow:hidden; min-height:0; }
@@ -104,7 +109,7 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 </style>
 </head>
 <body>
-<header><h1>销售军师</h1><span class="sub">客户端 · 对话助销</span><span class="nav"><button id="headerRunBtn" class="hdr-btn" title="显示/隐藏本轮任务">本轮任务</button><button id="headerTrBtn" class="hdr-btn" title="显示/隐藏对话原文">对话原文</button><a href="/console">进入编排端</a></span></header>
+<header><h1>销售军师</h1><span class="sub">客户端 · 对话助销</span><span class="nav"><button id="headerRunBtn" class="hdr-btn" title="显示/隐藏本轮任务"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>本轮任务</button><button id="headerTrBtn" class="hdr-btn" title="显示/隐藏对话原文"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>对话原文</button><a href="/console">进入编排端</a></span></header>
 <div class="client-layout">
 <aside class="side" id="side">
 <div class="side-head"><button id="collapseSideBtn" class="side-fold" title="收起侧栏">«</button></div>
