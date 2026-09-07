@@ -101,7 +101,7 @@ function fakeAgentTableRewriteStreamFn(): StreamFn {
 	const fa = fauxProvider();
 	fa.setResponses([
 		fauxAssistantMessage([fauxToolCall("list_customers", { limit: 50 })]),
-		fauxAssistantMessage([fauxToolCall("emit_final", { answer: "共 2 位客户,名单以工具原始数据为准。", nextSteps: [] })]),
+		fauxAssistantMessage([fauxToolCall("emit_final", { answer: "共 2 位客户,名单如下:\n\n| 客户标识姓名电话阶段 |\n| --- |\n| c_a 王五 13800000001 |", nextSteps: [] })]),
 	]);
 	return async (model, context, options) => fa.provider.stream(model as never, context, options);
 }
@@ -735,5 +735,9 @@ describe("api", () => {
 		expect(answer).toContain("共 2 位客户");
 		expect(answer).toContain("| 客户标识 |");
 		expect(answer).toContain("王五");
+		// 模型转述的错误表格被移除,只保留工具原始表格一份
+		expect(answer).not.toContain("| 客户标识姓名电话阶段 |");
+		expect((answer.match(/\| 客户标识 \|/g) || []).length).toBe(1);
+		expect(answer).toContain("13800000001");
 	});
 });

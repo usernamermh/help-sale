@@ -64,11 +64,15 @@ function collectRawTables(messages: unknown[]): string[] {
 }
 
 function appendRawTables(answer: string, messages: unknown[]): string {
+	const tables = collectRawTables(messages);
+	if (tables.length === 0) return answer;
 	let out = answer;
-	for (const table of collectRawTables(messages)) {
-		if (!out.includes(table)) out += `\n\n${table}`;
-	}
-	return out;
+	// 移除模型自行生成的 Markdown 表格(表头+分隔行+数据行),统一由工具原始表格呈现,避免重复与幻觉
+	out = out.replace(/^\|.*\|\s*\n^\|[\s:|-]+\|\s*\n(?:\|.*\|\s*\n)*/gm, "");
+	// 防重复:即使已包含工具原文,也统一只保留一份
+	for (const table of tables) out = out.replace(table, "");
+	out = out.replace(/\n{3,}/g, "\n\n").trim();
+	return out ? `${out}\n\n${tables.join("\n\n")}` : tables.join("\n\n");
 }
 /** 从 assistant 消息 content(TextContent[] 或字符串)提取纯文本。 */
 function assistantText(content: unknown): string {

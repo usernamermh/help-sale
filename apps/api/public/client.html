@@ -66,6 +66,10 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .run-item .run-head { display:flex; justify-content:space-between; gap:6px; font-weight:600; color:#334155; }
 .run-item .run-time { font-weight:400; color:var(--muted); font-size:11px; }
 .run-item .run-sum { margin-top:3px; color:#64748b; white-space:pre-wrap; word-break:break-word; }
+.run-sum .md, .run-sum { font-size:12px; }
+.run-sum table { border-collapse:collapse; width:100%; margin:6px 0; }
+.run-sum th, .run-sum td { border:1px solid var(--line); padding:4px 6px; font-size:11px; text-align:left; }
+.run-sum th { background:#f1f5f9; font-weight:600; }
 .run-item.run-done { border-color:#bbf7d0; background:#f0fdf4; }
 .tr-panel { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
 .tr-head { display:flex; align-items:center; justify-content:space-between; font-size:12px; color:var(--muted); letter-spacing:1px; margin:0 0 8px; }
@@ -205,7 +209,7 @@ async function loadCapabilities() {
 function resetRunPanel() { $("runList").innerHTML = ""; $("runMeta").textContent = ""; $("runPanel").style.display = "flex"; $("showRunBtn").classList.add("hide"); syncRightCol(); }
 function addRunTask(label, status, summary) {
   const d = document.createElement("div"); d.className = "run-item run-" + status;
-  d.innerHTML = '<div class="run-head"><span>' + escapeHtml(label) + '</span><span class="run-time">' + new Date().toLocaleTimeString() + '</span></div>' + (summary ? '<div class="run-sum">' + escapeHtml(summary.slice(0, 140)) + '</div>' : '');
+  d.innerHTML = '<div class="run-head"><span>' + escapeHtml(label) + '</span><span class="run-time">' + new Date().toLocaleTimeString() + '</span></div>' + (summary ? '<div class="run-sum md">' + renderMarkdown(summary.slice(0, 2000)) + '</div>' : '');
   $("runList").appendChild(d); $("runList").scrollTop = $("runList").scrollHeight;
   $("runPanel").style.display = "flex";
 }
