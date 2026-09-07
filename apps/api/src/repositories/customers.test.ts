@@ -73,4 +73,15 @@ describe("customers", () => {
 		const brief = listCustomers(db, "t1", 50).find((c) => c.key === "c_iv");
 		expect(brief?.intendedVehicles).toEqual([]);
 	});
+
+	it("upsert 支持地区来源与备注字段", () => {
+		const row = upsertCustomer(db, { tenantId: "t1", key: "c_region", name: "李雷", region: "苏州", notes: "高意向" });
+		expect(row.region).toBe("苏州");
+		expect(row.notes).toBe("高意向");
+		const again = upsertCustomer(db, { tenantId: "t1", key: "c_region", region: "上海" });
+		expect(again.region).toBe("上海");
+		expect(again.notes).toBe("高意向");
+		const brief = listCustomers(db, "t1", 50).find((c) => c.key === "c_region");
+		expect(brief?.region).toBe("上海");
+	});
 });

@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS customers (
 	notes TEXT,
 	phone TEXT,
 	intended_vehicles TEXT,
+	region TEXT,
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	UNIQUE (tenant_id, key)

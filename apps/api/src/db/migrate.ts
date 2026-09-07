@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 15;
+export const MIGRATION_VERSION = 16;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -41,6 +41,16 @@ export function migrate(db: DatabaseSync): void {
 			const custCols = db.prepare("PRAGMA table_info(customers)").all() as Array<{ name: string }>;
 			if (!custCols.some((col) => col.name === "intended_vehicles")) {
 				db.exec("ALTER TABLE customers ADD COLUMN intended_vehicles TEXT;");
+			}
+		}
+	}
+	// v16:客户地区来源(customers.region)
+	if (current.user_version < 16) {
+		const hasCustomers = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'customers'").get();
+		if (hasCustomers) {
+			const custCols = db.prepare("PRAGMA table_info(customers)").all() as Array<{ name: string }>;
+			if (!custCols.some((col) => col.name === "region")) {
+				db.exec("ALTER TABLE customers ADD COLUMN region TEXT;");
 			}
 		}
 	}

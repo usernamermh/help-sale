@@ -11,6 +11,8 @@ export interface CustomerInput {
 	phone?: string;
 	/** 意向车型列表(如 ["汉EV 冠军版","Model Y 后驱版"]),落库为 JSON 数组 */
 	intendedVehicles?: string[];
+	/** 地区来源(如 "苏州"/"上海") */
+	region?: string;
 }
 
 export interface CustomerRow {
@@ -23,6 +25,7 @@ export interface CustomerRow {
 	notes: string | null;
 	phone: string | null;
 	intended_vehicles: string | null;
+	region: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -36,7 +39,7 @@ export function upsertCustomer(db: DatabaseSync, input: CustomerInput): Customer
 		const nextVehicles = input.intendedVehicles !== undefined ? JSON.stringify(input.intendedVehicles) : existing.intended_vehicles;
 		db.prepare(
 			`UPDATE customers
-			 SET name = ?, company = ?, stage = ?, notes = ?, phone = ?, intended_vehicles = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+			 SET name = ?, company = ?, stage = ?, notes = ?, phone = ?, intended_vehicles = ?, region = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
 			 WHERE id = ?`,
 		).run(
 			input.name ?? existing.name,
@@ -45,6 +48,7 @@ export function upsertCustomer(db: DatabaseSync, input: CustomerInput): Customer
 			input.notes ?? existing.notes,
 			input.phone ?? existing.phone ?? null,
 			nextVehicles,
+			input.region !== undefined ? input.region : existing.region ?? null,
 			existing.id,
 		);
 		return db.prepare("SELECT * FROM customers WHERE id = ?").get(existing.id) as unknown as CustomerRow;
@@ -52,7 +56,7 @@ export function upsertCustomer(db: DatabaseSync, input: CustomerInput): Customer
 
 	const id = randomUUID();
 	db.prepare(
-		"INSERT INTO customers (id, tenant_id, key, name, company, stage, notes, phone, intended_vehicles) VALUES (?,?,?,?,?,?,?,?,?)",
+		"INSERT INTO customers (id, tenant_id, key, name, company, stage, notes, phone, intended_vehicles, region) VALUES (?,?,?,?,?,?,?,?,?,?)",
 	).run(
 		id,
 		input.tenantId,
@@ -63,6 +67,7 @@ export function upsertCustomer(db: DatabaseSync, input: CustomerInput): Customer
 		input.notes ?? null,
 		input.phone ?? null,
 		input.intendedVehicles !== undefined ? JSON.stringify(input.intendedVehicles) : null,
+		input.region ?? null,
 	);
 	return db.prepare("SELECT * FROM customers WHERE id = ?").get(id) as unknown as CustomerRow;
 }
@@ -85,6 +90,7 @@ export interface CustomerBriefRow {
 	phone: string | null;
 	stage: string | null;
 	intendedVehicles: string[] | null;
+	region: string | null;
 	lastAnalysisAt: string | null;
 	conversationCount: number;
 }
@@ -93,7 +99,7 @@ export interface CustomerBriefRow {
 export function listCustomers(db: DatabaseSync, tenantId: string, limit: number): CustomerBriefRow[] {
 	const rows = db
 		.prepare(
-			`SELECT cu.id, cu.key, cu.name, cu.phone, cu.stage, cu.intended_vehicles,
+			`SELECT cu.id, cu.key, cu.name, cu.phone, cu.stage, cu.intended_vehicles, cu.region,
 			        (SELECT MAX(a.created_at) FROM analyses a WHERE a.customer_id = cu.id) AS last_analysis_at,
 			        (SELECT COUNT(*) FROM conversations c WHERE c.customer_id = cu.id) AS conversation_count
 			 FROM customers cu
@@ -109,6 +115,7 @@ export function listCustomers(db: DatabaseSync, tenantId: string, limit: number)
 		phone: r.phone != null ? String(r.phone) : null,
 		stage: r.stage != null ? String(r.stage) : null,
 		intendedVehicles: parseVehicles(r.intended_vehicles),
+		region: r.region != null ? String(r.region) : null,
 		lastAnalysisAt: r.last_analysis_at != null ? String(r.last_analysis_at) : null,
 		conversationCount: Number(r.conversation_count ?? 0),
 	}));
