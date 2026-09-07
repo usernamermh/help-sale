@@ -42,6 +42,34 @@ export interface AgentFinal {
 }
 
 
+
+/**
+ * 表格保真:收集本轮工具返回的原始 Markdown 表格(details.rawTable / details.table)。
+ * 模型可能转述/重排表格,最终答复生成后若未包含原文,则原样追加,只允许模型在数据基础上总结。
+ */
+function collectRawTables(messages: unknown[]): string[] {
+	const tables: string[] = [];
+	for (const message of messages) {
+		const m = message as { role?: string; details?: Record<string, unknown> };
+		if (m.role !== "toolResult" || !m.details) continue;
+		const raw =
+			typeof m.details.rawTable === "string"
+				? m.details.rawTable
+				: typeof m.details.table === "string"
+					? m.details.table
+					: undefined;
+		if (raw && raw.includes("|") && !tables.includes(raw)) tables.push(raw);
+	}
+	return tables;
+}
+
+function appendRawTables(answer: string, messages: unknown[]): string {
+	let out = answer;
+	for (const table of collectRawTables(messages)) {
+		if (!out.includes(table)) out += `\n\n${table}`;
+	}
+	return out;
+}
 /** 从 assistant 消息 content(TextContent[] 或字符串)提取纯文本。 */
 function assistantText(content: unknown): string {
 	if (!content) return "";
@@ -142,5 +170,7 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 		}
 	}
 
+	// 表格保真:模型若未原样呈现工具表格(转述/重排),在最终答复末尾追加原始表格
+	if (final?.answer) final.answer = appendRawTables(final.answer, messages);
 	return { runId, final, messages };
 }

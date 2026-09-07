@@ -1,8 +1,12 @@
+import path from "node:path";
+import { mkdirSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import { fauxProvider, fauxToolCall, fauxAssistantMessage } from "@earendil-works/pi-ai/providers/faux";
 import { buildApp } from "./app.js";
+import { openDatabase } from "./db/database.js";
+import { requireTenant } from "./repositories/customers.js";
 import { cleanupDataDir, tmpDataDir } from "./pi/sessions.js";
 import type { MysqlSink } from "./integrations/mysql-sink.js";
 import { createMemoryReminderQueue } from "./integrations/reminder-queue.js";
@@ -89,6 +93,15 @@ function fakeAgentNoEmitStreamFn(): StreamFn {
 	fa.setResponses([
 		fauxAssistantMessage([fauxToolCall("get_customer_profile", { customerKey: "陈静" })]),
 		fauxAssistantMessage([{ type: "text", text: "陈静的档案里暂时没有电话,建议先补录联系方式。" }]),
+	]);
+	return async (model, context, options) => fa.provider.stream(model as never, context, options);
+}
+
+function fakeAgentTableRewriteStreamFn(): StreamFn {
+	const fa = fauxProvider();
+	fa.setResponses([
+		fauxAssistantMessage([fauxToolCall("list_customers", { limit: 50 })]),
+		fauxAssistantMessage([fauxToolCall("emit_final", { answer: "共 2 位客户,名单以工具原始数据为准。", nextSteps: [] })]),
 	]);
 	return async (model, context, options) => fa.provider.stream(model as never, context, options);
 }
@@ -700,5 +713,27 @@ describe("api", () => {
 		expect(del.json().removed).toBeGreaterThan(0);
 		const list2 = await app.inject({ method: "GET", url: "/api/v1/agent/threads", headers });
 		expect(list2.json().threads).toHaveLength(0);
+	});
+
+	it("表格保真:模型未原样输出表格时,最终答复自动追加工具原始表格", async () => {
+		dir = tmpDataDir("api-table-faith");
+		mkdirSync(dir, { recursive: true });
+		const db0 = openDatabase(path.join(dir, "business.db"));
+		requireTenant(db0, "t1", "测试租户");
+		db0.prepare("INSERT INTO customers (id, tenant_id, key, name, phone) VALUES (?,?,?,?,?)").run("cid1", "t1", "c_a", "王五", "13800000001");
+		db0.prepare("INSERT INTO customers (id, tenant_id, key, name, phone) VALUES (?,?,?,?,?)").run("cid2", "t1", "c_b", "陈六", "13800000002");
+		db0.close();
+		app = buildApp({ dataDir: dir, streamFn: fakeAgentTableRewriteStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
+		const headers = { "x-tenant-id": "t1" };
+		const t = await app.inject({ method: "POST", url: "/api/v1/agent/threads", headers });
+		const res = await app.inject({ method: "POST", url: `/api/v1/agent/threads/${t.json().id}/run-stream`, payload: { goal: "列出客户表格" }, headers });
+		expect(res.statusCode).toBe(200);
+		const events = res.body.split("\n").filter(Boolean).map((l) => JSON.parse(l));
+		const finals = events.filter((e: { type: string }) => e.type === "final");
+		expect(finals).toHaveLength(1);
+		const answer = finals[0].final.answer;
+		expect(answer).toContain("共 2 位客户");
+		expect(answer).toContain("| 客户标识 |");
+		expect(answer).toContain("王五");
 	});
 });

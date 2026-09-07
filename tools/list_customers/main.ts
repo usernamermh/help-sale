@@ -10,5 +10,5 @@ export function execute(ctx: ToolContext, params: any) {
 	for (const r of rows as any[]) {
 		lines.push(`| ${r.key} | ${r.name ?? "—"} | ${r.phone ?? "—"} | ${r.stage ?? "—"} | ${r.region ?? "—"} | ${r.intendedVehicles?.join("、") ?? "—"} | ${r.lastAnalysisAt?.slice(0, 10) ?? "—"} | ${r.conversationCount} |`);
 	}
-	return { content: [{ type: "text", text: `当前客户清单(${rows.length} 位):\n${lines.join("\n")}` }], details: { customers: rows } };
+	return { content: [{ type: "text", text: `当前客户清单(${rows.length} 位):\n${lines.join("\n")}` }], details: { customers: rows, rawTable: lines.join("\n") } };
 }
