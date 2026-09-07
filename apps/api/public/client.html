@@ -12,6 +12,7 @@ header { display:flex; align-items:center; gap:14px; padding:14px 28px; backgrou
 header h1 { font-size:20px; margin:0; letter-spacing:.5px; display:flex; align-items:center; gap:9px; }
 header h1::before { content:""; width:11px; height:11px; border-radius:3px; background:linear-gradient(135deg,#60a5fa,#c4b5fd); box-shadow:0 0 10px rgba(147,197,253,.8); }
 header .sub { font-size:12px; opacity:.85; }
+.header-left { display:flex; align-items:center; gap:8px; margin-left:14px; }
 header .nav { margin-left:auto; font-size:12px; display:flex; align-items:center; gap:8px; }
 .hdr-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(255,255,255,.30); background:rgba(255,255,255,.12); color:#fff; border-radius:999px; padding:6px 14px; font-size:12.5px; font-family:inherit; cursor:pointer; backdrop-filter:blur(8px); box-shadow:0 1px 4px rgba(15,23,42,.16); transition:all .2s ease; }
 .hdr-btn svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
@@ -109,12 +110,12 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 </style>
 </head>
 <body>
-<header><h1>销售军师</h1><span class="sub">客户端 · 对话助销</span><span class="nav"><button id="headerRunBtn" class="hdr-btn" title="显示/隐藏本轮任务"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>本轮任务</button><button id="headerTrBtn" class="hdr-btn" title="显示/隐藏对话原文"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>对话原文</button><a href="/console">进入编排端</a></span></header>
+<header><h1>销售军师</h1><span class="sub">客户端 · 对话助销</span><span class="header-left"><button id="headerCapsBtn" class="hdr-btn active" title="显示/隐藏业务逻辑功能"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>业务逻辑功能</button><button id="headerThreadsBtn" class="hdr-btn active" title="显示/隐藏历史会话"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>历史会话</button></span><span class="nav"><button id="headerRunBtn" class="hdr-btn" title="显示/隐藏本轮任务"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>本轮任务</button><button id="headerTrBtn" class="hdr-btn" title="显示/隐藏对话原文"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>对话原文</button><a href="/console">进入编排端</a></span></header>
 <div class="client-layout">
 <aside class="side" id="side">
 <div class="side-head"><button id="collapseSideBtn" class="side-fold" title="收起侧栏">«</button></div>
-<div class="side-block grow"><div class="side-title">业务逻辑功能</div><div id="capList">加载中…</div></div>
-<div class="side-block"><div class="side-title">历史会话<button id="clearThreadsBtn" class="clear-btn" title="一键清理全部历史会话">清理</button></div><button id="newBtn" class="secondary" style="width:100%;margin-bottom:8px">+ 新会话</button><div id="threadList"></div></div>
+<div class="side-block grow" id="capsBlock"><div class="side-title">业务逻辑功能</div><div id="capList">加载中…</div></div>
+<div class="side-block" id="threadsBlock"><div class="side-title">历史会话<button id="clearThreadsBtn" class="clear-btn" title="一键清理全部历史会话">清理</button></div><button id="newBtn" class="secondary" style="width:100%;margin-bottom:8px">+ 新会话</button><div id="threadList"></div></div>
 </aside>
 <button id="expandSideBtn" title="展开侧栏">▶</button>
 <section class="chat">
@@ -326,6 +327,15 @@ $("clearThreadsBtn").addEventListener("click", clearThreads);
 $("collapseSideBtn").addEventListener("click", () => toggleSide(true));
 $("expandSideBtn").addEventListener("click", () => toggleSide(false));
 // 顶部栏按钮:切换显示/隐藏
+// 顶部左侧按钮:切换业务逻辑功能/历史会话面板
+function toggleLeftBlock(blockId, btn) {
+  const el = $(blockId);
+  const hidden = el.style.display === "none";
+  el.style.display = hidden ? "flex" : "none";
+  btn.classList.toggle("active", hidden);
+}
+$("headerCapsBtn").addEventListener("click", function () { toggleLeftBlock("capsBlock", this); });
+$("headerThreadsBtn").addEventListener("click", function () { toggleLeftBlock("threadsBlock", this); });
 $("headerRunBtn").addEventListener("click", () => { if ($("runPanel").style.display === "none") showRunPanel(); else hideRunPanel(); });
 $("headerTrBtn").addEventListener("click", () => { if ($("trPanel").style.display === "none") showTrPanel(); else hideTrPanel(); });
 // 右侧面板拖拽调宽
