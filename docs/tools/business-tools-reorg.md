@@ -118,28 +118,38 @@
 2. **系统工具 = 给 LLM 的通用原语;业务工具 = 给 LLM 的领域封装**。同一能力在两层复用同一份实现。
 3. **低频动作不建工具**:模型直接用 sql + table_generate 现场组合;只有高频、易错、需要统一口径的动作才沉淀为业务工具。
 
-### 3.2 重组后的业务工具目录(建议)
+### 3.2 最终成立的业务级 tools 清单(9 个)
 
-| 领域 | 重组后工具 | 组合来源(系统能力 + 共享服务) | 变化 |
-| --- | --- | --- | --- |
-| 客户 | customer_query | sql(list) + table_generate + customer-resolve | 合并 list_customers/get_profile/get_history/get_tags,view=list/profile/history/tags |
-| 会话 | conversation_query | sql + conversation-data | 合并 list_conversations/load_conversation,view=list/load |
-| 知识 | knowledge_search | sql(FTS) + withToolCache | search_playbook 保留,统一分页 |
-| 知识 | knowledge_ingest | ingest(分块/去重/分类) | ingest_knowledge 保留 |
-| 知识 | knowledge_candidate | sql + ingest(确认时复用) | 合并 list/approve/reject,op=list/approve/reject;approve 改走 ingest |
-| 任务 | task_manage | sql + customer-resolve + table_generate | 合并 create/list/complete,op=create/list/complete;create 复用姓名解析 |
-| 车型 | vehicle_query | sql + withToolCache | search_vehicles 保留 |
-| 经营 | insight_query | digest/insights 统计服务 | 合并 build_morning_digest/collect_insights,type=morning/trend |
-| 通用 | date_tool | computer/正则 | week2date 保留 |
-| 文件 | file_read / file_write_new | 系统工具原样,补分页 | file_read 补分页,下线 txt/excel/ppt |
+> 聚合原则:同一领域的高频操作合并为一个工具(通过 op/view/type 参数区分),减少模型选择成本、统一参数校验与输出口径;文件类能力由系统工具承担,业务侧不重复建。
 
-待实现(幽灵工具)按原计划补齐:cluster/embedding/keyword_extract×2/dialog_extract/dialog_select,补齐后并入"通用/会话"领域。
+| # | 工具 | 领域 | 职责 | 主要参数 | 组合来源 | 替代现状 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | customer_query | 客户 | 客户查询(列表/档案/历史/标签),分页 10 行/页,支持按姓名解析 | view=list\|profile\|history\|tags, customerKey, page | sql(读) + customer-resolve + table_generate + withToolCache | list_customers、get_customer_profile、get_customer_history、get_customer_tags |
+| 2 | conversation_query | 会话 | 会话列表/对话原文查询 | view=list\|load, conversationId, page | sql(读) + conversation-data + table_generate + withToolCache | list_conversations、load_conversation |
+| 3 | knowledge_search | 知识 | 话术/政策/竞品 FTS 检索,无命中时提示可沉淀 | query, category, page | sql(FTS) + withToolCache + table_generate | search_playbook |
+| 4 | knowledge_ingest | 知识 | 话术批量沉淀(分块/去重/分类) | category, entries[] | ingest 服务(分块/去重/分类) | ingest_knowledge |
+| 5 | knowledge_candidate | 知识 | 话术候选列表/确认入库/拒绝;approve 复用标准入库 | op=list\|approve\|reject, candidateId, page | sql + ingest(approve 时统一分块/分类/去重) | list_knowledge_candidates、approve_knowledge_candidate、reject_knowledge_candidate |
+| 6 | task_manage | 任务 | 跟进任务创建/列表/完成;create 按姓名解析客户、校验 due_at | op=create\|list\|complete, customerKey, action, dueAt, page | sql + customer-resolve + table_generate + withToolCache | create_task、list_tasks、complete_task |
+| 7 | vehicle_query | 车型 | 车型检索(预算/座位/能源/关键词) | budgetMin, budgetMax, seats, energyType, keyword, page | sql + withToolCache + table_generate | search_vehicles |
+| 8 | insight_query | 经营 | 经营洞察:晨报(待办/到期/近24h)/趋势(近N天分析/意图/完成率/车型偏好) | type=morning\|trend, days | digest/insights 统计服务 + table_generate | build_morning_digest、collect_insights |
+| 9 | date_tool | 通用 | 把"下周X/周X"等相对日期替换为绝对日期 | text, baseDate | computer/正则(原 main.py) | week2date |
 
+> 文件能力:file_read / file_write_new 保留在 tools_system,作为系统原语被上面工具与模型共用,业务侧不重复注册。
+
+#### 待实现工具补齐后的归属
+
+| 待实现 | 补齐后归属 |
+| --- | --- |
+| dialog_extract / dialog_select | 会话域(conversation_query 的补充,或独立"对话处理"工具) |
+| keyword_extract_free / keyword_extract_strict | 会话/标签域(get_customer_tags 的上游) |
+| cluster / embedding | 通用算法原语,供 keyword/dialog 组合,不进业务清单 |
 ### 3.3 合并/拆分/下线清单
 
-- **合并(6 → 2 组)**:客户 4 合 1(customer_query)、会话 2 合 1(conversation_query)、知识候选 3 合 1(knowledge_candidate)、任务 3 合 1(task_manage)、经营 2 合 1(insight_query)。
+- **合并(14 个现有工具 → 5 个聚合工具)**:客户 4 合 1(customer_query)、会话 2 合 1(conversation_query)、知识候选 3 合 1(knowledge_candidate)、任务 3 合 1(task_manage)、经营 2 合 1(insight_query)。
+- **更名(3 个)**:search_playbook → knowledge_search、ingest_knowledge → knowledge_ingest、week2date → date_tool(保持原有实现)。
+- **保留(1 个)**:search_vehicles → vehicle_query(仅补齐分页与统一输出)。
 - **下线**:txt/excel/ppt(file_read 补齐分页后);todo_list 或改为持久化,或明确为"会话内草稿"。
-- **保留**:search_playbook、search_vehicles、ingest_knowledge、week2date、file_read、file_write_new。
+- **系统工具保留**:file_read、file_write_new 作为原语供业务工具与模型共用。
 
 ### 3.4 工具注册规范(readme.json 契约)
 
