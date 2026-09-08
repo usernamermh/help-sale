@@ -58,8 +58,8 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 
 ## 中间件(可选)
 
-- **MySQL**(连接信息见 help-sale.config.yaml mysql 段,不提交真实密码):分析(analyses)与车型优选方案(vehicle_match_plans)自动归档,失败自动降级不影响主流程;可用于后续报表/BI。
-- **Redis**(连接信息见 help-sale.config.yaml redis 段,不提交真实密码):跟进任务到期提醒队列;`GET /api/v1/reminders/overdue` 返回已到期待办,前端「跟进任务」卡片显示「已到期」标记,完成即出队。
+- **MySQL**(连接信息在 help-sale.config.yaml mysql 段,按部署环境填入凭据):分析(analyses)与车型优选方案(vehicle_match_plans)自动归档,失败自动降级不影响主流程;可用于后续报表/BI。
+- **Redis**(连接信息在 help-sale.config.yaml redis 段,按部署环境填入凭据):跟进任务到期提醒队列;`GET /api/v1/reminders/overdue` 返回已到期待办,前端「跟进任务」卡片显示「已到期」标记,完成即出队。
 - 连接信息与开关都在 help-sale.config.yaml(mysql/redis 段);环境变量 MYSQL_* / REDIS_* 可覆盖;`enabled: false` 关闭(Redis 自动退化为内存队列)。
 
 ## 参考
