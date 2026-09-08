@@ -51,7 +51,7 @@ npm run dev
 
 所有运行时配置集中在 `help-sale.config.yaml`(仓库只提供匿名示例 `help-sale.config.example.yaml`)。覆盖:服务监听、数据存储模式(local/mysql)、默认租户、模型端点/模型名/密钥/代理、知识分块参数、检索条数、日志、业务默认值、可选中间件(MySQL/Redis/通知 Webhook)、公司与团队名称。
 
-> ⚠️ 真实密钥(模型 API Key、数据库密码)只写在你本地的 `help-sale.config.yaml`,该文件不纳入版本库。
+> 部署时复制 `help-sale.config.example.yaml` 为 `help-sale.config.yaml`,在文件内填入当前环境的模型密钥与数据库凭据即可运行。
 
 ## 目录结构
 
