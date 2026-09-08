@@ -1,7 +1,7 @@
 {
   "name": "insight_query",
   "label": "经营洞察",
-  "description": "经营数据:type=morning 生成本日晨报(待办/到期/关键客户/近24h分析);type=trend 统计近 N 天分析量/热门意图/任务完成率/车型偏好。",
+  "description": "生成本日晨报,或查看近 N 天的经营趋势(分析量、热门意图、任务完成率、车型偏好)。",
   "category": "经营",
   "parameters": { "type": "object", "properties": { "type": { "type": "string", "enum": ["morning", "trend"], "default": "morning", "description": "洞察类型" }, "days": { "type": "number", "maximum": 90, "description": "趋势窗口天数(trend 用)" } } },
   "entry": "main.ts",
