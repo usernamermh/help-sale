@@ -2,6 +2,14 @@
 
 面向销售团队的 AI 军师:基于数据库导入导出的客户会话记录,自动检索团队话术库、识别意向与风险、给出可复制的应对话术与跟进建议,**并形成自动闭环(loop agent 设计见规划第 13 章)**。
 
+
+## 界面截图
+
+![工作台界面](docs/images/Snipaste_2026-09-08_15-07-16.jpg)
+
+![对话分析界面](docs/images/Snipaste_2026-09-08_15-09-37.jpg)
+
+![经营与工具界面](docs/images/Snipaste_2026-09-08_15-44-06.jpg)
 ## 技术栈
 
 - Node.js >= 24(`node:sqlite`) + TypeScript + Fastify + Vitest
