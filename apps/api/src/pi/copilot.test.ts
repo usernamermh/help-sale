@@ -34,7 +34,7 @@ describe("runCopilotAnalysis", () => {
 	it("faux 驱动:检索知识库后输出分析并落库会话", async () => {
 		const fa = fauxProvider();
 		fa.setResponses([
-			fauxAssistantMessage([fauxToolCall("search_playbook", { query: "旗舰版", limit: 3 })]),
+			fauxAssistantMessage([fauxToolCall("knowledge_search", { query: "旗舰版", limit: 3 })]),
 			fauxAssistantMessage([
 				fauxToolCall("emit_analysis", {
 					intent: "价格异议",
@@ -63,7 +63,7 @@ describe("runCopilotAnalysis", () => {
 	it("知识库检索被实际调用且返回内容", async () => {
 		const fa = fauxProvider();
 		fa.setResponses([
-			fauxAssistantMessage([fauxToolCall("search_playbook", { query: "旗舰版", limit: 3 })]),
+			fauxAssistantMessage([fauxToolCall("knowledge_search", { query: "旗舰版", limit: 3 })]),
 			fauxAssistantMessage([
 				fauxToolCall("emit_analysis", {
 					intent: "需求确认",

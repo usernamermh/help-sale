@@ -22,7 +22,7 @@ export interface AnalysisDetails {
 const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const TOOL_PATHS = TOOL_ROOTS.map((r) => path.join(repoRoot, r));
 
-const COPIOT_EXTERNAL = new Set(["search_playbook", "get_customer_profile"]);
+const COPIOT_EXTERNAL = new Set(["knowledge_search", "customer_query"]);
 
 /** 系统收口工具:输出分析结论(不随 tools 目录加载)。 */
 export function emitAnalysisTool(): AgentTool<any, any> {
@@ -60,7 +60,7 @@ export function emitAnalysisTool(): AgentTool<any, any> {
 	};
 }
 
-/** 对话分析使用的工具:外部(search_playbook/get_customer_profile) + 系统 emit_analysis。 */
+/** 对话分析使用的工具:外部(knowledge_search/customer_query) + 系统 emit_analysis。 */
 export async function createCopilotTools(deps: AgentDeps): Promise<Array<AgentTool<any, any>>> {
 	const external = await loadExternalAgentTools(TOOL_PATHS, { db: deps.db, tenantId: deps.tenantId });
 	return [...external.filter((t) => COPIOT_EXTERNAL.has(t.name)), emitAnalysisTool()];

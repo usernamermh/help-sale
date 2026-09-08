@@ -1,7 +1,7 @@
 import { externalToolByName, externalToolPaths, type ExternalToolContext } from "./external-tools.js";
 
 /** 允许前端手动翻页的表格类工具白名单(防止任意工具被客户端直接执行)。 */
-export const PAGINATED_TOOLS: ReadonlySet<string> = new Set(["list_customers", "excel", "table_generate"]);
+export const PAGINATED_TOOLS: ReadonlySet<string> = new Set(["customer_query", "vehicle_query", "excel", "table_generate"]);
 
 export interface ToolPageResult {
 	name: string;

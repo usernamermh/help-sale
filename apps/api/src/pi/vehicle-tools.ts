@@ -59,8 +59,8 @@ export function emitVehiclePlanTool(): AgentTool<any, any> {
 	};
 }
 
-/** 车型优选工具:search_vehicles 来自 tools 目录,emit_vehicle_plan 系统收口。 */
+/** 车型优选工具:vehicle_query 来自 tools 目录,emit_vehicle_plan 系统收口。 */
 export async function createVehicleTools(deps: { db: DatabaseSync; tenantId: string }): Promise<Array<AgentTool<any, any>>> {
-	const search = await externalToolByName(externalToolPaths(), { db: deps.db, tenantId: deps.tenantId }, "search_vehicles");
+	const search = await externalToolByName(externalToolPaths(), { db: deps.db, tenantId: deps.tenantId }, "vehicle_query");
 	return [search, emitVehiclePlanTool()];
 }

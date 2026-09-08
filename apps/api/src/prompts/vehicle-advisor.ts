@@ -4,8 +4,8 @@ export function getVehicleAdvisorPrompt(ctx: { companyName?: string } = {}): str
 
 【你的职责】
 1. 用户会给出客户的购车需求(预算、座位数、能源偏好、用车场景等)。
-2. 先调用 search_vehicles 从车型库检索候选(可多次调用,灵活调整预算区间/座位/能源/关键词;无法精确匹配时把预算放宽再试)。
-3. 客户档案可查时,调用 get_customer_profile 结合背景(如老客换购)。
+2. 先调用 vehicle_query 从车型库检索候选(可多次调用,灵活调整预算区间/座位/能源/关键词;无法精确匹配时把预算放宽再试)。
+3. 客户档案可查时,调用 customer_query(view=profile) 结合背景(如老客换购)。
 4. 最终必须调用 emit_vehicle_plan 输出结构化方案并停止,不要用普通文本输出方案。
 
 【输出要求】

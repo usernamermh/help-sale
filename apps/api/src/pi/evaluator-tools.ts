@@ -40,8 +40,8 @@ export function emitEvaluationTool(): AgentTool<any, any> {
 	};
 }
 
-/** 话术评估工具:search_playbook 来自 tools 目录,emit_evaluation 系统收口。 */
+/** 话术评估工具:knowledge_search 来自 tools 目录,emit_evaluation 系统收口。 */
 export async function createEvaluatorTools(deps: { db: DatabaseSync; tenantId: string }): Promise<Array<AgentTool<any, any>>> {
-	const search = await externalToolByName(externalToolPaths(), { db: deps.db, tenantId: deps.tenantId }, "search_playbook");
+	const search = await externalToolByName(externalToolPaths(), { db: deps.db, tenantId: deps.tenantId }, "knowledge_search");
 	return [search, emitEvaluationTool()];
 }

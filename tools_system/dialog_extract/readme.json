@@ -1,0 +1,9 @@
+{
+  "name": "dialog_extract",
+  "label": "抽取对话原文",
+  "description": "从人-人对话转写文本中抽取结构化对话原文(识别「客户:」「销售:」等角色标注,无标注时按交替启发式归属)。",
+  "category": "文本算法",
+  "parameters": { "type": "object", "required": ["transcript"], "properties": { "transcript": { "type": "string", "description": "带角色标注的对话文本" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

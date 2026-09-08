@@ -1,0 +1,9 @@
+{
+  "name": "cluster",
+  "label": "文本聚类",
+  "description": "对文本列表做 KMeans 聚类(基于本地字符 n-gram 向量,无外部依赖),返回每簇大小与样本,用于话题/意图分组。",
+  "category": "文本算法",
+  "parameters": { "type": "object", "required": ["texts"], "properties": { "texts": { "type": "array", "items": { "type": "string" }, "description": "要聚类的文本列表" }, "k": { "type": "number", "default": 3, "maximum": 10, "description": "期望簇数" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

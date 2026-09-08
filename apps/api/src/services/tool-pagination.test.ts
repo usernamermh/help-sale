@@ -16,11 +16,11 @@ beforeEach(() => {
 afterEach(() => db.close());
 
 describe("tool-pagination 手动翻页", () => {
-	it("list_customers:按 page 返回对应页明细与原始表格", async () => {
+	it("customer_query:按 page 返回对应页明细与原始表格", async () => {
 		for (let i = 1; i <= 12; i++) {
 			upsertCustomer(db, { tenantId: "t1", key: "c_page_" + String(i).padStart(2, "0"), name: "客户" + String(i).padStart(2, "0") });
 		}
-		const p1 = await executeToolPage({ db, tenantId: "t1" }, "list_customers", { limit: 100, page: 1 });
+		const p1 = await executeToolPage({ db, tenantId: "t1" }, "customer_query", { view: "list", limit: 100, page: 1 });
 		const d1 = p1.details as { customers: unknown[]; page: number; totalPages: number; hasMore: boolean; rawTable: string };
 		expect(d1.page).toBe(1);
 		expect(d1.totalPages).toBe(2);
@@ -28,7 +28,7 @@ describe("tool-pagination 手动翻页", () => {
 		expect(d1.customers).toHaveLength(10);
 		expect(d1.rawTable).toContain("客户01");
 
-		const p2 = await executeToolPage({ db, tenantId: "t1" }, "list_customers", { limit: 100, page: 2 });
+		const p2 = await executeToolPage({ db, tenantId: "t1" }, "customer_query", { view: "list", limit: 100, page: 2 });
 		const d2 = p2.details as { customers: unknown[]; page: number; hasMore: boolean; rawTable: string };
 		expect(d2.page).toBe(2);
 		expect(d2.hasMore).toBe(false);
@@ -85,7 +85,7 @@ describe("tool-pagination 手动翻页", () => {
 	});
 
 	it("page 非法值拒绝", async () => {
-		await expect(executeToolPage({ db, tenantId: "t1" }, "list_customers", { page: 0 })).rejects.toThrow();
-		await expect(executeToolPage({ db, tenantId: "t1" }, "list_customers", { page: "abc" })).rejects.toThrow();
+		await expect(executeToolPage({ db, tenantId: "t1" }, "customer_query", { view: "list", page: 0 })).rejects.toThrow();
+		await expect(executeToolPage({ db, tenantId: "t1" }, "customer_query", { view: "list", page: "abc" })).rejects.toThrow();
 	});
 });

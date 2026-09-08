@@ -75,12 +75,12 @@ describe("buildExternalToolsText", () => {
 	it("生成 prompt 块:工具名/描述/函数", () => {
 		const text = buildExternalToolsText([
 			{ root: "tools_system", dir: "todo_list", name: "todo_list", description: "创建、细化、标记完成 todo list", functions: ["main.createTodoList", "main.finishTodoList"] },
-			{ root: "tools", dir: "week2date", name: "week2date", description: "把周X转为年月日", functions: [] },
+			{ root: "tools", dir: "date_tool", name: "date_tool", description: "把周X转为年月日", functions: [] },
 		]);
 		expect(text).toContain("【外部工具】");
 		expect(text).toContain("todo_list(tools_system/todo_list): 创建、细化、标记完成 todo list");
 		expect(text).toContain("main.createTodoList");
-		expect(text).toContain("week2date");
+		expect(text).toContain("date_tool");
 	});
 
 	it("空列表返回空串", () => {

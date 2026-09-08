@@ -34,8 +34,8 @@ export function emitDigestTool(): AgentTool<any, any> {
 	};
 }
 
-/** 通话/试驾总结工具:search_playbook 来自 tools 目录,emit_digest 系统收口。 */
+/** 通话/试驾总结工具:knowledge_search 来自 tools 目录,emit_digest 系统收口。 */
 export async function createVoiceDigestTools(deps: { db: DatabaseSync; tenantId: string }): Promise<Array<AgentTool<any, any>>> {
-	const search = await externalToolByName(externalToolPaths(), { db: deps.db, tenantId: deps.tenantId }, "search_playbook");
+	const search = await externalToolByName(externalToolPaths(), { db: deps.db, tenantId: deps.tenantId }, "knowledge_search");
 	return [search, emitDigestTool()];
 }

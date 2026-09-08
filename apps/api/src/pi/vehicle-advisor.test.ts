@@ -30,7 +30,7 @@ describe("runVehicleMatch", () => {
 	it("faux 驱动:检索车型后输出结构化优选方案", async () => {
 		const fa = fauxProvider();
 		fa.setResponses([
-			fauxAssistantMessage([fauxToolCall("search_vehicles", { budgetMin: 15, budgetMax: 30, seats: 5 })]),
+			fauxAssistantMessage([fauxToolCall("vehicle_query", { budgetMin: 15, budgetMax: 30, seats: 5 })]),
 			fauxAssistantMessage([
 				fauxToolCall("emit_vehicle_plan", {
 					profile: "预算 15-30 万,5 座,商务兼家用",
@@ -60,7 +60,7 @@ describe("runVehicleMatch", () => {
 	it("检索结果真实来自车型库", async () => {
 		const fa = fauxProvider();
 		fa.setResponses([
-			fauxAssistantMessage([fauxToolCall("search_vehicles", { budgetMin: 25, budgetMax: 35, seats: 5 })]),
+			fauxAssistantMessage([fauxToolCall("vehicle_query", { budgetMin: 25, budgetMax: 35, seats: 5 })]),
 			fauxAssistantMessage([
 				fauxToolCall("emit_vehicle_plan", {
 					profile: "25-35 万 5 座",
@@ -75,8 +75,8 @@ describe("runVehicleMatch", () => {
 
 		const result = await runVehicleMatch({ db, tenantId: "t1", store, streamFn }, { requirementsText: "25-35 万 SUV" });
 		const searchResult = result.messages.find((m) => (m as { role: string }).role === "toolResult") as {
-			details?: Array<{ brand: string; series: string }>;
+			details?: { vehicles?: Array<{ brand: string; series: string }> };
 		} | undefined;
-		expect(searchResult?.details?.some((v) => v.series === "Model Y")).toBe(true);
+		expect(searchResult?.details?.vehicles?.some((v) => v.series === "Model Y")).toBe(true);
 	});
 });

@@ -71,11 +71,11 @@ describe("tool_call_cache", () => {
 			calls++;
 			return { content: [{ type: "text", text: "结果A" }], details: { q: "价格" } };
 		};
-		const first = withToolCache(db, "t1", "search_playbook", { query: "价格", limit: 3 }, compute);
-		const second = withToolCache(db, "t1", "search_playbook", { limit: 3, query: "价格" }, compute);
+		const first = withToolCache(db, "t1", "knowledge_search", { query: "价格", limit: 3 }, compute);
+		const second = withToolCache(db, "t1", "knowledge_search", { limit: 3, query: "价格" }, compute);
 		expect(first).toEqual(second);
 		expect(calls).toBe(1);
-		const row = db.prepare("SELECT result_json,last_used_at FROM tool_call_cache WHERE tenant_id='t1' AND tool_name='search_playbook'").get() as { result_json: string; last_used_at: string | null };
+		const row = db.prepare("SELECT result_json,last_used_at FROM tool_call_cache WHERE tenant_id='t1' AND tool_name='knowledge_search'").get() as { result_json: string; last_used_at: string | null };
 		expect(row).toBeTruthy();
 		expect(JSON.parse(row.result_json)).toEqual(first);
 	});
@@ -86,8 +86,8 @@ describe("tool_call_cache", () => {
 			calls++;
 			return { content: [{ type: "text", text: "x" }] };
 		};
-		withToolCache(db, "t1", "search_vehicles", { keyword: "SUV" }, compute);
-		withToolCache(db, "t2", "search_vehicles", { keyword: "SUV" }, compute);
+		withToolCache(db, "t1", "vehicle_query", { keyword: "SUV" }, compute);
+		withToolCache(db, "t2", "vehicle_query", { keyword: "SUV" }, compute);
 		expect(calls).toBe(2);
 	});
 });

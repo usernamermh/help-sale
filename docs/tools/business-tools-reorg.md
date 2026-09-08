@@ -1,4 +1,11 @@
 # 业务级 Tools 梳理与重组设计
+> ## 实施状态(2026-09-08)
+>
+> - ✅ 6 个幽灵工具已迁移至 tools_system 并实现:embedding(本地字符 n-gram 向量)/ cluster(KMeans)/ keyword_extract_free / keyword_extract_strict / dialog_extract(复用 parseTranscript)/ dialog_select。
+> - ✅ 业务工具重组完成:tools 目录收敛为 9 个(customer_query / conversation_query / knowledge_search / knowledge_ingest / knowledge_candidate / task_manage / vehicle_query / insight_query / date_tool),旧 18 个业务工具目录已下线。
+> - ✅ P0 修复:knowledge_candidate 的 approve 复用标准 ingest(分块/去重/分类);task_manage 的 create 复用客户姓名解析并校验 due_at;file_read 补行分页;提示词补检索无命中引导沉淀。
+> - ✅ 关联更新:copilot/evaluator/vehicle/voice 装配与提示词、翻页白名单、前端分页工具清单、全部受影响测试。
+
 
 > 日期:2026-09-08
 > 范围:tools(业务级)与 tools_system(系统级)全部目录,基于当前代码实现盘点。

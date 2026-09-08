@@ -1,0 +1,9 @@
+{
+  "name": "keyword_extract_strict",
+  "label": "候选标签匹配",
+  "description": "在文本中匹配给定的候选标签列表(包含匹配),返回命中的标签,用于打标/意图识别。",
+  "category": "文本算法",
+  "parameters": { "type": "object", "required": ["text", "candidates"], "properties": { "text": { "type": "string", "description": "待匹配文本" }, "candidates": { "type": "array", "items": { "type": "string" }, "description": "候选标签列表" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

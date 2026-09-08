@@ -285,7 +285,7 @@ async function removeThread(id) {
     loadThreads();
   } catch (e) { alert("删除失败:" + e.message); }
 }let running = false; let currentThreadId = null; let deltaBuf = "";
-const PAGE_TOOLS = ["list_customers", "excel", "table_generate"];
+const PAGE_TOOLS = ["customer_query", "vehicle_query", "excel", "table_generate"];
 function appendAgentMsg(role, text) {
   const chat = $("chat");
   const div = document.createElement("div");

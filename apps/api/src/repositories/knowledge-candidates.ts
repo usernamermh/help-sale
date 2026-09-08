@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
-import { findDocumentByTitle } from "./knowledge.js";
+import { ingestDocument } from "../services/ingest.js";
 
 export type CandidateStatus = "pending" | "approved" | "rejected";
 
@@ -48,43 +48,24 @@ export function listCandidates(db: DatabaseSync, tenantId: string, status: Candi
 	return rows.map(mapRow);
 }
 
-/** 确认入库:同名文档已存在则复用,否则新增;候选标记 approved。 */
+/** 确认入库:复用标准 ingest(分块/去重/分类),同名文档已存在则跳过新增;候选标记 approved。 */
 export function approveCandidate(db: DatabaseSync, tenantId: string, candidateId: string): CandidateRecord | undefined {
 	const existing = getCandidate(db, tenantId, candidateId);
 	if (!existing) return undefined;
 	if (existing.status === "approved") return existing;
 
-	let documentId = findDocumentByTitle(db, tenantId, existing.draftTitle)?.id;
-	db.exec("BEGIN");
-	try {
-		if (!documentId) {
-			// 在当前事务内手动插入文档与 chunk(FTS 由触发器同步;避免与 insertKnowledgeDocument 的嵌套事务冲突)
-			documentId = randomUUID();
-			db.prepare("INSERT INTO knowledge_documents (id, tenant_id, title, content) VALUES (?,?,?,?)").run(
-				documentId,
-				tenantId,
-				existing.draftTitle,
-				existing.draftContent,
-			);
-			db.prepare("INSERT INTO knowledge_chunks (id, tenant_id, document_id, chunk_index, content) VALUES (?,?,?,?,?)").run(
-				randomUUID(),
-				tenantId,
-				documentId,
-				0,
-				existing.draftContent,
-			);
-		}
-		db.prepare(
-			"UPDATE knowledge_candidates SET status = 'approved', approved_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?",
-		).run(candidateId);
-		db.exec("COMMIT");
-	} catch (error) {
-		db.exec("ROLLBACK");
-		throw error;
-	}
+	const result = ingestDocument(db, {
+		tenantId,
+		title: existing.draftTitle,
+		content: existing.draftContent,
+		category: existing.intent || undefined,
+	});
+	db.prepare(
+		"UPDATE knowledge_candidates SET status = 'approved', approved_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?",
+	).run(candidateId);
 
 	const record = getCandidate(db, tenantId, candidateId)!;
-	return { ...record, documentId };
+	return { ...record, documentId: result.documentId };
 }
 
 export function rejectCandidate(db: DatabaseSync, tenantId: string, candidateId: string): CandidateRecord | undefined {

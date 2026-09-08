@@ -40,7 +40,7 @@ afterEach(async () => {
 function fakeStreamFn(): StreamFn {
 	const fa = fauxProvider();
 	fa.setResponses([
-		fauxAssistantMessage([fauxToolCall("search_playbook", { query: "价格", limit: 3 })]),
+		fauxAssistantMessage([fauxToolCall("knowledge_search", { query: "价格", limit: 3 })]),
 		fauxAssistantMessage([
 			fauxToolCall("emit_analysis", {
 				intent: "价格异议",
@@ -91,7 +91,7 @@ function fakeVoiceDigestStreamFn(): StreamFn {
 function fakeAgentNoEmitStreamFn(): StreamFn {
 	const fa = fauxProvider();
 	fa.setResponses([
-		fauxAssistantMessage([fauxToolCall("get_customer_profile", { customerKey: "陈静" })]),
+		fauxAssistantMessage([fauxToolCall("customer_query", { view: "profile", customerKey: "陈静" })]),
 		fauxAssistantMessage([{ type: "text", text: "陈静的档案里暂时没有电话,建议先补录联系方式。" }]),
 	]);
 	return async (model, context, options) => fa.provider.stream(model as never, context, options);
@@ -100,7 +100,7 @@ function fakeAgentNoEmitStreamFn(): StreamFn {
 function fakeAgentTableRewriteStreamFn(): StreamFn {
 	const fa = fauxProvider();
 	fa.setResponses([
-		fauxAssistantMessage([fauxToolCall("list_customers", { limit: 50 })]),
+		fauxAssistantMessage([fauxToolCall("customer_query", { view: "list", limit: 50 })]),
 		fauxAssistantMessage([fauxToolCall("emit_final", { answer: "共 2 位客户,名单如下:\n\n| 客户标识姓名电话阶段 |\n| --- |\n| c_a 王五 13800000001 |", nextSteps: [] })]),
 	]);
 	return async (model, context, options) => fa.provider.stream(model as never, context, options);
@@ -123,7 +123,7 @@ function fakeAgentStreamFn(): StreamFn {
 function fakeVehicleStreamFn(): StreamFn {
 	const fa = fauxProvider();
 	fa.setResponses([
-		fauxAssistantMessage([fauxToolCall("search_vehicles", { budgetMin: 15, budgetMax: 30, seats: 5 })]),
+		fauxAssistantMessage([fauxToolCall("vehicle_query", { budgetMin: 15, budgetMax: 30, seats: 5 })]),
 		fauxAssistantMessage([
 			fauxToolCall("emit_vehicle_plan", {
 				profile: "预算 15-30 万,5 座,商务兼家用",
@@ -168,7 +168,7 @@ describe("api", () => {
 		const bad = await app.inject({ method: "POST", url: "/api/v1/agent/tools/sql/page", payload: { params: { page: 1 } } });
 		expect(bad.statusCode).toBe(400);
 
-		const ok = await app.inject({ method: "POST", url: "/api/v1/agent/tools/list_customers/page", payload: { params: { page: 1 } } });
+		const ok = await app.inject({ method: "POST", url: "/api/v1/agent/tools/customer_query/page", payload: { params: { page: 1 } } });
 		expect(ok.statusCode).toBe(200);
 		const body = ok.json();
 		expect(body.details.page).toBe(1);

@@ -24,14 +24,14 @@ afterEach(() => db.close());
 const byName = (name: string) => tools.find((t) => t.name === name)!;
 
 describe("copilot tools", () => {
-	it("search_playbook 命中知识库", async () => {
-		const result = await byName("search_playbook").execute("call-1", { query: "旗舰版" } as never, undefined as never, undefined as never);
-		expect(result.details).toHaveLength(1);
+	it("knowledge_search 命中知识库", async () => {
+		const result = await byName("knowledge_search").execute("call-1", { query: "旗舰版" } as never, undefined as never, undefined as never);
+		expect((result.details as { hits: unknown[] }).hits).toHaveLength(1);
 		expect(result.content[0].type).toBe("text");
 	});
 
-	it("get_customer_profile 自动建档", async () => {
-		const result = await byName("get_customer_profile").execute("call-2", { customerKey: "c_001" } as never, undefined as never, undefined as never);
+	it("customer_query 按 key 查询档案", async () => {
+		const result = await byName("customer_query").execute("call-2", { view: "profile", customerKey: "c_001" } as never, undefined as never, undefined as never);
 		expect(result.details.key).toBe("c_001");
 	});
 

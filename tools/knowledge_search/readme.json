@@ -1,0 +1,9 @@
+{
+  "name": "knowledge_search",
+  "label": "话术检索",
+  "description": "在团队知识库检索话术、竞品资料、价格政策、售后FAQ;优先用客户原话或具体词,无命中时如实说明并提示可沉淀。",
+  "category": "知识",
+  "parameters": { "type": "object", "required": ["query"], "properties": { "query": { "type": "string", "description": "检索词/客户原话" }, "limit": { "type": "number", "maximum": 10, "description": "命中条数上限" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

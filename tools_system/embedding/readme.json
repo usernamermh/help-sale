@@ -1,0 +1,9 @@
+{
+  "name": "embedding",
+  "label": "文本向量",
+  "description": "把文本转为固定维度向量(字符 n-gram 哈希 + L2 归一化,无外部依赖);供相似度计算与聚类使用。",
+  "category": "文本算法",
+  "parameters": { "type": "object", "required": ["texts"], "properties": { "texts": { "type": "array", "items": { "type": "string" }, "description": "要编码的文本列表" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

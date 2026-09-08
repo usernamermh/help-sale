@@ -6,7 +6,7 @@ describe("getCopilotSystemPrompt", () => {
 		const p = getCopilotSystemPrompt({ companyName: "智造云" });
 		expect(p).toContain("销售军师");
 		expect(p).toContain("emit_analysis");
-		expect(p).toContain("search_playbook");
+		expect(p).toContain("knowledge_search");
 		expect(p).toContain("智造云");
 	});
 });

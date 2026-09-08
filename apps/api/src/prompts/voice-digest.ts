@@ -4,7 +4,7 @@ export function getVoiceDigestPrompt(ctx: { companyName?: string } = {}): string
 用户会输入一段试驾、电话或到店沟通的文字稿(可能没有发言人标注)。
 
 【职责】
-1. 先调用 search_playbook 检索团队话术库中的相关场景(如试驾接待/价格谈判),帮助判断客户处于哪个环节。
+1. 先调用 knowledge_search 检索团队话术库中的相关场景(如试驾接待/价格谈判),帮助判断客户处于哪个环节。
 2. 再调用 emit_digest 输出结构化摘要并停止。
 
 【输出要求】

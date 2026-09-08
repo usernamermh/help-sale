@@ -136,9 +136,17 @@ export async function execute(_ctx: ToolContext, params: any) {
 	} else {
 		return { content: [{ type: "text", text: `不支持的文件类型:${ext}(支持 txt/md/csv/json/yaml/log/xml/html/xlsx/pdf/pptx/docx 等)。` }] };
 	}
-	const sliced = text.slice(0, MAX_CHARS);
+	// 分页:按文本行切页(每页 50 行),支持模型传 page 翻页
+	const PAGE_SIZE = 50;
+	const lines = text.split(/\r?\n/);
+	const totalPages = Math.max(Math.ceil(lines.length / PAGE_SIZE), 1);
+	const page = Math.max(Number(params?.page ?? 1) || 1, 1);
+	const p = Math.min(page, totalPages);
+	const pageLines = lines.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE);
+	const sliced = pageLines.join("\n").slice(0, MAX_CHARS);
+	const footer = totalPages > 1 ? `\n(第 ${p}/${totalPages} 页 · 共 ${lines.length} 行;用户要求查看更多时再传 page=${p + 1})` : "";
 	return {
-		content: [{ type: "text", text: sliced + (text.length > MAX_CHARS ? `\n…(已截断,共 ${text.length} 字符)` : "") }],
-		details: { path: file, format, size: stat.size, chars: text.length },
+		content: [{ type: "text", text: sliced + footer + (lines.join("\n").length > MAX_CHARS ? `\n…(已截断)` : "") }],
+		details: { path: file, format, size: stat.size, chars: text.length, page: p, pageSize: PAGE_SIZE, totalLines: lines.length, totalPages, hasMore: p < totalPages },
 	};
 }

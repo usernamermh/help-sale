@@ -4,7 +4,7 @@ export function getEvaluatorPrompt(ctx: { companyName?: string } = {}): string {
 
 【输入】用户会给出一段客户对话,以及销售实际回复的话术。
 【职责】
-1. 先调用 search_playbook 检索团队话术库作为基准(如命中)。
+1. 先调用 knowledge_search 检索团队话术库作为基准(如命中)。
 2. 再调用 emit_evaluation 输出结构化评估并停止,不要用普通文本输出。
 
 【评分维度(各 0-100)】
