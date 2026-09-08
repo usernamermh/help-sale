@@ -43,14 +43,14 @@ describe("model-log", () => {
 	it("wrapFetchWithModelLog 请求行只记 ID,响应行写完整请求/返回并带同一 ID", async () => {
 		const dir = tmpDir("model-log-wrap-");
 		const fakeFetch = async () => new Response(JSON.stringify({ choices: [{ message: { content: "hello" } }] }), { status: 200, headers: { "content-type": "application/json" } });
-		const wrapped = wrapFetchWithModelLog(fakeFetch as typeof fetch, { enabled: true, dir, maxBytes: 8388608 }, { modelId: "deepseek-v4-flash" });
+		const wrapped = wrapFetchWithModelLog(fakeFetch as typeof fetch, { enabled: true, dir, maxBytes: 8388608 }, { modelId: "test-model" });
 		const res = await wrapped("http://example.test/v1/chat/completions", { method: "POST", body: JSON.stringify({ model: "m", messages: [{ role: "user", content: "hi" }] }) });
 		expect(res.status).toBe(200);
 		// 请求行在 fetch 返回前已同步写入:只有请求 ID,不落完整请求体
 		let lines = readModelCallLogs(dir);
 		expect(lines).toHaveLength(1);
 		expect(lines[0].event).toBe("request");
-		expect(lines[0].modelId).toBe("deepseek-v4-flash");
+		expect(lines[0].modelId).toBe("test-model");
 		expect(lines[0].requestId).toBeTruthy();
 		expect(lines[0].request).toBeUndefined();
 		// 消费响应后异步补响应行:完整请求 + 返回 + 同一请求 ID
@@ -71,7 +71,7 @@ describe("model-log", () => {
 		const fakeFetch = async () => {
 			throw new Error("connection refused");
 		};
-		const wrapped = wrapFetchWithModelLog(fakeFetch as typeof fetch, { enabled: true, dir, maxBytes: 8388608 }, { modelId: "deepseek-v4-flash" });
+		const wrapped = wrapFetchWithModelLog(fakeFetch as typeof fetch, { enabled: true, dir, maxBytes: 8388608 }, { modelId: "test-model" });
 		await expect(wrapped("http://example.test/v1/chat/completions", { method: "POST", body: '{"q":1}' })).rejects.toThrow("connection refused");
 		await new Promise((r) => setTimeout(r, 20));
 		const lines = readModelCallLogs(dir);
