@@ -1,0 +1,9 @@
+{
+  "name": "file_read",
+  "label": "任意路径读取文件",
+  "description": "从任意本地路径读取文档内容(txt/md/csv/json/yaml/log/xml/html/xlsx/pdf/pptx/docx 等),返回提取后的文本;仅读不写,用户明确要求读取本地文件时使用。",
+  "category": "文件读取",
+  "parameters": { "type": "object", "required": ["filePath"], "properties": { "filePath": { "type": "string", "description": "任意本地绝对路径,如 C:/data/客户名单.xlsx 或 E:/proj_help_sale/data/报告.pdf" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

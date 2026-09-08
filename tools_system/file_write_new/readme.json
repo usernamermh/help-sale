@@ -1,0 +1,9 @@
+{
+  "name": "file_write_new",
+  "label": "写入新文件",
+  "description": "在任意本地路径创建一个新文件并写入文本内容;只允许创建新文件,文件已存在时拒绝且绝不覆盖/编辑现有文件。",
+  "category": "文件写入",
+  "parameters": { "type": "object", "required": ["filePath", "content"], "properties": { "filePath": { "type": "string", "description": "任意本地绝对路径,如 C:/data/导出报告.txt" }, "content": { "type": "string", "description": "要写入的文本内容(utf8)" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}
