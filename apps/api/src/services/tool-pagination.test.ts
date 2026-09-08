@@ -89,3 +89,24 @@ describe("tool-pagination 手动翻页", () => {
 		await expect(executeToolPage({ db, tenantId: "t1" }, "customer_query", { view: "list", page: "abc" })).rejects.toThrow();
 	});
 });
+
+	it("conversation_query:原文按 page 分页返回", async () => {
+		const convId = "conv-page-1";
+		db.prepare("INSERT INTO conversations (id, tenant_id, sales_name, message_count) VALUES (?,?,?,?)").run(convId, "t1", "销售A", 12);
+		const ins = db.prepare("INSERT INTO conversation_messages (id, tenant_id, conversation_id, seq, speaker_role, speaker_name, content, spoken_at) VALUES (?,?,?,?,?,?,?,?)");
+		for (let i = 1; i <= 12; i++) {
+			ins.run(`m${i}`, "t1", convId, i, i % 2 ? "customer" : "sales", i % 2 ? "客户" : "销售", "内容" + i, `2026-01-01T00:00:0${i < 10 ? i : "9"}Z`);
+		}
+		const p1 = await executeToolPage({ db, tenantId: "t1" }, "conversation_query", { view: "load", conversationId: convId, page: 1 });
+		const d1 = p1.details as { messages: unknown[]; page: number; totalPages: number; totalMessages: number; hasMore: boolean };
+		expect(d1.messages).toHaveLength(10);
+		expect(d1.totalMessages).toBe(12);
+		expect(d1.totalPages).toBe(2);
+		expect(d1.hasMore).toBe(true);
+
+		const p2 = await executeToolPage({ db, tenantId: "t1" }, "conversation_query", { view: "load", conversationId: convId, page: 2 });
+		const d2 = p2.details as { messages: unknown[]; page: number; hasMore: boolean };
+		expect(d2.messages).toHaveLength(2);
+		expect(d2.page).toBe(2);
+		expect(d2.hasMore).toBe(false);
+	});

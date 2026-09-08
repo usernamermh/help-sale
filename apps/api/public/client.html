@@ -145,7 +145,8 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 <script src="/vendor/purify.min.js"></script>
 <script>const $ = (id) => document.getElementById(id);
 function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
-function renderTrPanel(meta, list) {
+let trPager = null;
+function renderTrPanel(meta, list, pager) {
   $("trMeta").textContent = meta || "";
   const box = $("trList"); box.innerHTML = "";
   if (!list || !list.length) { box.innerHTML = "<div class=\"t\">暂无原文</div>"; }
@@ -156,9 +157,37 @@ function renderTrPanel(meta, list) {
     d.innerHTML = '<div><span class="tr-time">' + (m.spokenAt ? escapeHtml(new Date(m.spokenAt).toLocaleString()) : "—") + '</span><span class="tr-role ' + escapeHtml(m.speakerRole || "") + '">' + role + name + '</span></div><div class="tr-text">' + escapeHtml(m.content) + '</div>';
     box.appendChild(d);
   }
+  trPager = pager || null;
+  if (trPager && trPager.totalPages > 1) {
+    const bar = document.createElement("div"); bar.className = "pager-bar";
+    bar.innerHTML =
+      '<button class="pager-btn" data-dir="-1"' + (trPager.page <= 1 ? " disabled" : "") + '>上一页</button>' +
+      '<span class="pager-info">第 ' + trPager.page + '/' + trPager.totalPages + ' 页 · 共 ' + trPager.totalMessages + ' 条</span>' +
+      '<button class="pager-btn" data-dir="1"' + (trPager.page >= trPager.totalPages ? " disabled" : "") + '>下一页</button>';
+    Array.from(bar.querySelectorAll("button")).forEach((b) => { b.onclick = () => flipTrPage(Number(b.dataset.dir)); });
+    box.appendChild(bar);
+  }
   $("trPanel").style.display = "flex";
   $("headerTrBtn").classList.add("active");
   syncRightCol();
+}
+async function flipTrPage(dir) {
+  if (!trPager) return;
+  const target = trPager.page + dir;
+  if (target < 1 || target > trPager.totalPages) return;
+  try {
+    const res = await api("/api/v1/agent/tools/conversation_query/page", {
+      method: "POST",
+      body: JSON.stringify({ params: { view: "load", conversationId: trPager.conversationId, page: target } }),
+    });
+    const det = res.details || {};
+    trPager.page = target;
+    if (Number.isFinite(Number(det.totalPages)) && Number(det.totalPages) > 0) trPager.totalPages = Number(det.totalPages);
+    if (Number.isFinite(Number(det.totalMessages))) trPager.totalMessages = Number(det.totalMessages);
+    renderTrPanel("会话 " + String(trPager.conversationId || "").slice(0, 10) + "…", det.messages || [], trPager);
+  } catch (e) {
+    alert("翻页失败:" + e.message);
+  }
 }
 function hideTrPanel() { $("trPanel").style.display = "none"; $("headerTrBtn").classList.remove("active"); syncRightCol(); }
 function showTrPanel() { $("trPanel").style.display = "flex"; $("headerTrBtn").classList.add("active"); syncRightCol(); }function renderMarkdown(text) {
@@ -449,7 +478,7 @@ function handleStreamEvent(evt, wait, steps) {
     wait.body.textContent = name + " 完成，正在整理结果…";
     const det = evt.payload && evt.payload.details;
     if (det && Array.isArray(det.messages) && det.messages.length) {
-      renderTrPanel("会话 " + String(det.conversationId || "").slice(0, 10) + "…", det.messages);
+      renderTrPanel("会话 " + String(det.conversationId || "").slice(0, 10) + "…", det.messages, { conversationId: det.conversationId, page: Number(det.page) || 1, pageSize: Number(det.pageSize) || 10, totalPages: Number(det.totalPages) || 1, totalMessages: Number(det.totalMessages) || det.messages.length });
     }
     if (det && PAGE_TOOLS.indexOf(evt.toolName) >= 0 && Number(det.totalPages) > 1) {
       wait.pager = { toolName: evt.toolName, baseArgs: wait.pageArgs || {}, page: Number(det.page) || 1, totalPages: Number(det.totalPages) || 1, totalRows: Number(det.totalRows) || 0 };
