@@ -1,0 +1,9 @@
+{
+  "name": "kanban",
+  "label": "协作看板",
+  "description": "本地看板(JSON 文件):add/list/move/get/remove 任务卡片,供 subagent 模式及多任务之间共享状态。",
+  "category": "协作",
+  "parameters": { "type": "object", "required": ["op"], "properties": { "op": { "type": "string", "enum": ["add", "list", "move", "get", "remove"] }, "title": { "type": "string", "description": "add 时任务标题" }, "description": { "type": "string" }, "status": { "type": "string", "enum": ["backlog", "todo", "inprogress", "done"], "default": "todo" }, "id": { "type": "string", "description": "move/get/remove 时卡片ID" }, "statusFilter": { "type": "string" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

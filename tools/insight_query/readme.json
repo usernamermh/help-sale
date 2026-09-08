@@ -1,0 +1,9 @@
+{
+  "name": "insight_query",
+  "label": "经营洞察",
+  "description": "生成本日晨报,或查看近 N 天的经营趋势(分析量、热门意图、任务完成率、车型偏好)。",
+  "category": "经营",
+  "parameters": { "type": "object", "properties": { "type": { "type": "string", "enum": ["morning", "trend"], "default": "morning", "description": "洞察类型" }, "days": { "type": "number", "maximum": 90, "description": "趋势窗口天数(trend 用)" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

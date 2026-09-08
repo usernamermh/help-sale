@@ -1,0 +1,36 @@
+{
+  "name": "sql",
+  "label": "操作业务数据库",
+  "description": "操作当前 data.mode 对应的业务库(local=本地 SQLite / mysql=远程 MySQL),按配置二选一不会错连;默认只读,写操作需 readOnly=false + confirmWrite=true,危险语句(如 DROP/无 WHERE 的 UPDATE/DELETE)由规则拦截并审计。",
+  "category": "数据库",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "sql"
+    ],
+    "properties": {
+      "sql": {
+        "type": "string",
+        "description": "单条 SQL,如 SELECT * FROM customers WHERE tenant_id = ?"
+      },
+      "values": {
+        "type": "array",
+        "description": "SQL 占位符 ? 对应的值"
+      },
+      "readOnly": {
+        "type": "boolean",
+        "default": true,
+        "description": "默认只读:写操作(INSERT/UPDATE/DELETE 等)必须显式传 false"
+      },
+      "confirmWrite": {
+        "type": "boolean",
+        "default": false,
+        "description": "危险写操作需 true 确认;规则拦截 DROP/TRUNCATE/ALTER,UPDATE/DELETE 必须带 WHERE"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ]
+}

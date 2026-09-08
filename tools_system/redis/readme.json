@@ -1,0 +1,9 @@
+{
+  "name": "redis",
+  "label": "操作 Redis",
+  "description": "基于配置文件 redis 段连接,支持 get/set/del/keys/ttl/expire/incr/zadd/zrange,白名单操作,连接失败返回明确错误。",
+  "category": "存储",
+  "parameters": { "type": "object", "required": ["op", "key"], "properties": { "op": { "type": "string", "enum": ["get", "set", "del", "keys", "ttl", "expire", "incr", "zadd", "zrange"] }, "key": { "type": "string" }, "value": { "type": "string", "description": "set 时的值" }, "expireSeconds": { "type": "number", "description": "set/expire 的过期秒数" }, "score": { "type": "number", "description": "zadd 分值" }, "member": { "type": "string", "description": "zadd 成员" }, "start": { "type": "number", "default": 0 }, "stop": { "type": "number", "default": -1 } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

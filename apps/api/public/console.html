@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>销售军师 · 编排端</title>
+<style>
+:root { --bg:#f4f6fa; --card:#fff; --line:#e2e8f0; --text:#1e293b; --muted:#64748b; --brand:#2563eb; --brand2:#3b82f6; --ok:#16a34a; --warn:#d97706; --danger:#dc2626; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; background:var(--bg); color:var(--text); }
+header { display:flex; align-items:center; gap:14px; padding:14px 28px; background:linear-gradient(120deg,#0f172a,#1e293b); color:#fff; }
+header h1 { font-size:18px; margin:0; }
+header .sub { font-size:12px; opacity:.8; }
+header .nav { margin-left:auto; font-size:12px; } header .nav a { color:#bfdbfe; text-decoration:none; }
+.tabs { display:flex; gap:6px; max-width:1080px; margin:16px auto 0; padding:0 18px; }
+.tab { padding:9px 18px; cursor:pointer; font-size:14px; color:var(--muted); border-radius:10px 10px 0 0; border-bottom:2px solid transparent; background:transparent; border-top:0; border-left:0; border-right:0; }
+.tab:hover { color:var(--text); background:#f1f5f9; }
+.tab.active { color:var(--brand); border-bottom-color:var(--brand); font-weight:600; }
+main { max-width:1080px; margin:0 auto 24px; padding:14px 18px 0; display:flex; flex-direction:column; gap:14px; }
+.panel { display:none; } .panel.active { display:block; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; }
+.card h2 { font-size:15px; margin:0 0 4px; }
+.card .hint { font-size:12px; color:var(--muted); margin:0 0 14px; }
+.cap-row { display:flex; align-items:flex-start; gap:12px; padding:11px 0; border-bottom:1px solid var(--line); }
+.cap-row:last-child { border-bottom:0; }
+.cap-main { flex:1; min-width:0; }
+.cap-name { font-size:14px; font-weight:600; }
+.cap-cat { font-size:11px; color:var(--brand); margin-left:8px; }
+.cap-desc { font-size:12px; color:var(--muted); margin-top:3px; }
+.switch { position:relative; width:42px; height:23px; flex-shrink:0; }
+.switch input { opacity:0; width:0; height:0; }
+.slider { position:absolute; cursor:pointer; inset:0; background:#cbd5e1; border-radius:999px; transition:.2s; }
+.slider:before { content:""; position:absolute; height:17px; width:17px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+.switch input:checked + .slider { background:var(--ok); }
+.switch input:checked + .slider:before { transform:translateX(19px); }
+.wf-item { border:1px solid var(--line); border-radius:10px; padding:11px 13px; margin-bottom:9px; }
+.wf-item .n { font-size:14px; font-weight:600; }
+.wf-item .steps { font-size:12px; color:var(--muted); margin-top:4px; }
+label { display:block; font-size:12px; color:var(--muted); margin:12px 0 4px; }
+input, textarea, select { width:100%; border:1px solid var(--line); border-radius:8px; padding:9px 11px; font-size:13px; font-family:inherit; background:#fff; }
+textarea { resize:vertical; }
+.btn { border:0; border-radius:8px; padding:9px 18px; font-size:13px; cursor:pointer; background:var(--brand); color:#fff; }
+.btn:hover { background:var(--brand2); }
+.btn.ghost { background:#fff; color:var(--text); border:1px solid var(--line); }
+.step-checks { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.step-checks label { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text); margin:0; padding:7px 9px; border:1px solid var(--line); border-radius:8px; cursor:pointer; }
+.step-checks input { width:auto; }
+.filter { display:flex; gap:10px; align-items:flex-end; margin-bottom:14px; flex-wrap:wrap; }
+.filter label { margin:0; flex:0 0 auto; }
+.filter select, .filter input { width:auto; }
+.filter input { flex:1; min-width:220px; }
+.log-item { border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px; }
+.log-item .head { display:flex; align-items:center; gap:8px; font-size:12px; }
+.log-item .head b { font-size:13px; }
+.log-item .time { color:var(--muted); margin-left:auto; }
+.log-item .sum { font-size:13px; color:#334155; margin-top:5px; white-space:pre-wrap; word-break:break-word; max-height:360px; overflow:auto; }
+.badge { display:inline-block; padding:1px 8px; border-radius:999px; font-size:11px; color:#fff; }
+.badge.agent { background:#2563eb; }
+.badge.notification { background:#d97706; }
+.badge.runtime { background:#7c3aed; }
+</style>
+</head>
+<body>
+<header><h1>销售军师</h1><span class="sub">编排端 · 能力 / 工作流 / 日志</span><span class="nav"><a href="/">返回客户端</a></span></header>
+<div class="tabs">
+<button class="tab active" data-panel="cap">能力</button>
+<button class="tab" data-panel="wf">工作流</button>
+<button class="tab" data-panel="logs">日志</button>
+</div>
+<main>
+<section class="panel active" id="panel-cap">
+<div class="card">
+<h2>Agent 能力</h2><p class="hint">激活/停用后，客户端左侧与 Agent 可用工具会同步变化。</p>
+<div id="capList">加载中…</div>
+</div>
+</section>
+<section class="panel" id="panel-wf">
+<div class="card">
+<h2>工作流</h2><p class="hint">把一个或多个能力编排成固定流程。</p>
+<div id="wfList">加载中…</div>
+<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px">
+<h2 style="font-size:14px">新建工作流</h2>
+<label>名称</label><input id="wfName" placeholder="例如：新人晨会流程">
+<label>描述（可选）</label><textarea id="wfDesc" rows="2" placeholder="一句话说明用途"></textarea>
+<label>步骤（勾选能力，按勾选顺序）</label>
+<div class="step-checks" id="wfSteps">等待能力加载…</div>
+<button class="btn" id="wfSave" style="margin-top:14px">保存工作流</button>
+</div>
+</div>
+</section>
+<section class="panel" id="panel-logs">
+<div class="card">
+<h2>日志</h2><p class="hint">聚合 Agent 事件、通知日志与运行日志，可分类检索。</p>
+<div class="filter">
+<label>分类
+<select id="logCat"><option value="all">全部</option><option value="agent">Agent 事件</option><option value="notification">通知日志</option><option value="runtime">运行日志</option></select>
+</label>
+<label>关键词<input id="logQ" placeholder="例如：task_manage / error / 某个 runId"></label>
+<button class="btn" id="logSearch">检索</button>
+<button class="btn ghost" id="logReset">重置</button>
+</div>
+<div id="logList">加载中…</div>
+</div>
+</section>
+</main>
+<script>const $ = (id) => document.getElementById(id);
+function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+async function api(path, opt) {
+  const o = opt || {};
+  const headers = { "x-tenant-id": "t_demo" };
+  if (o.body != null) headers["Content-Type"] = "application/json";
+  const res = await fetch(path, Object.assign({}, o, { headers: Object.assign(headers, o.headers || {}) }));
+  if (!res.ok) { let msg = "HTTP " + res.status; try { msg = (await res.json()).message || msg; } catch {} throw new Error(msg); }
+  return res.json();
+}
+document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+  t.classList.add("active");
+  $("panel-" + t.dataset.panel).classList.add("active");
+  if (t.dataset.panel === "logs") loadLogs();
+}));
+let allCaps = [];
+async function loadCapabilities() {
+  const box = $("capList");
+  try {
+    const r = await api("/api/v1/agent/capabilities");
+    allCaps = r.capabilities || [];
+    box.innerHTML = "";
+    for (const c of allCaps) {
+      const row = document.createElement("div"); row.className = "cap-row";
+      const main = document.createElement("div"); main.className = "cap-main";
+      main.innerHTML = '<div><span class="cap-name">' + escapeHtml(c.label) + '</span><span class="cap-cat">' + escapeHtml(c.category) + '</span></div><div class="cap-desc">' + escapeHtml(c.description) + '</div>';
+      const sw = document.createElement("label"); sw.className = "switch";
+      sw.innerHTML = '<input type="checkbox" ' + (c.enabled ? "checked" : "") + '><span class="slider"></span>';
+      sw.querySelector("input").addEventListener("change", (e) => toggleCap(c.name, e.target.checked));
+      row.appendChild(main); row.appendChild(sw);
+      box.appendChild(row);
+    }
+    renderWfSteps();
+  } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
+}
+async function toggleCap(name, enabled) {
+  try {
+    const r = await api("/api/v1/console/capabilities/" + name, { method: "PUT", body: JSON.stringify({ enabled }) });
+    const cap = allCaps.find((c) => c.name === r.name); if (cap) cap.enabled = r.enabled;
+  } catch (e) { alert("操作失败:" + e.message); loadCapabilities(); }
+}
+function renderWfSteps() {
+  const box = $("wfSteps");
+  if (!allCaps.length) { box.innerHTML = "等待能力加载…"; return; }
+  box.innerHTML = "";
+  for (const c of allCaps) {
+    const lab = document.createElement("label");
+    lab.innerHTML = '<input type="checkbox" value="' + escapeHtml(c.name) + '"> ' + escapeHtml(c.label);
+    box.appendChild(lab);
+  }
+}
+async function loadWorkflows() {
+  const box = $("wfList");
+  try {
+    const r = await api("/api/v1/console/workflows");
+    const list = r.workflows || [];
+    if (!list.length) { box.innerHTML = "<div class=\"hint\">暂无工作流</div>"; return; }
+    box.innerHTML = "";
+    for (const w of list) {
+      const d = document.createElement("div"); d.className = "wf-item";
+      const stepNames = (w.steps || []).map((s) => { const n = s && s.name ? s.name : String(s); const def = allCaps.find((c) => c.name === n); return def ? def.label : n; }).join(" → ");
+      d.innerHTML = '<div><span class="n">' + escapeHtml(w.name) + '</span> <span class="cap-cat">' + (w.enabled ? "已启用" : "已停用") + '</span></div><div class="steps">' + (stepNames ? escapeHtml(stepNames) : "未配置步骤") + '</div>';
+      box.appendChild(d);
+    }
+  } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
+}
+$("wfSave").addEventListener("click", async () => {
+  const name = $("wfName").value.trim();
+  if (!name) { alert("请输入工作流名称"); return; }
+  const steps = [];
+  for (const chk of $("wfSteps").querySelectorAll("input:checked")) steps.push({ name: chk.value });
+  try {
+    await api("/api/v1/console/workflows", { method: "POST", body: JSON.stringify({ name, description: $("wfDesc").value.trim(), steps }) });
+    $("wfName").value = ""; $("wfDesc").value = "";
+    $("wfSteps").querySelectorAll("input").forEach((c) => { c.checked = false; });
+    loadWorkflows();
+  } catch (e) { alert("保存失败:" + e.message); }
+});
+async function loadLogs() {
+  const box = $("logList");
+  box.innerHTML = "<div class=\"hint\">加载中…</div>";
+  try {
+    const cat = $("logCat").value || "all";
+    const q = $("logQ").value.trim();
+    const r = await api("/api/v1/console/logs?category=" + encodeURIComponent(cat) + "&q=" + encodeURIComponent(q) + "&limit=200");
+    const list = r.logs || [];
+    if (!list.length) { box.innerHTML = "<div class=\"hint\">暂无日志</div>"; return; }
+    box.innerHTML = "";
+    for (const item of list) {
+      const d = document.createElement("div"); d.className = "log-item";
+      const badge = { agent: "Agent 事件", notification: "通知日志", runtime: "运行日志" }[item.category] || item.category;
+      d.innerHTML = '<div class="head"><span class="badge ' + escapeHtml(item.category) + '">' + escapeHtml(badge) + '</span><b>' + escapeHtml(item.subCategory || "") + '</b><span class="time">' + escapeHtml(new Date(item.ts).toLocaleString()) + '</span></div><div class="sum">' + escapeHtml(item.summary) + '</div>';
+      box.appendChild(d);
+    }
+  } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
+}
+$("logSearch").addEventListener("click", loadLogs);
+$("logReset").addEventListener("click", () => { $("logCat").value = "all"; $("logQ").value = ""; loadLogs(); });
+$("logQ").addEventListener("keydown", (e) => { if (e.key === "Enter") loadLogs(); });
+loadCapabilities(); loadWorkflows(); loadLogs();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "excel",
+  "label": "读取 Excel/CSV",
+  "description": "读取仓库内的 .xlsx/.xls/.csv 文件,按工作表转为表格文本(路径仅限仓库内);每页最多 10 行,默认只展示第 1 页,禁止自动翻页取全量;多页时在答复中说明共 N 条即可,其余内容由前端翻页按钮查看,仅当用户明确要求查看更多时才传 page 翻页。",
+  "category": "文件读取",
+  "parameters": { "type": "object", "required": ["filePath"], "properties": { "filePath": { "type": "string", "description": "仓库内路径,如 data/报价.xlsx" }, "sheet": { "type": "string", "description": "工作表名或序号(从 0),缺省第一个" }, "page": { "type": "number", "default": 1, "description": "页码,每页最多 10 行;默认第 1 页,仅当用户明确要求查看更多时才翻页" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

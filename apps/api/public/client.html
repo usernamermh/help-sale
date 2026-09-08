@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>销售军师 · 客户端</title>
+<style>
+:root { --bg:#eef2f8; --bg2:#e2e8f0; --card:#fff; --line:#e2e8f0; --text:#1e293b; --muted:#64748b; --brand:#2563eb; --brand2:#3b82f6; --shadow:0 8px 28px rgba(15,23,42,.07); --radius:16px; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; background:linear-gradient(160deg,#eef2f8 0%,#e7edf7 55%,#eef4ff 100%); color:var(--text); -webkit-font-smoothing:antialiased; }
+header { display:flex; align-items:center; gap:14px; padding:14px 28px; background:linear-gradient(120deg,#1e3a8a 0%,#2563eb 55%,#4f46e5 100%); color:#fff; box-shadow:0 2px 16px rgba(30,58,138,.28); position:sticky; top:0; z-index:50; }
+header h1 { font-size:20px; margin:0; letter-spacing:.5px; display:flex; align-items:center; gap:9px; }
+header h1::before { content:""; width:11px; height:11px; border-radius:3px; background:linear-gradient(135deg,#60a5fa,#c4b5fd); box-shadow:0 0 10px rgba(147,197,253,.8); }
+header .sub { font-size:12px; opacity:.85; }
+.header-left { display:flex; align-items:center; gap:8px; margin-left:14px; }
+header .nav { margin-left:auto; font-size:12px; display:flex; align-items:center; gap:8px; }
+.hdr-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(255,255,255,.30); background:rgba(255,255,255,.12); color:#fff; border-radius:999px; padding:6px 14px; font-size:12.5px; font-family:inherit; cursor:pointer; backdrop-filter:blur(8px); box-shadow:0 1px 4px rgba(15,23,42,.16); transition:all .2s ease; }
+.hdr-btn svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.hdr-btn:hover { background:rgba(255,255,255,.26); border-color:rgba(255,255,255,.55); transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,.24); }
+.hdr-btn.active { background:#fff; color:#1d4ed8; border-color:#fff; box-shadow:0 4px 14px rgba(30,58,138,.35); }
+.hdr-btn.active svg { stroke:#1d4ed8; }
+header .nav a { color:#fff; opacity:.9; text-decoration:none; }
+.client-layout { display:flex; gap:14px; width:100%; max-width:none; margin:18px auto; padding:0 24px; height:calc(100vh - 82px); min-height:520px; }
+.side { width:250px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; overflow:hidden; min-height:0; }
+.side-block { background:var(--card); border:1px solid rgba(226,232,240,.9); border-radius:var(--radius); padding:14px; display:flex; flex-direction:column; min-height:0; flex:1 1 0; overflow:hidden; box-shadow:var(--shadow); }
+#capList, #threadList { flex:1; min-height:0; overflow:auto; }
+.side-title { font-size:12px; color:var(--muted); letter-spacing:1px; margin:0 0 10px; display:flex; align-items:center; gap:6px; }
+.side-title::before { content:"◈"; color:var(--brand); font-size:10px; }
+.cap-item { font-size:13px; padding:8px 10px; border-radius:10px; transition:background .15s; }
+.cap-item:hover { background:#f1f5f9; }
+.cap-item b { font-weight:600; }
+.cap-item .d { font-size:11px; color:var(--muted); }
+.cap-cat { font-size:11px; color:var(--brand); margin:8px 0 4px; font-weight:600; }
+.chat { flex:1; display:flex; flex-direction:column; min-width:0; }
+.agent-chat { flex:1; overflow:auto; background:var(--card); border:1px solid rgba(226,232,240,.9); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); }
+.agent-msg { margin:0 0 14px; padding:11px 14px; border-radius:16px; max-width:88%; line-height:1.6; }
+.agent-user { background:linear-gradient(135deg,#2563eb,#4f46e5); color:#fff; border:0; margin-left:auto; border-bottom-right-radius:6px; box-shadow:0 4px 12px rgba(37,99,235,.22); }
+.agent-assist { background:#f8fafc; border:1px solid var(--line); border-bottom-left-radius:6px; }
+.agent-body { white-space:pre-wrap; word-break:break-word; }
+.agent-body .md { white-space:normal; }
+.agent-body .md p { margin:0 0 8px; }
+.agent-body .md h1, .agent-body .md h2, .agent-body .md h3 { margin:10px 0 6px; font-size:1.05em; }
+.agent-body .md table { border-collapse:collapse; margin:8px 0; width:100%; }
+.agent-body .md th, .agent-body .md td { border:1px solid var(--line); padding:5px 8px; font-size:13px; text-align:left; }
+.agent-body .md th { background:#f1f5f9; font-weight:600; }
+.agent-body .md code { background:#eef2ff; padding:1px 5px; border-radius:4px; font-size:12px; }
+.agent-body .md pre { background:#0f172a; color:#e2e8f0; padding:10px; border-radius:8px; overflow:auto; }
+.agent-body .md pre code { background:transparent; color:inherit; padding:0; }
+.agent-body .md ul, .agent-body .md ol { margin:6px 0; padding-left:20px; }
+.agent-body .md a { color:var(--brand); }
+.mermaid-render { margin:8px 0; overflow:auto; text-align:center; }
+.mermaid-render svg { max-width:100%; height:auto; }
+.agent-meta { font-size:11px; color:var(--muted); margin-top:6px; }
+.agent-input { display:flex; gap:8px; margin-top:12px; }
+.agent-input textarea { flex:1; min-height:56px; resize:none; padding:11px 14px; border:1px solid #cbd5e1; border-radius:12px; font-family:inherit; font-size:14px; transition:border-color .2s, box-shadow .2s; }
+.agent-input button { border:0; border-radius:12px; padding:0 24px; background:linear-gradient(135deg,#2563eb,#4f46e5); color:#fff; font-size:14px; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,.25); transition:transform .15s, box-shadow .15s; }
+.agent-input button:disabled { opacity:.55; cursor:wait; }
+.thread-item { position:relative; padding:8px 10px; padding-right:74px; border-radius:10px; font-size:13px; cursor:pointer; transition:background .15s; }
+.thread-actions { position:absolute; top:50%; right:6px; transform:translateY(-50%); display:flex; gap:4px; opacity:0; transition:opacity .15s; }
+.thread-item:hover .thread-actions { opacity:1; }
+.thread-act { border:0; background:#eef2ff; color:var(--brand); border-radius:6px; font-size:11px; padding:2px 7px; cursor:pointer; }
+.thread-act.del { background:#fee2e2; color:#b91c1c; }
+.thread-act:hover { filter:brightness(.96); }
+.thread-item:hover { background:#f1f5f9; }
+.thread-item.selected { background:linear-gradient(135deg,#eff6ff,#eef2ff); border:1px solid #bfdbfe; font-weight:500; }
+.thread-item .t { font-size:11px; color:var(--muted); margin-top:2px; }
+.clear-btn { border:0; background:#fee2e2; color:#b91c1c; border-radius:8px; cursor:pointer; font-size:12px; padding:4px 10px; line-height:1; margin-left:8px; }
+.clear-btn:hover { background:#fecaca; }
+.side { transition:width .22s ease, opacity .18s ease; }
+.side.collapsed { width:0; padding:0; border:0; opacity:0; overflow:hidden; pointer-events:none; }
+
+.right-resizer { width:6px; flex-shrink:0; cursor:col-resize; border-radius:3px; background:transparent; }
+.right-resizer:hover { background:#bfdbfe; }
+.right-col { width:272px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; min-height:0; }
+.run-item { font-size:12px; border:1px solid var(--line); border-radius:11px; padding:8px 10px; background:#fff; box-shadow:0 2px 8px rgba(15,23,42,.04); }
+.run-item .run-head { display:flex; justify-content:space-between; align-items:center; gap:6px; font-weight:600; color:#334155; }
+.run-item .run-head::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--brand); flex-shrink:0; }
+.run-item.run-done .run-head::before { background:#16a34a; }
+.run-item .run-time { font-weight:400; color:var(--muted); font-size:11px; }
+.run-item .run-sum { margin-top:3px; color:#64748b; white-space:pre-wrap; word-break:break-word; }
+.run-sum .md, .run-sum { font-size:12px; }
+.run-sum table { border-collapse:collapse; width:100%; margin:6px 0; }
+.run-sum th, .run-sum td { border:1px solid var(--line); padding:4px 6px; font-size:11px; text-align:left; }
+.run-sum th { background:#f1f5f9; font-weight:600; }
+.run-item.run-done { border-color:#bbf7d0; background:#f0fdf4; }
+.tr-panel { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+.tr-head { display:flex; align-items:center; justify-content:space-between; font-size:12px; color:var(--muted); letter-spacing:1px; margin:0 0 8px; }
+.tr-close { border:0; background:transparent; color:var(--muted); cursor:pointer; font-size:15px; }
+.tr-meta { font-size:11px; color:var(--muted); margin-bottom:8px; word-break:break-all; }
+.tr-list { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; gap:8px; }
+.tr-line { font-size:12px; border:1px solid var(--line); border-radius:11px; padding:8px 10px; background:#fff; box-shadow:0 2px 8px rgba(15,23,42,.04); }
+.tr-line .tr-time { font-size:11px; color:var(--muted); }
+.tr-line .tr-role { display:inline-block; padding:1px 7px; border-radius:999px; font-size:11px; margin:0 6px; background:#eef2ff; color:var(--brand); }
+.tr-line .tr-role.sales { background:#ecfdf5; color:#16a34a; }
+.tr-line .tr-role.other { background:#f1f5f9; color:var(--muted); }
+.tr-line .tr-text { margin-top:3px; white-space:pre-wrap; word-break:break-word; color:#334155; }
+::-webkit-scrollbar { width:8px; height:8px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:999px; }
+::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
+.agent-details { margin-top:8px; border:1px solid var(--line); border-radius:8px; background:#fff; overflow:hidden; }
+.agent-footnote { cursor:pointer; padding:6px 10px; font-size:12px; color:var(--brand); user-select:none; list-style:none; }
+.agent-footnote::-webkit-details-marker { display:none; }
+.agent-footnote .arrow { display:inline-block; transition:transform .15s; }
+.agent-details[open] .arrow { transform:rotate(90deg); }
+.agent-steps { padding:8px 10px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:6px; }
+.agent-step { font-size:12px; }
+.agent-step-head { font-weight:600; color:#334155; }
+.agent-step-body { margin-top:2px; color:#64748b; white-space:pre-wrap; word-break:break-word; max-height:120px; overflow:auto; background:#f8fafc; border-radius:6px; padding:6px 8px; }
+
+.pager-bar { display:flex; align-items:center; gap:10px; justify-content:center; margin:8px 0 2px; font-size:12px; color:var(--muted); }
+.pager-btn { border:1px solid var(--line); background:#fff; color:var(--brand); border-radius:8px; padding:3px 12px; font-size:12px; font-family:inherit; cursor:pointer; transition:background .15s, border-color .15s; }
+.pager-btn:hover:not(:disabled) { background:#eff6ff; border-color:#bfdbfe; }
+.pager-btn:disabled { opacity:.45; cursor:not-allowed; }
+.pager-info { white-space:nowrap; }
+.pager-pre { background:#f8fafc; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:12px; white-space:pre-wrap; word-break:break-word; margin:8px 0; }
+</style>
+</head>
+<body>
+<header><h1>销售军师</h1><span class="sub">客户端 · 对话助销</span><span class="header-left"><button id="headerCapsBtn" class="hdr-btn active" title="显示/隐藏业务逻辑功能"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>业务逻辑功能</button><button id="headerThreadsBtn" class="hdr-btn active" title="显示/隐藏历史会话"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>历史会话</button></span><span class="nav"><button id="headerRunBtn" class="hdr-btn" title="显示/隐藏本轮任务"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>本轮任务</button><button id="headerTrBtn" class="hdr-btn" title="显示/隐藏对话原文"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>对话原文</button><a href="/console">进入编排端</a></span></header>
+<div class="client-layout">
+<aside class="side" id="side">
+<div class="side-block grow" id="capsBlock"><div class="side-title">业务逻辑功能</div><div id="capList">加载中…</div></div>
+<div class="side-block" id="threadsBlock"><div class="side-title">历史会话<button id="clearThreadsBtn" class="clear-btn" title="一键清理全部历史会话">清理</button></div><button id="newBtn" class="secondary" style="width:100%;margin-bottom:8px">+ 新会话</button><div id="threadList"></div></div>
+</aside>
+<section class="chat">
+<div class="agent-chat" id="chat"></div>
+<div class="agent-input"><textarea id="goal" placeholder="下达目标，例如：列出当前待办并告诉我最该先跟进哪一条"></textarea><button id="sendBtn">发送</button></div>
+</section>
+<div id="rightResizer" class="right-resizer" title="拖动调整右侧面板宽度"></div>
+<div class="right-col" id="rightCol">
+<aside class="side-block tr-panel" id="runPanel">
+<div class="tr-head"><span>本轮任务</span><button class="tr-close" onclick="hideRunPanel()">×</button></div>
+<div class="tr-meta" id="runMeta"></div>
+<div class="tr-list" id="runList"></div>
+</aside>
+<aside class="side-block tr-panel" id="trPanel" style="display:none">
+<div class="tr-head"><span>对话原文</span><button class="tr-close" onclick="hideTrPanel()">×</button></div>
+<div class="tr-meta" id="trMeta"></div>
+<div class="tr-list" id="trList"></div>
+</aside>
+</div>
+</div>
+<script src="/vendor/marked.min.js"></script>
+<script src="/vendor/purify.min.js"></script>
+<script>const $ = (id) => document.getElementById(id);
+function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+let trPager = null;
+function renderTrPanel(meta, list, pager) {
+  $("trMeta").textContent = meta || "";
+  const box = $("trList"); box.innerHTML = "";
+  if (!list || !list.length) { box.innerHTML = "<div class=\"t\">暂无原文</div>"; }
+  for (const m of list) {
+    const d = document.createElement("div"); d.className = "tr-line";
+    const role = m.speakerRole === "customer" ? "客户" : m.speakerRole === "sales" ? "销售" : "其他";
+    const name = m.speakerName ? "·" + escapeHtml(m.speakerName) : "";
+    d.innerHTML = '<div><span class="tr-time">' + (m.spokenAt ? escapeHtml(new Date(m.spokenAt).toLocaleString()) : "—") + '</span><span class="tr-role ' + escapeHtml(m.speakerRole || "") + '">' + role + name + '</span></div><div class="tr-text">' + escapeHtml(m.content) + '</div>';
+    box.appendChild(d);
+  }
+  trPager = pager || null;
+  if (trPager && trPager.totalPages > 1) {
+    const bar = document.createElement("div"); bar.className = "pager-bar";
+    bar.innerHTML =
+      '<button class="pager-btn" data-dir="-1"' + (trPager.page <= 1 ? " disabled" : "") + '>上一页</button>' +
+      '<span class="pager-info">第 ' + trPager.page + '/' + trPager.totalPages + ' 页 · 共 ' + trPager.totalMessages + ' 条</span>' +
+      '<button class="pager-btn" data-dir="1"' + (trPager.page >= trPager.totalPages ? " disabled" : "") + '>下一页</button>';
+    Array.from(bar.querySelectorAll("button")).forEach((b) => { b.onclick = () => flipTrPage(Number(b.dataset.dir)); });
+    box.appendChild(bar);
+  }
+  $("trPanel").style.display = "flex";
+  $("headerTrBtn").classList.add("active");
+  syncRightCol();
+}
+async function flipTrPage(dir) {
+  if (!trPager) return;
+  const target = trPager.page + dir;
+  if (target < 1 || target > trPager.totalPages) return;
+  try {
+    const res = await api("/api/v1/agent/tools/conversation_query/page", {
+      method: "POST",
+      body: JSON.stringify({ params: { view: "load", conversationId: trPager.conversationId, page: target } }),
+    });
+    const det = res.details || {};
+    trPager.page = target;
+    if (Number.isFinite(Number(det.totalPages)) && Number(det.totalPages) > 0) trPager.totalPages = Number(det.totalPages);
+    if (Number.isFinite(Number(det.totalMessages))) trPager.totalMessages = Number(det.totalMessages);
+    renderTrPanel("会话 " + String(trPager.conversationId || "").slice(0, 10) + "…", det.messages || [], trPager);
+  } catch (e) {
+    alert("翻页失败:" + e.message);
+  }
+}
+function hideTrPanel() { $("trPanel").style.display = "none"; $("headerTrBtn").classList.remove("active"); syncRightCol(); }
+function showTrPanel() { $("trPanel").style.display = "flex"; $("headerTrBtn").classList.add("active"); syncRightCol(); }function renderMarkdown(text) {
+  try {
+    if (typeof marked !== "undefined" && marked.parse) {
+      const html = marked.parse(text);
+      if (typeof DOMPurify !== "undefined") return DOMPurify.sanitize(html);
+      return html;
+    }
+  } catch {}
+  return escapeHtml(text);
+}
+function ensureMermaid() {
+  if (window.mermaid) return Promise.resolve();
+  return new Promise((resolve) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js";
+    s.onload = () => { try { window.mermaid.initialize({ startOnLoad: false, theme: "base", securityLevel: "strict" }); } catch {} resolve(); };
+    s.onerror = () => resolve();
+    document.head.appendChild(s);
+  });
+}
+async function renderMermaidBlocks(root) {
+  const codes = Array.from(root.querySelectorAll("code.language-mermaid"));
+  if (!codes.length) return;
+  await ensureMermaid();
+  if (!window.mermaid) return;
+  for (const code of codes) {
+    try {
+      const src = code.textContent || "";
+      const id = "mmd" + Math.random().toString(36).slice(2, 8);
+      const out = await window.mermaid.render(id, src);
+      const wrap = document.createElement("div");
+      wrap.className = "mermaid-render";
+      wrap.innerHTML = out.svg;
+      const pre = code.closest("pre");
+      if (pre) pre.replaceWith(wrap); else code.replaceWith(wrap);
+    } catch {}
+  }
+}async function api(path, opt) {
+  const o = opt || {};
+  const headers = { "x-tenant-id": "t_demo" };
+  if (o.body != null) headers["Content-Type"] = "application/json";
+  const res = await fetch(path, Object.assign({}, o, { headers: Object.assign(headers, o.headers || {}) }));
+  if (!res.ok) { let msg = "HTTP " + res.status; try { msg = (await res.json()).message || msg; } catch {} throw new Error(msg); }
+  return res.json();
+}
+async function loadCapabilities() {
+  const box = $("capList");
+  try {
+    const r = await api("/api/v1/agent/capabilities");
+    const list = (r.capabilities || []).filter((c) => c.enabled && c.root === "tools");
+    if (!list.length) { box.innerHTML = "<div class=\"cap-item\">暂无启用能力</div>"; return; }
+    const cats = {};
+    for (const c of list) { (cats[c.category] = cats[c.category] || []).push(c); }
+    box.innerHTML = "";
+    for (const cat of Object.keys(cats)) {
+      const t = document.createElement("div"); t.className = "cap-cat"; t.textContent = cat; box.appendChild(t);
+      for (const c of cats[cat]) {
+        const d = document.createElement("div"); d.className = "cap-item"; d.title = c.description;
+        d.innerHTML = "<b>" + escapeHtml(c.label) + "</b><div class=\"d\">" + escapeHtml(c.description) + "</div>";
+        box.appendChild(d);
+      }
+    }
+  } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
+}
+// ── 本轮任务栏 ──
+function resetRunPanel() { $("runList").innerHTML = ""; $("runMeta").textContent = ""; $("runPanel").style.display = "flex"; $("headerRunBtn").classList.add("active"); syncRightCol(); }
+function addRunTask(label, status) {
+  const d = document.createElement("div"); d.className = "run-item run-" + status;
+  d.innerHTML = '<div class="run-head"><span>' + escapeHtml(label) + '</span><span class="run-time">' + new Date().toLocaleTimeString() + '</span></div>';
+  $("runList").appendChild(d); $("runList").scrollTop = $("runList").scrollHeight;
+  $("runPanel").style.display = "flex";
+}
+function syncRightCol() {
+  const visible = $("runPanel").style.display !== "none" || $("trPanel").style.display !== "none";
+  $("rightCol").style.display = visible ? "flex" : "none";
+  $("rightResizer").style.display = visible ? "block" : "none";
+}
+function hideRunPanel() { $("runPanel").style.display = "none"; $("headerRunBtn").classList.remove("active"); syncRightCol(); }
+function showRunPanel() { $("runPanel").style.display = "flex"; $("headerRunBtn").classList.add("active"); $("runList").scrollTop = $("runList").scrollHeight; syncRightCol(); }
+function runTaskCount() { return $("runList").querySelectorAll(".run-item").length; }
+// ── 侧栏自适应:业务逻辑功能与历史会话都隐藏时,聊天区向左扩展不留白 ──
+function syncSide() {
+  const capsHidden = $("capsBlock").style.display === "none";
+  const threadsHidden = $("threadsBlock").style.display === "none";
+  $("side").classList.toggle("collapsed", capsHidden && threadsHidden);
+}
+// ── 历史会话一键清理 ──
+async function clearThreads() {
+  if (!window.confirm("确认清空全部历史会话吗?此操作不可恢复。")) return;
+  try {
+    await api("/api/v1/agent/threads", { method: "DELETE" });
+    currentThreadId = null;
+    clearChat();
+    loadThreads();
+    hideTrPanel();
+  } catch (e) { alert("清理失败:" + e.message); }
+}
+// 导出单个历史会话:JSON 文件,保存每一轮对话的完整输入与输出(原始 content,含工具调用与结果)
+async function exportThread(id, title) {
+  try {
+    const r = await api("/api/v1/agent/threads/" + id + "/export");
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      app: "sales-copilot",
+      thread: r.thread,
+      messages: r.messages || [],
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "会话-" + String(id).slice(0, 8) + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) { alert("导出失败:" + e.message); }
+}
+// 删除单个历史会话
+async function removeThread(id) {
+  if (!window.confirm("确认删除该历史会话?此操作不可恢复。")) return;
+  try {
+    await api("/api/v1/agent/threads/" + id, { method: "DELETE" });
+    if (currentThreadId === id) { currentThreadId = null; clearChat(); hideTrPanel(); }
+    loadThreads();
+  } catch (e) { alert("删除失败:" + e.message); }
+}let running = false; let currentThreadId = null; let deltaBuf = "";
+const PAGE_TOOLS = ["customer_query", "vehicle_query", "excel", "table_generate"];
+function appendAgentMsg(role, text) {
+  const chat = $("chat");
+  const div = document.createElement("div");
+  div.className = "agent-msg " + (role === "user" ? "agent-user" : "agent-assist");
+  const body = document.createElement("div"); body.className = "agent-body"; if (role === "assistant") { body.innerHTML = '<div class="md">' + renderMarkdown(text) + '</div>'; renderMermaidBlocks(body); } else { body.textContent = text; }
+  div.appendChild(body);
+  const step = document.createElement("div"); step.style.display = "none";
+  const meta = document.createElement("div"); meta.className = "agent-meta";
+  div.appendChild(step); div.appendChild(meta);
+  chat.appendChild(div); chat.scrollTop = chat.scrollHeight;
+  return { div, body, step, meta };
+}
+function extractAgentText(content) { if (!Array.isArray(content)) return ""; return content.map((c) => (c && c.type === "text" ? c.text : "")).join(""); }
+function attachAgentSteps(wait, steps) {
+  if (!steps || !steps.length) return;
+  const details = document.createElement("details"); details.className = "agent-details";
+  const summary = document.createElement("summary"); summary.className = "agent-footnote";
+  const raw = steps.filter((s) => s.eventType === "tool_start").map((s) => s.label || s.toolName);
+  const names = [];
+  for (let i = 0; i < raw.length; i++) {
+    let n = 1;
+    while (i + n < raw.length && raw[i + n] === raw[i]) n++;
+    names.push(n > 1 ? raw[i] + " ×" + n : raw[i]);
+    i += n - 1;
+  }
+  summary.innerHTML = "<span class=\"arrow\">▸</span> 过程 · " + escapeHtml(names.join(" → ") || "无工具调用");
+  details.appendChild(summary);
+  const list = document.createElement("div"); list.className = "agent-steps";
+  for (const s of steps) {
+    const line = document.createElement("div"); line.className = "agent-step";
+    const head = document.createElement("div"); head.className = "agent-step-head";
+    head.textContent = (s.eventType === "tool_start" ? "调用 " : "返回 ") + (s.label || s.toolName || "…");
+    line.appendChild(head);
+
+    list.appendChild(line);
+  }
+  details.appendChild(list);
+  wait.div.appendChild(details);
+}
+function clearChat() { $("chat").innerHTML = ""; }
+async function loadThreads() {
+  const box = $("threadList");
+  try {
+    const r = await api("/api/v1/agent/threads");
+    const threads = r.threads || [];
+    if (!threads.length) { box.innerHTML = "<div class=\"thread-item\" style=\"color:var(--muted)\">暂无会话</div>"; return; }
+    box.innerHTML = "";
+    for (const t of threads) {
+      const d = document.createElement("div");
+      d.className = "thread-item" + (t.id === currentThreadId ? " selected" : "");
+      d.innerHTML = "<div>" + escapeHtml(t.title || "未命名会话") + "</div><div class=\"t\">" + escapeHtml(new Date(t.updatedAt).toLocaleString()) + "</div>" +
+        '<div class="thread-actions"><button class="thread-act" title="导出完整对话历史">导出</button><button class="thread-act del" title="删除该历史会话">删除</button></div>';
+      d.addEventListener("click", () => selectThread(t.id));
+      d.querySelector(".thread-actions button:first-child").addEventListener("click", (e) => { e.stopPropagation(); exportThread(t.id, t.title); });
+      d.querySelector(".thread-act.del").addEventListener("click", (e) => { e.stopPropagation(); removeThread(t.id); });
+      box.appendChild(d);
+    }
+  } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
+}
+async function newThread() { const t = await api("/api/v1/agent/threads", { method: "POST" }); currentThreadId = t.id; clearChat(); loadThreads(); }
+async function selectThread(id) {
+  currentThreadId = id; loadThreads();
+  const chat = $("chat"); chat.innerHTML = "<div class=\"cap-item\">加载中…</div>";
+  try {
+    const r = await api("/api/v1/agent/threads/" + id);
+    chat.innerHTML = "";
+    for (const m of r.messages || []) { if (m.role === "user" || m.role === "assistant") appendAgentMsg(m.role, extractAgentText(m.content)); }
+    if (!(r.messages || []).length) appendAgentMsg("assist", "这是一个新会话，把目标告诉我吧。");
+  } catch (e) { chat.innerHTML = "加载失败:" + escapeHtml(e.message); }
+}
+$("sendBtn").addEventListener("click", send);
+$("goal").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
+$("newBtn").addEventListener("click", newThread);
+$("clearThreadsBtn").addEventListener("click", clearThreads);
+
+// 顶部栏按钮:切换显示/隐藏
+// 顶部左侧按钮:切换业务逻辑功能/历史会话面板
+function toggleLeftBlock(blockId, btn) {
+  const el = $(blockId);
+  const hidden = el.style.display === "none";
+  el.style.display = hidden ? "flex" : "none";
+  btn.classList.toggle("active", hidden);
+  syncSide();
+}
+$("headerCapsBtn").addEventListener("click", function () { toggleLeftBlock("capsBlock", this); });
+$("headerThreadsBtn").addEventListener("click", function () { toggleLeftBlock("threadsBlock", this); });
+$("headerRunBtn").addEventListener("click", () => { if ($("runPanel").style.display === "none") showRunPanel(); else hideRunPanel(); });
+$("headerTrBtn").addEventListener("click", () => { if ($("trPanel").style.display === "none") showTrPanel(); else hideTrPanel(); });
+// 右侧面板拖拽调宽
+let rightResizing = false;
+$("rightResizer").addEventListener("mousedown", (e) => { rightResizing = true; document.body.style.userSelect = "none"; e.preventDefault(); });
+document.addEventListener("mousemove", (e) => {
+  if (!rightResizing) return;
+  const layout = document.querySelector(".client-layout");
+  if (!layout) return;
+  const rect = layout.getBoundingClientRect();
+  const width = Math.min(Math.max(rect.right - e.clientX - 8, 220), 560);
+  $("rightCol").style.width = width + "px";
+});
+document.addEventListener("mouseup", () => { if (rightResizing) { rightResizing = false; document.body.style.userSelect = ""; } });
+async function send() {
+  const goal = $("goal").value.trim();
+  if (!goal || running) return;
+  running = true;
+  $("sendBtn").disabled = true;
+  $("goal").value = "";
+  appendAgentMsg("user", goal);
+  const wait = appendAgentMsg("assist", "正在开始任务…");
+  wait.pageArgs = null; wait.pager = null;
+  const steps = [];
+  try {
+    if (!currentThreadId) { const t = await api("/api/v1/agent/threads", { method: "POST" }); currentThreadId = t.id; }
+    await streamRun(goal, wait, steps);
+    loadThreads(); loadCapabilities();
+  } catch (e) {
+    wait.body.textContent = "出错了：" + e.message;
+  } finally {
+    running = false;
+    $("sendBtn").disabled = false;
+    $("goal").focus();
+  }
+}
+async function streamRun(goal, wait, steps) {
+  deltaBuf = "";
+  resetRunPanel();
+  const res = await fetch("/api/v1/agent/threads/" + currentThreadId + "/run-stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-tenant-id": "t_demo" },
+    body: JSON.stringify({ goal }),
+  });
+  if (!res.ok) { let msg = "HTTP " + res.status; try { msg = (await res.json()).message || msg; } catch {} throw new Error(msg); }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let idx;
+    while ((idx = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, idx).replace(/\r$/, "");
+      buf = buf.slice(idx + 1);
+      if (!line.trim()) continue;
+      let evt;
+      try { evt = JSON.parse(line); } catch { continue; }
+      handleStreamEvent(evt, wait, steps);
+    }
+  }
+}
+function handleStreamEvent(evt, wait, steps) {
+  if (evt.type === "tool_start") {
+    const name = evt.label || evt.toolName || "工具";
+    steps.push({ eventType: "tool_start", toolName: evt.toolName, label: name });
+    if (PAGE_TOOLS.indexOf(evt.toolName) >= 0 && evt.payload && typeof evt.payload === "object") wait.pageArgs = evt.payload;
+    addRunTask(name, "start");
+    wait.body.textContent = "正在调用 " + name + "…";
+  } else if (evt.type === "tool_end") {
+    const name = evt.label || evt.toolName || "工具";
+    steps.push({ eventType: "tool_end", toolName: evt.toolName, label: name });
+    addRunTask(name, "done");
+    wait.body.textContent = name + " 完成，正在整理结果…";
+    const det = evt.payload && evt.payload.details;
+    if (det && Array.isArray(det.messages) && det.messages.length) {
+      renderTrPanel("会话 " + String(det.conversationId || "").slice(0, 10) + "…", det.messages, { conversationId: det.conversationId, page: Number(det.page) || 1, pageSize: Number(det.pageSize) || 10, totalPages: Number(det.totalPages) || 1, totalMessages: Number(det.totalMessages) || det.messages.length });
+    }
+    if (det && PAGE_TOOLS.indexOf(evt.toolName) >= 0 && Number(det.totalPages) > 1) {
+      wait.pager = { toolName: evt.toolName, baseArgs: wait.pageArgs || {}, page: Number(det.page) || 1, totalPages: Number(det.totalPages) || 1, totalRows: Number(det.totalRows) || 0 };
+    }
+  } else if (evt.type === "tool_update") {
+    wait.body.textContent = (evt.label || evt.toolName || "工具") + " 处理中…";
+  } else if (evt.type === "delta") {
+    deltaBuf += evt.text || "";
+    wait.body.innerHTML = '<div class="md">' + renderMarkdown(deltaBuf) + '</div>';
+    if (window.mermaid) renderMermaidBlocks(wait.body);
+  } else if (evt.type === "final") {
+    deltaBuf = "";
+    const answer = evt.final && evt.final.answer ? evt.final.answer : "（未生成答复）";
+    wait.body.innerHTML = '<div class="md">' + renderMarkdown(answer) + '</div>'; renderMermaidBlocks(wait.body);
+    wait.meta.textContent = (evt.final && evt.final.nextSteps && evt.final.nextSteps.length) ? ("下一步：" + evt.final.nextSteps.join(" · ")) : "";
+    attachAgentSteps(wait, steps);
+    if (wait.pager) attachPager(wait);
+    $("runMeta").textContent = "本轮任务完成 · " + runTaskCount() + " 项";
+  } else if (evt.type === "error") {
+    wait.body.textContent = "出错了：" + (evt.error || "未知错误");
+    $("runMeta").textContent = "本轮出错:" + (evt.error || "未知错误");
+  }
+}
+function prettyPayload(p) {
+  if (p == null) return "";
+  try {
+    if (p && Array.isArray(p.content)) {
+      const txt = p.content.map((c) => (c && c.type === "text" ? c.text : "")).join(" ").trim();
+      if (txt) return txt;
+    }
+  } catch {}
+  try { return typeof p === "string" ? p : JSON.stringify(p); } catch { return String(p); }
+}
+
+// ── 表格手动翻页:直接执行工具翻页,只替换表格原文,不经过大模型 ──
+function attachPager(wait) {
+  const body = wait.body;
+  if (!body || !wait.pager) return;
+  const tables = body.querySelectorAll("table");
+  if (!tables.length) return;
+  const table = tables[tables.length - 1];
+  let bar = body.querySelector(".pager-bar");
+  if (!bar) { bar = document.createElement("div"); bar.className = "pager-bar"; table.after(bar); }
+  const st = wait.pager;
+  bar.innerHTML =
+    '<button class="pager-btn" data-dir="-1"' + (st.page <= 1 ? " disabled" : "") + '>上一页</button>' +
+    '<span class="pager-info">第 ' + st.page + '/' + st.totalPages + ' 页 · 共 ' + st.totalRows + ' 条</span>' +
+    '<button class="pager-btn" data-dir="1"' + (st.page >= st.totalPages ? " disabled" : "") + '>下一页</button>';
+  Array.from(bar.querySelectorAll("button")).forEach((b) => { b.onclick = () => flipPager(wait, Number(b.dataset.dir)); });
+}
+async function flipPager(wait, dir) {
+  const st = wait.pager;
+  if (!st) return;
+  const target = st.page + dir;
+  if (target < 1 || target > st.totalPages) return;
+  const bar = wait.body && wait.body.querySelector(".pager-bar");
+  if (bar) { bar.style.opacity = "0.55"; bar.style.pointerEvents = "none"; }
+  try {
+    const res = await api("/api/v1/agent/tools/" + encodeURIComponent(st.toolName) + "/page", {
+      method: "POST",
+      body: JSON.stringify({ params: Object.assign({}, st.baseArgs, { page: target }) }),
+    });
+    const det = res.details || {};
+    const md = (typeof det.rawTable === "string" && det.rawTable) ? det.rawTable : (typeof det.table === "string" ? det.table : "");
+    const tables = wait.body.querySelectorAll("table");
+    if (tables.length) {
+      const table = tables[tables.length - 1];
+      if (md) {
+        const wrap = document.createElement("div"); wrap.className = "md"; wrap.innerHTML = renderMarkdown(md);
+        table.replaceWith(wrap);
+      } else {
+        const txt = (res.content || []).map((c) => (c && c.text ? c.text : "")).join("\n");
+        const pre = document.createElement("pre"); pre.className = "pager-pre"; pre.textContent = txt;
+        table.replaceWith(pre);
+      }
+    }
+    st.page = target;
+    if (Number.isFinite(Number(det.totalPages)) && Number(det.totalPages) > 0) st.totalPages = Number(det.totalPages);
+    if (Number.isFinite(Number(det.totalRows))) st.totalRows = Number(det.totalRows);
+    attachPager(wait);
+  } catch (e) {
+    alert("翻页失败:" + e.message);
+  } finally {
+    if (bar) { bar.style.opacity = ""; bar.style.pointerEvents = ""; }
+  }
+}
+syncRightCol();
+loadCapabilities(); loadThreads();
+</script>
+</body>
+</html>

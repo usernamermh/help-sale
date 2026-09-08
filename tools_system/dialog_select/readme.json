@@ -1,0 +1,9 @@
+{
+  "name": "dialog_select",
+  "label": "选择对话",
+  "description": "从大批量对话中按关键词/最短长度/数量上限选择一部分对话,返回选中的子集。",
+  "category": "文本算法",
+  "parameters": { "type": "object", "required": ["dialogs"], "properties": { "dialogs": { "type": "array", "description": "对话列表(字符串或 {text|content|transcript})" }, "keyword": { "type": "string", "description": "必须包含的关键词" }, "minLength": { "type": "number", "default": 0, "description": "最短内容长度" }, "maxCount": { "type": "number", "default": 20, "maximum": 100, "description": "最多选择数量" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

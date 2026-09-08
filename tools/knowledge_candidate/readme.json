@@ -1,0 +1,9 @@
+{
+  "name": "knowledge_candidate",
+  "label": "话术候选",
+  "description": "查看待确认的话术候选,确认入库或拒绝,沉淀团队话术资产。",
+  "category": "知识",
+  "parameters": { "type": "object", "properties": { "op": { "type": "string", "enum": ["list", "approve", "reject"], "default": "list", "description": "操作类型" }, "candidateId": { "type": "string", "description": "候选 ID(approve/reject 用)" }, "limit": { "type": "number", "maximum": 100, "description": "列表条数上限" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

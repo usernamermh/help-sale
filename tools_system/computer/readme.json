@@ -1,0 +1,9 @@
+{
+  "name": "computer",
+  "label": "数值计算",
+  "description": "安全地计算数值表达式(仅支持数字、运算符 + - * / % 与括号,支持变量替换),不执行任何代码。",
+  "category": "数值计算",
+  "parameters": { "type": "object", "required": ["expression"], "properties": { "expression": { "type": "string", "description": "数值表达式,如 (a+b)*2/3" }, "variables": { "type": "object", "description": "变量名->数值,如 {a:10,b:20}" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

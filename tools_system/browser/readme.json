@@ -1,0 +1,9 @@
+{
+  "name": "browser",
+  "label": "无头浏览器",
+  "description": "轻量无头抓取:通过 HTTP 抓取指定 URL 返回页面标题与可见文本(不执行页面 JS);如需完整浏览器(点击/表单/截图)请安装 playwright 后扩展本工具。",
+  "category": "浏览器",
+  "parameters": { "type": "object", "required": ["url"], "properties": { "url": { "type": "string", "description": "要抓取的 URL" }, "maxChars": { "type": "number", "default": 2000, "maximum": 8000 } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

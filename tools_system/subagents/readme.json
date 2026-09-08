@@ -1,0 +1,9 @@
+{
+  "name": "subagents",
+  "label": "子代理任务",
+  "description": "登记/查看子代理任务(JSON 文件队列):create 写入任务单,list 查看队列;真实子代理由宿主编排消费该队列。",
+  "category": "子代理",
+  "parameters": { "type": "object", "required": ["op"], "properties": { "op": { "type": "string", "enum": ["create", "list"] }, "title": { "type": "string", "description": "create 时任务名称" }, "goal": { "type": "string", "description": "create 时子代理目标" }, "input": { "type": "object", "description": "可选输入" }, "statusFilter": { "type": "string" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

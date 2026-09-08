@@ -1,0 +1,9 @@
+{
+  "name": "vehicle_query",
+  "label": "车型查询",
+  "description": "按预算、座位、能源类型、级别或关键词检索匹配车型,返回车型清单。",
+  "category": "车型",
+  "parameters": { "type": "object", "properties": { "budgetMin": { "type": "number", "description": "预算下限(万)" }, "budgetMax": { "type": "number", "description": "预算上限(万)" }, "seats": { "type": "number", "description": "座位数" }, "energyType": { "type": "string", "description": "能源类型:燃油/纯电/混动" }, "bodyType": { "type": "string", "description": "级别:轿车/SUV/MPV" }, "keyword": { "type": "string", "description": "关键词" }, "limit": { "type": "number", "maximum": 100, "description": "查询上限" }, "page": { "type": "number", "default": 1, "description": "页码,每页最多 10 行;默认第 1 页,仅当用户明确要求查看更多时才翻页" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

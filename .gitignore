@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.env
+.env.local
+apps/api/data/
+apps/api/.tmp/
+apps/api/apps/
+/pi/
+/pi/**/dist/
+/.playwright-cli/
+*.log
+*.pid
+.DS_Store
+reference/llm-agent-workflow/
+llm-agent-workflow-master.zip
+llm-agent-workflow-master
+
+# 本地配置/运行数据(不提交真实密钥与用户数据)
+help-sale.config.yaml
+/data/
+*.local.yaml

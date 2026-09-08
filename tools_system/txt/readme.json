@@ -1,0 +1,9 @@
+{
+  "name": "txt",
+  "label": "读取文本文件",
+  "description": "读取仓库内的 txt/md/csv/json/yaml 等文本文件内容(路径仅限仓库内,防止越界读取)。",
+  "category": "文件读取",
+  "parameters": { "type": "object", "required": ["filePath"], "properties": { "filePath": { "type": "string", "description": "仓库内相对路径或绝对路径,如 tools/data/example.txt" }, "maxChars": { "type": "number", "default": 4000, "maximum": 20000 } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

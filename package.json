@@ -1,0 +1,24 @@
+{
+	"name": "help-sale",
+	"private": true,
+	"type": "module",
+	"workspaces": [
+		"apps/api",
+		"pi/packages/ai",
+		"pi/packages/telemetry",
+		"pi/packages/agent",
+		"pi/packages/session-backends/sqlite-node"
+	],
+	"overrides": {
+		"protobufjs": "7.6.5",
+		"rimraf": "6.1.2",
+		"gaxios": { "rimraf": "6.1.2" }
+	},
+	"engines": { "node": ">=24.0.0" },
+	"scripts": {
+		"bootstrap": "npm ci --prefix pi --ignore-scripts && node scripts/gen-minimal-model-data.mjs && npm run build:offline --prefix pi && npm install --ignore-scripts",
+		"dev": "npm run dev --workspace=@help-sale/api",
+		"test": "npm run test --workspace=@help-sale/api",
+		"typecheck": "npm run typecheck --workspace=@help-sale/api"
+	}
+}

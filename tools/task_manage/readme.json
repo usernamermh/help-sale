@@ -1,0 +1,9 @@
+{
+  "name": "task_manage",
+  "label": "跟进任务",
+  "description": "为客户创建跟进待办,查看待办/已完成任务,或把任务标记为完成。",
+  "category": "任务",
+  "parameters": { "type": "object", "properties": { "op": { "type": "string", "enum": ["create", "list", "complete"], "default": "list", "description": "操作类型" }, "customerKey": { "type": "string", "description": "客户标识或姓名(create 用)" }, "action": { "type": "string", "description": "跟进动作(create 用)" }, "dueAt": { "type": "string", "description": "截止时间 ISO(create 用)" }, "taskId": { "type": "string", "description": "任务 ID(complete 用)" }, "status": { "type": "string", "enum": ["pending", "done"], "default": "pending", "description": "列表状态筛选" }, "limit": { "type": "number", "maximum": 100, "description": "列表条数上限" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

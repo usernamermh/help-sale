@@ -1,0 +1,9 @@
+{
+  "name": "customer_query",
+  "label": "客户查询",
+  "description": "查看客户清单(每页 10 行,可翻页),或按客户标识/姓名查看客户档案、历史分析与标签。",
+  "category": "客户",
+  "parameters": { "type": "object", "properties": { "view": { "type": "string", "enum": ["list", "profile", "history", "tags"], "default": "list", "description": "查询类型" }, "customerKey": { "type": "string", "description": "客户标识或姓名(profile/history/tags 用)" }, "limit": { "type": "number", "maximum": 100, "description": "查询上限" }, "page": { "type": "number", "default": 1, "description": "页码,每页最多 10 行;默认第 1 页,仅当用户明确要求查看更多时才翻页" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

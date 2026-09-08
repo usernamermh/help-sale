@@ -1,0 +1,9 @@
+{
+  "name": "table_generate",
+  "label": "生成表格/流程图",
+  "description": "把结构化二维数组或对象数组转为 Markdown 表格,并可生成 mermaid 流程图/饼图,供前端直接渲染;表格每页最多 10 行,默认只展示第 1 页,禁止自动翻页取全量;多页时在答复中说明共 N 条即可,其余内容由前端翻页按钮查看,仅当用户明确要求查看更多时才传 page 翻页。",
+  "category": "呈现",
+  "parameters": { "type": "object", "properties": { "title": { "type": "string", "description": "表格标题(可选)" }, "rows": { "type": "array", "description": "二维数组或对象数组(对象时表头取keys)" }, "chartType": { "type": "string", "enum": ["table", "mermaid", "both"], "default": "table" }, "graph": { "type": "array", "description": "流程图边列表 [{from,to,label?}]" }, "pie": { "type": "array", "description": "饼图数据 [{label,value}]" }, "page": { "type": "number", "default": 1, "description": "页码,表格每页最多 10 行;默认第 1 页,仅当用户明确要求查看更多时才翻页" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "knowledge_ingest",
+  "label": "话术沉淀",
+  "description": "把话术、政策、竞品资料批量写入团队知识库,自动分块与去重。",
+  "category": "知识",
+  "parameters": { "type": "object", "required": ["entries"], "properties": { "category": { "type": "string", "description": "知识分类,如 话术/政策/竞品" }, "entries": { "type": "array", "items": { "type": "object", "properties": { "title": { "type": "string" }, "content": { "type": "string" } } }, "description": "知识点列表" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

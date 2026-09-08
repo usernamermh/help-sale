@@ -1,0 +1,90 @@
+# ═══════════════════════ 助销 Agent 统一配置(示例) ═══════════════════════
+# 复制本文件为 help-sale.config.yaml 并按环境填写真实值;带 * 的字段必须替换。
+# 注意:本仓库不提交真实密钥,请勿把实际 apiKey/密码提交到 git。
+
+# ───────────────────────── 服务监听 ─────────────────────────
+server:
+  host: 0.0.0.0
+  port: 3101
+
+# ───────────────────────── 数据存储 ─────────────────────────
+data:
+  # local = 本地 SQLite;mysql = 远程 MySQL 主库(需迁移完成)
+  mode: local
+  databaseId: help_sale
+  dataDir: apps/api/data
+  memoryFile: apps/api/data/memory.md
+  businessDbPath: apps/api/data/business.db
+  sessionDbPath: apps/api/data/pi-sessions.db
+
+# ───────────────────────── 多租户 ─────────────────────────
+tenant:
+  defaultTenantId: t_demo
+
+# ───────────────────────── 模型接入 ─────────────────────────
+model:
+  provider: local-llm
+  modelId: your-model-id                # *
+  baseUrl: http://your-llm-gateway/v1   # *
+  apiKey: your-api-key                  # *
+  proxy: ""                             # 可选 HTTP 代理
+  contextWindow: 80000
+  maxTokens: 8192
+  extraBody: {}
+
+# ───────────────────────── 知识库分块 ─────────────────────────
+chunker:
+  size: 600
+  overlap: 80
+
+# ───────────────────────── 知识检索 ─────────────────────────
+knowledge:
+  searchLimit: 5
+
+# ───────────────────────── 本地日志 ─────────────────────────
+logging:
+  enabled: true
+  dir: apps/api/log
+  maxBytes: 8388608
+
+# ───────────────────────── 业务默认值 ─────────────────────────
+defaults:
+  insightsDays: 7
+  improvementsDays: 30
+  conversationsLimit: 30
+  dealsLimit: 100
+  storeOverviewDays: 30
+  customersLimit: 50
+  knowledgeCandidatesLimit: 50
+  agentThreadsLimit: 30
+  transcriptLimit: 50
+  agentListLimit: 20
+  notificationScanLimit: 50
+  remindersTakeLimit: 100
+  analysisHistoryLimit: 5
+  vehicleSearchLimit: 10
+
+# ───────────────────────── 中间件(可选) ─────────────────────────
+mysql:
+  enabled: false
+  host: your-mysql-host                 # *
+  port: 3306
+  user: root
+  password: change-me                   # *
+  database: help_sale
+
+redis:
+  enabled: false
+  host: your-redis-host                 # *
+  port: 6379
+  password: change-me                   # *
+
+# ───────────────────────── 通知推送(可选) ─────────────────────────
+notification:
+  enabled: true
+  webhookUrl: ""
+
+# ───────────────────────── 公司与团队 ─────────────────────────
+company:
+  name: 你的公司
+  team: 销售团队

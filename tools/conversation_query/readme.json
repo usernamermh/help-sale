@@ -1,0 +1,9 @@
+{
+  "name": "conversation_query",
+  "label": "会话查询",
+  "description": "查看最近的会话列表(时间/ID/销售/客户/消息数),或按会话 ID 读取完整对话原文,便于分析客户沟通内容。",
+  "category": "会话",
+  "parameters": { "type": "object", "properties": { "view": { "type": "string", "enum": ["list", "load"], "default": "list", "description": "查询类型" }, "conversationId": { "type": "string", "description": "会话 ID(load 用)" }, "page": { "type": "number", "default": 1, "description": "原文页码,每页最多 10 句" }, "limit": { "type": "number", "maximum": 100, "description": "列表条数上限" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

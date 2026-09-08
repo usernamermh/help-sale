@@ -1,0 +1,9 @@
+{
+  "name": "keyword_extract_free",
+  "label": "自由抽取标签",
+  "description": "从对话/文本中自由抽取高频关键词作为标签(2-6 字词频 + 停用词过滤,无外部依赖)。",
+  "category": "文本算法",
+  "parameters": { "type": "object", "required": ["text"], "properties": { "text": { "type": "string", "description": "要抽取标签的文本" }, "maxKeywords": { "type": "number", "default": 5, "maximum": 20, "description": "最多返回标签数" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

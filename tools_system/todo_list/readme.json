@@ -1,0 +1,43 @@
+{
+  "name": "todo_list",
+  "description": "创建、细化、标记完成 todo list",
+  "category": "流程",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "op": {
+        "type": "string",
+        "enum": [
+          "create",
+          "detail",
+          "finish"
+        ],
+        "default": "create",
+        "description": "create 创建;detail 细化第 index 项;finish 标记完成(传 indexList)"
+      },
+      "inputString": {
+        "type": "string",
+        "description": "按换行分隔的待办文本(create/detail 用)"
+      },
+      "index": {
+        "type": "number",
+        "description": "detail 时细化的条目索引(从 0 开始)"
+      },
+      "indexList": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "finish 时待完成的层级ID列表,如 [\"1.1\",\"2\"]"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.createTodoList",
+    "main.detailTodoList",
+    "main.finishTodoList",
+    "main.execute"
+  ],
+  "label": "待办清单"
+}

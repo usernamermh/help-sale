@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>销售军师 · 助销 Agent</title>
+<style>
+:root { --bg:#f4f6fa; --card:#fff; --line:#e2e8f0; --text:#1e293b; --muted:#64748b; --brand:#2563eb; --brand2:#3b82f6; --ok:#16a34a; --warn:#d97706; --danger:#dc2626; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; background:var(--bg); color:var(--text); }
+header { display:flex; align-items:center; gap:14px; padding:14px 28px; background:linear-gradient(90deg,#1d4ed8,#2563eb); color:#fff; position:sticky; top:0; z-index:20; box-shadow:0 1px 4px rgba(15,23,42,.12); }
+header h1 { font-size:18px; margin:0; letter-spacing:.5px; }
+header .sub { font-size:12px; opacity:.8; }
+#health { font-size:12px; margin-left:auto; display:flex; align-items:center; gap:6px; opacity:.95; }
+.dot { width:8px; height:8px; border-radius:50%; background:#cbd5e1; } .dot.ok { background:#4ade80; }
+.tabs { display:flex; gap:6px; padding:10px 28px 0; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:54px; z-index:15; }
+.tab { padding:10px 20px; cursor:pointer; font-size:14px; color:var(--muted); border-radius:10px 10px 0 0; border-bottom:2px solid transparent; }
+.tab:hover { color:var(--text); background:#f1f5f9; }
+.tab.active { color:var(--brand); border-bottom-color:var(--brand); font-weight:600; }
+main { max-width:1240px; margin:18px auto; padding:0 18px; }
+.panel { display:none; gap:18px; } .panel.active { display:grid; grid-template-columns:230px 1fr; align-items:start; }
+.func-menu { position:sticky; top:112px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px; }
+.menu-title { font-size:12px; color:var(--muted); margin:4px 6px 10px; letter-spacing:1px; }
+.func-btn { width:100%; text-align:left; border:0; border-radius:9px; padding:10px 12px; font-size:14px; cursor:pointer; background:transparent; color:var(--muted); margin-bottom:4px; }
+.func-btn:hover { background:#f1f5f9; color:var(--text); }
+.func-btn.active { background:#e8f0fe; color:var(--brand); font-weight:600; }
+.func-body { display:flex; flex-direction:column; gap:16px; min-width:0; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+.card h2 { font-size:15px; margin:0 0 12px; }
+.func-card { display:none; } .func-card.active { display:block; }
+label { display:block; font-size:12px; color:var(--muted); margin:12px 0 4px; }
+textarea, input, select { width:100%; border:1px solid var(--line); border-radius:8px; padding:9px 11px; font-size:13px; font-family:inherit; background:#fff; }
+textarea { resize:vertical; }
+input:focus, textarea:focus { outline:2px solid #bfdbfe; border-color:var(--brand); }
+button.primary { border:0; border-radius:8px; padding:9px 18px; font-size:13px; cursor:pointer; background:var(--brand); color:#fff; }
+button.primary:hover { background:var(--brand2); }
+button.primary:disabled { opacity:.55; cursor:wait; }
+button.secondary { background:#fff; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; }
+button.secondary:hover { background:#f1f5f9; }
+.row { display:flex; gap:10px; } .row > * { flex:1; }
+.badge { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; background:#eef2ff; color:var(--brand); margin-right:4px; }
+.badge.warn { background:#fffbeb; color:var(--warn); } .badge.danger { background:#fef2f2; color:var(--danger); }
+.item { border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px; font-size:13px; background:#fff; }
+.item:hover { border-color:#cbd5e1; }
+.item .t { color:var(--muted); font-size:12px; margin-top:2px; }
+.item.selected { border-color:var(--brand); background:#eff6ff; }
+.error { background:#fef2f2; color:var(--danger); border:1px solid #fecaca; border-radius:8px; padding:8px 10px; margin-top:10px; font-size:12px; }
+.hidden { display:none; }
+.digest-content { white-space:pre-wrap; font-size:12px; color:#334155; background:#f8fafc; border-radius:8px; padding:10px; }
+.tr-panel { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; min-width:0; display:flex; flex-direction:column; max-height:100%; overflow:hidden; }
+.panel#panel-workspace.show-tr { grid-template-columns:230px 1fr 300px; }
+.tr-head { display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:600; margin-bottom:8px; }
+.tr-close { border:0; background:transparent; color:var(--muted); cursor:pointer; font-size:16px; }
+.tr-meta { font-size:11px; color:var(--muted); margin-bottom:8px; word-break:break-all; }
+.tr-list { flex:1; overflow:auto; display:flex; flex-direction:column; gap:8px; min-height:0; }
+.tr-line { font-size:12px; border:1px solid var(--line); border-radius:8px; padding:7px 9px; background:#fff; }
+.tr-line .tr-time { font-size:11px; color:var(--muted); }
+.tr-line .tr-role { display:inline-block; padding:1px 7px; border-radius:999px; font-size:11px; margin:0 6px; background:#eef2ff; color:var(--brand); }
+.tr-line .tr-role.sales { background:#ecfdf5; color:var(--ok); }
+.tr-line .tr-role.other { background:#f1f5f9; color:var(--muted); }
+.tr-line .tr-text { margin-top:3px; white-space:pre-wrap; word-break:break-word; color:#334155; }
+.stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:6px; }
+.stat-card { background:#f8fafc; border:1px solid var(--line); border-radius:10px; padding:12px; }
+.stat-card .k { font-size:12px; color:var(--muted); }
+.stat-card .v { font-size:20px; font-weight:700; color:var(--text); margin-top:4px; }
+.mini-table { border-collapse:collapse; width:100%; margin-top:8px; }
+.mini-table th, .mini-table td { border:1px solid var(--line); padding:6px 8px; font-size:12px; text-align:left; }
+.mini-table th { background:#f1f5f9; }
+.mini { font-size:12px; color:var(--muted); }
+.section-note { font-size:12px; color:var(--muted); margin-bottom:10px; }
+@media (max-width:860px){ .panel.active { grid-template-columns:1fr; } .func-menu { position:static; display:flex; flex-wrap:wrap; gap:6px; } .menu-title { display:none; } .func-btn { width:auto; margin:0; } }
+.agent-wrap { display:flex; flex-direction:column; height:calc(100vh - 170px); min-height:480px; }
+.agent-chat { flex:1; overflow:auto; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; max-width:860px; width:100%; margin:0 auto; }
+.agent-msg { margin:0 0 14px; padding:10px 12px; border-radius:12px; max-width:86%; line-height:1.55; }
+.agent-user { background:#eff6ff; border:1px solid #bfdbfe; margin-left:auto; }
+.agent-assist { background:#f8fafc; border:1px solid #e2e8f0; }
+.agent-body { white-space:pre-wrap; word-break:break-word; }
+.agent-body .md { white-space:normal; }
+.agent-body .md p { margin:0 0 8px; }
+.agent-body .md table { border-collapse:collapse; margin:8px 0; width:100%; }
+.agent-body .md th, .agent-body .md td { border:1px solid var(--line); padding:5px 8px; font-size:13px; text-align:left; }
+.agent-body .md th { background:#f1f5f9; font-weight:600; }
+.agent-body .md ul, .agent-body .md ol { margin:6px 0; padding-left:20px; }
+.agent-body .md a { color:var(--brand); }
+.agent-meta { font-size:11px; color:var(--muted); margin-top:6px; }
+.step-line { font-size:11px; color:var(--brand); margin-top:8px; }
+.agent-input { max-width:860px; width:100%; margin:12px auto 0; display:flex; gap:8px; align-items:flex-end; }
+.agent-input textarea { flex:1; min-height:56px; resize:none; padding:10px; border:1px solid #cbd5e1; border-radius:10px; font-family:inherit; font-size:14px; }.panel#panel-agent.active { display:block; }.agent-layout { display:flex; gap:12px; height:calc(100vh - 170px); min-height:480px; max-width:1000px; margin:0 auto; }
+.agent-layout .agent-wrap { flex:1; min-width:0; }
+.agent-side { width:220px; flex-shrink:0; display:flex; flex-direction:column; gap:8px; }
+.agent-thread-list { flex:1; overflow:auto; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:8px; }
+.thread-item { padding:8px 10px; border-radius:8px; font-size:13px; cursor:pointer; color:#334155; }
+.thread-item:hover { background:#f1f5f9; }
+.thread-item.selected { background:#eff6ff; border:1px solid #bfdbfe; }
+.thread-item .t { font-size:11px; color:var(--muted); margin-top:2px; }.agent-details { margin-top:8px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; overflow:hidden; }
+.agent-footnote { cursor:pointer; padding:6px 10px; font-size:12px; color:var(--brand); user-select:none; list-style:none; }
+.agent-footnote::-webkit-details-marker { display:none; }
+.agent-footnote .arrow { display:inline-block; transition:transform .15s; }
+.agent-details[open] .arrow { transform:rotate(90deg); }
+.agent-steps { padding:8px 10px; border-top:1px solid #e2e8f0; display:flex; flex-direction:column; gap:6px; }
+.agent-step { font-size:12px; }
+.agent-step-head { font-weight:600; color:#334155; }
+.agent-step-body { margin-top:2px; color:#64748b; white-space:pre-wrap; word-break:break-word; max-height:120px; overflow:auto; background:#f8fafc; border-radius:6px; padding:6px 8px; }</style>
+</head>
+<body>
+<header><h1>销售军师</h1><span class="sub">助销 Agent</span><span id="health"><span class="dot" id="healthDot"></span><span id="healthText">检查中…</span></span></header>
+<div class="tabs">
+<span class="tab active" data-tab="agent">AI 助销</span>
+<span class="tab" data-tab="workspace">工作台</span>
+<span class="tab" data-tab="knowledge">知识库</span>
+<span class="tab" data-tab="tasks">跟进与通知</span>
+<span class="tab" data-tab="insights">洞察晨报</span>
+<span class="tab" data-tab="stores">门店管理</span>
+</div>
+<main>
+<section class="panel active" id="panel-agent">
+<div class="agent-layout">
+<aside class="agent-side">
+<button id="agentNewBtn" class="btn primary" style="width:100%">+ 新会话</button>
+<div class="agent-thread-list" id="agentThreadList"></div>
+</aside>
+<div class="agent-wrap">
+<div class="agent-chat" id="agentChat">
+
+</div>
+<div class="agent-input">
+<textarea id="agentGoal" placeholder="下达目标，例如：列出当前待办并告诉我最该先跟进哪一条"></textarea>
+<button id="agentSendBtn" class="btn primary">发送</button>
+</div>
+</div>
+<aside class="tr-panel" id="agentTranscript" style="display:none">
+<div class="tr-head"><span>对话原文</span><button class="tr-close" onclick="hideTranscript('agentTranscript')">×</button></div>
+<div class="tr-meta" id="agentTrMeta"></div>
+<div class="tr-list" id="agentTrList"></div>
+</aside>
+</div>
+</section>
+<section class="panel" id="panel-workspace">
+<aside class="func-menu">
+<div class="menu-title">工作台</div>
+<button class="func-btn active" data-card="convCard">会话库分析</button>
+<button class="func-btn" data-card="vehicleCard">车型优选</button>
+<button class="func-btn" data-card="evalCard">话术评估</button>
+<button class="func-btn" data-card="digestCard">通话/试驾总结</button>
+</aside>
+<div class="func-body">
+<div class="card func-card active" id="convCard">
+<h2>会话库分析</h2>
+<div class="section-note">从数据库选取会话分析,无需手动粘贴。</div>
+<button id="convRefreshBtn" class="secondary">刷新会话</button>
+<div id="convList" class="mini" style="margin-top:10px">加载中…</div>
+<div id="analyzeMsg" class="mini" style="margin-top:8px"></div>
+</div>
+<div class="card func-card" id="vehicleCard">
+<h2>车型优选</h2>
+<div class="row"><input id="vBudgetMin" type="number" placeholder="预算最低" value="15"><input id="vBudgetMax" type="number" placeholder="预算最高" value="30"></div>
+<div class="row"><input id="vSeats" type="number" placeholder="座位" value="5"><input id="vEnergy" placeholder="能源(纯电/混动)"></div>
+<label>用车场景</label><input id="vUsage" placeholder="商务接待 / 家庭通勤…">
+<div style="margin-top:12px"><button id="vehicleBtn" class="primary">生成优选方案</button></div>
+<div id="vehicleError" class="error hidden"></div>
+</div>
+<div class="card func-card" id="evalCard">
+<h2>话术评估</h2>
+<label>客户对话</label><textarea id="evalConversation" style="min-height:60px" placeholder="客户对话"></textarea>
+<label>你的回复</label><textarea id="evalReply" style="min-height:60px" placeholder="你的回复"></textarea>
+<div style="margin-top:12px"><button id="evalBtn" class="secondary">评估并改进</button></div>
+<div id="evalError" class="error hidden"></div>
+</div>
+<div class="card func-card" id="digestCard">
+<h2>通话/试驾总结</h2>
+<label>文字稿</label><textarea id="digestText" style="min-height:70px" placeholder="粘贴文字稿…"></textarea>
+<div style="margin-top:12px"><button id="digestBtn" class="secondary">生成总结</button></div>
+<div id="digestError" class="error hidden"></div>
+<div id="digestBox" class="mini" style="margin-top:8px"></div>
+</div>
+<div class="card hidden" id="resultCard">
+<h2>分析结果 <span class="badge" id="intentBadge"></span></h2>
+<p id="summary" style="font-size:13px"></p>
+<div style="margin-top:12px"><b>信号</b></div><div id="signals"></div>
+<div style="margin-top:12px"><b>建议回复</b></div><textarea id="suggestedReply" style="min-height:80px" readonly></textarea>
+<div style="margin-top:8px"><button id="copyBtn" class="secondary">复制话术</button></div>
+<div style="margin-top:12px"><b>下一步</b></div><ol id="nextSteps"></ol>
+<p class="mini" id="followupAt"></p>
+<p class="mini" id="resultMeta"></p>
+<div style="margin-top:12px"><b>过程回放</b></div><div id="timelineBox" class="mini"></div>
+</div>
+<div class="card hidden" id="vehicleResultCard">
+<h2>优选方案 <span class="badge" id="vProfile"></span></h2>
+<div id="vehicleList"></div>
+<div style="margin-top:12px"><b>关键差异</b></div><ul id="vDifferences"></ul>
+<div style="margin-top:12px"><b>建议话术</b></div><textarea id="vReply" style="min-height:80px" readonly></textarea>
+<div style="margin-top:8px"><button id="vCopyBtn" class="secondary">复制话术</button></div>
+<div style="margin-top:12px"><b>下一步</b></div><ol id="vNextSteps"></ol>
+<p class="mini" id="vMeta"></p>
+</div>
+<div class="card hidden" id="evalResultCard">
+<h2>评估结果 <span class="badge" id="evalScore"></span></h2>
+<div id="evalDims" class="mini"></div>
+<div style="margin-top:12px"><b>做得好的</b></div><ul id="evalStrengths"></ul>
+<div style="margin-top:12px"><b>可改进</b></div><ul id="evalImprovements"></ul>
+<div style="margin-top:12px"><b>建议回复</b></div><textarea id="evalSuggested" style="min-height:80px" readonly></textarea>
+<div style="margin-top:8px"><button id="evalCopyBtn" class="secondary">复制建议话术</button></div>
+<p class="mini" id="evalMeta"></p>
+</div>
+</div>
+<aside class="tr-panel" id="wsTranscript" style="display:none">
+<div class="tr-head"><span>对话原文</span><button class="tr-close" onclick="hideTranscript('wsTranscript')">×</button></div>
+<div class="tr-meta" id="wsTrMeta"></div>
+<div class="tr-list" id="wsTrList"></div>
+</aside>
+</section>
+<section class="panel" id="panel-knowledge">
+<aside class="func-menu">
+<div class="menu-title">知识库</div>
+<button class="func-btn active" data-card="kbCandidatesCard">知识沉淀</button>
+<button class="func-btn" data-card="kbSearchCard">知识库检索</button>
+<button class="func-btn" data-card="kbUploadCard">知识库上传</button>
+</aside>
+<div class="func-body">
+<div class="card func-card active" id="kbCandidatesCard">
+<h2>知识沉淀</h2>
+<div class="section-note">会话分析后自动生成候选(基于库内对话),一键入库。</div>
+<div id="candidateList"></div>
+</div>
+<div class="card func-card" id="kbSearchCard">
+<h2>知识库检索</h2>
+<div class="row"><input id="kbSearch" placeholder="检索关键词"><button id="kbSearchBtn" class="secondary">检索</button></div>
+<div id="kbHits" class="mini" style="margin-top:10px"></div>
+</div>
+<div class="card func-card" id="kbUploadCard">
+<h2>知识库上传(分类 + 多条知识点)</h2>
+<label>分类</label><input id="docCategory" placeholder="如 价格政策 / 竞品话术 / 售后FAQ">
+<label>每行一条: 标题 :: 内容</label>
+<textarea id="docEntries" style="min-height:120px" placeholder="旗舰版价格 :: 1999元/年,年付送一个月&#10;售后网点 :: 全国300家"></textarea>
+<div style="margin-top:12px"><button id="uploadEntriesBtn" class="primary">批量上传</button></div>
+<div id="uploadResult" class="mini" style="margin-top:8px"></div>
+</div>
+</div>
+</section>
+<section class="panel" id="panel-tasks">
+<aside class="func-menu">
+<div class="menu-title">跟进与通知</div>
+<button class="func-btn active" data-card="tasksCard">跟进任务</button>
+<button class="func-btn" data-card="profileCard">客户画像</button>
+</aside>
+<div class="func-body">
+<div class="card func-card active" id="tasksCard">
+<h2>跟进任务 <button id="notifyBtn" class="secondary" style="padding:4px 10px;font-size:12px;float:right">推送到期提醒</button></h2>
+<div id="notifyResult" class="mini" style="margin-bottom:8px"></div>
+<div id="taskList"></div>
+</div>
+<div class="card func-card" id="profileCard">
+<h2>客户画像</h2>
+<div class="row"><input id="historyKey" placeholder="客户标识 e.g. c_001" value="c_001"><button id="tagBtn" class="secondary">查标签和历史</button></div>
+<div id="tagBox" style="margin-top:10px"></div>
+<div id="historyList" class="mini" style="margin-top:10px"></div>
+</div>
+</div>
+</section>
+<section class="panel" id="panel-insights">
+<aside class="func-menu">
+<div class="menu-title">洞察晨报</div>
+<button class="func-btn active" data-card="insightCard">经营洞察</button>
+<button class="func-btn" data-card="digestCard2">军师晨报</button>
+</aside>
+<div class="func-body">
+<div class="card func-card active" id="insightCard">
+<h2>经营洞察(近7天)</h2>
+<div id="insightBox" class="mini"></div>
+</div>
+<div class="card func-card" id="digestCard2">
+<h2>军师晨报</h2>
+<button id="digestBtn2" class="secondary" style="margin-bottom:10px">生成今日晨报</button>
+<div id="digestList"></div>
+</div>
+</div>
+</section>
+<section class="panel" id="panel-stores">
+<aside class="func-menu">
+<div class="menu-title">门店管理</div>
+<button class="func-btn active" data-card="storeOvCard">门店概览</button>
+<button class="func-btn" data-card="storeMgmtCard">门店与成员</button>
+<button class="func-btn" data-card="storeDealCard">成交登记</button>
+</aside>
+<div class="func-body">
+<div class="card func-card active" id="storeOvCard">
+<h2>门店经营概览</h2>
+<div class="section-note">店长选定门店与时间周期,查看经营概况:接客次数 / 成交量 / 成交额 / 成交率 / 成交订单。</div>
+<div class="row" style="align-items:flex-end">
+<div style="flex:1"><label>门店</label><select id="storeSel"></select></div>
+<div style="flex:1"><label>开始日期</label><input id="storeFrom" type="date"></div>
+<div style="flex:1"><label>结束日期</label><input id="storeTo" type="date"></div>
+<div style="flex:0 0 auto"><button id="storeQueryBtn" class="secondary">查询</button></div>
+</div>
+<p class="mini" id="storeOvMeta" style="margin-top:8px"></p>
+<div class="stat-grid" id="storeStats"></div>
+<div style="margin-top:12px"><b>每日明细</b></div><div id="storeDaily"></div>
+<div style="margin-top:14px"><b>成交订单</b></div><div id="storeOrders"></div>
+</div>
+<div class="card func-card" id="storeMgmtCard">
+<h2>门店与成员 <button id="storeRefreshBtn" class="secondary" style="padding:4px 10px;font-size:12px;float:right">刷新</button></h2>
+<div id="storeList"></div>
+<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px">
+<h2 style="font-size:14px">新增门店(可同时登记店长)</h2>
+<div class="row"><input id="sName" placeholder="门店名称"><input id="sAddress" placeholder="地址"></div>
+<div class="row"><input id="mName" placeholder="店长姓名"><input id="mPhone" placeholder="店长电话"></div>
+<div style="margin-top:12px"><button id="storeAddBtn" class="primary">新增门店</button></div>
+</div>
+<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px">
+<h2 style="font-size:14px">新增销售/店长</h2>
+<div class="row"><select id="addStoreSel"></select><input id="salesName" placeholder="姓名"><input id="salesPhone" placeholder="电话"></div>
+<div style="margin-top:8px"><select id="salesRole" style="width:auto"><option value="sales">销售</option><option value="manager">店长</option></select><button id="salesAddBtn" class="primary" style="margin-left:8px">新增成员</button></div>
+</div>
+</div>
+<div class="card func-card" id="storeDealCard">
+<h2>成交登记</h2>
+<div class="section-note">登记一笔成交订单,计入门店经营概况(成交率/成交量/成交额/订单列表)。</div>
+<div class="row"><input id="dealKey" placeholder="客户标识 e.g. c_001"><select id="dealStoreSel"></select></div>
+<div class="row"><input id="dealAmount" type="number" placeholder="成交额(元)"><input id="dealDate" type="date"></div>
+<div style="margin-top:12px"><button id="dealAddBtn" class="primary">登记成交</button></div>
+<div id="dealResult" class="mini" style="margin-top:8px"></div>
+</div>
+</div>
+</section>
+</main>
+
+<script src="/vendor/marked.min.js"></script>
+<script src="/vendor/purify.min.js"></script>
+<script>
+
+
+const $ = (id) => document.getElementById(id);
+const api = async (path, options = {}) => {
+  const res = await fetch(path, { headers: { "Content-Type": "application/json", "x-tenant-id": "t_demo" }, ...options });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || body.message || ("HTTP " + res.status));
+  return body;
+};
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c])); }
+function renderMarkdown(text) {
+  try {
+    if (typeof marked !== "undefined" && marked.parse) {
+      const html = marked.parse(text);
+      if (typeof DOMPurify !== "undefined") return DOMPurify.sanitize(html);
+      return html;
+    }
+  } catch {}
+  return escapeHtml(text);
+}document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+  tab.classList.add("active");
+  document.querySelectorAll("section.panel").forEach((p) => p.classList.remove("active"));
+  document.getElementById("panel-" + tab.dataset.tab).classList.add("active");
+}));
+async function checkHealth() { try { await fetch("/api/v1/health"); $("healthDot").className = "dot ok"; $("healthText").textContent = "服务正常"; } catch { $("healthText").textContent = "服务不可用"; } }
+let selectedConvId = null;
+async function loadConversations() {
+  const box = $("convList"); box.innerHTML = "加载中…";
+  try {
+    const r = await api("/api/v1/conversations?limit=30");
+    const list = r.conversations || [];
+    if (!list.length) { box.innerHTML = "暂无会话"; return; }
+    box.innerHTML = "";
+    for (const c of list) {
+      const d = document.createElement("div");
+      d.className = "item" + (selectedConvId === c.id ? " selected" : "");
+      d.innerHTML = "<div><b>" + escapeHtml(c.customerName || c.customerKey || "未知客户") + "</b> <span class=\"badge\">" + escapeHtml(c.salesName) + "</span></div><div class=\"t\">" + escapeHtml(c.id.slice(0, 10)) + "… · " + escapeHtml(new Date(c.createdAt).toLocaleString()) + " · " + c.messageCount + " 条</div>";
+      d.style.cursor = "pointer";
+      d.addEventListener("click", async () => { selectedConvId = c.id; loadConversations(); await analyzeConversation(); });
+      box.appendChild(d);
+    }
+  } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
+}
+async function analyzeConversation() {
+  if (!selectedConvId) return;
+  const box = $("analyzeMsg"); box.textContent = "分析中…";
+  try {
+    const r = await api("/api/v1/conversations/" + selectedConvId + "/analyze", { method: "POST" });
+    renderResult(r.analysis); box.textContent = "分析完成:" + r.analysisId;
+    showConversationTranscript(r.conversationId || selectedConvId);
+    loadTasks(); loadCandidates(); loadDigests(); loadInsights();
+  } catch (e) { box.textContent = "分析失败:" + e.message; }
+}
+$("convRefreshBtn").addEventListener("click", loadConversations);
+$("convList").addEventListener("click", (ev) => { const item = ev.target.closest(".item"); if (item && selectedConvId) analyzeConversation(); });
+function renderResult(a) {
+  $("resultCard").classList.remove("hidden");
+  $("intentBadge").textContent = a.intent || "";
+  $("summary").textContent = a.summary || "";
+  const signals = $("signals"); signals.innerHTML = "";
+  for (const s of a.signals || []) {
+    const cls = s.kind === "risk" ? "danger" : s.kind === "buying_signal" ? "warn" : "";
+    const div = document.createElement("div"); div.className = "item";
+    div.innerHTML = "<span class=\"badge " + cls + "\">" + escapeHtml(s.kind || "") + "</span><p>“" + escapeHtml(s.quote || "") + "”</p><div class=\"t\">" + escapeHtml(s.note || "") + "</div>";
+    signals.appendChild(div);
+  }
+  $("suggestedReply").value = a.suggestedReply || "";
+  const steps = $("nextSteps"); steps.innerHTML = "";
+  for (const step of a.nextSteps || []) { const li = document.createElement("li"); li.textContent = step; steps.appendChild(li); }
+  $("followupAt").textContent = a.followupAt ? "建议跟进时间:" + a.followupAt : "";
+  $("resultMeta").textContent = "分析ID:" + a.id + " / 会话:" + a.conversationId;
+  loadTimeline(a.conversationId);
+  $("resultCard").scrollIntoView({ behavior: "smooth" });
+}
+async function loadTimeline(conversationId) {
+  const box = $("timelineBox"); if (!conversationId) { box.textContent = ""; return; }
+  try { const r = await api("/api/v1/conversations/" + conversationId + "/timeline"); const steps = []; for (const e of r.events || []) { if (e.type === "agent_start") steps.push("🚀 开始"); else if (e.type === "tool_start") steps.push("调用:" + e.toolName); else if (e.type === "tool_end") steps.push("完成:" + e.toolName); else if (e.type === "agent_end") steps.push("收尾"); } box.textContent = steps.join(" → "); } catch { box.textContent = ""; }
+}
+async function copyToClipboard(id, label, text) { if (!text) return; try { await navigator.clipboard.writeText(text); $(id).textContent = "已复制"; setTimeout(() => ($(id).textContent = label), 1500); } catch {} }
+$("copyBtn").addEventListener("click", () => copyToClipboard("copyBtn", "复制话术", $("suggestedReply").value));
+$("vehicleBtn").addEventListener("click", async () => {
+  const err = $("vehicleError"); err.classList.add("hidden");
+  const requirements = { budgetMin: Number($("vBudgetMin").value) || undefined, budgetMax: Number($("vBudgetMax").value) || undefined, seats: Number($("vSeats").value) || undefined, energyType: $("vEnergy").value.trim() || undefined, usage: $("vUsage").value.trim() || undefined };
+  if (!requirements.budgetMin && !requirements.budgetMax && !requirements.usage) { err.textContent = "请至少填写预算或场景"; err.classList.remove("hidden"); return; }
+  const btn = $("vehicleBtn"); btn.disabled = true; btn.textContent = "优选中…";
+  try { const r = await api("/api/v1/copilot/vehicle-match", { method: "POST", body: JSON.stringify({ customerKey: $("historyKey").value.trim() || "c_car", requirements }) }); renderVehiclePlan(r.plan); }
+  catch (e) { err.textContent = "优选失败:" + e.message; err.classList.remove("hidden"); }
+  finally { btn.disabled = false; btn.textContent = "生成优选方案"; }
+});
+function renderVehiclePlan(plan) {
+  $("vehicleResultCard").classList.remove("hidden");
+  $("vProfile").textContent = plan.profile || "";
+  const list = $("vehicleList"); list.innerHTML = "";
+  for (const v of plan.recommendations || []) {
+    const div = document.createElement("div"); div.className = "item";
+    const score = v.fitScore != null ? " <span class=\"badge\">匹配度 " + v.fitScore + "</span>" : "";
+    div.innerHTML = "<div><b>" + escapeHtml(v.brand + " " + v.series + " " + v.modelName) + "</b>" + score + "</div><div class=\"t\">" + escapeHtml(v.priceText + " / " + v.energyType + " / " + v.bodyType + " / " + v.seats + "座") + "</div><div class=\"t\">" + escapeHtml(v.reason || "") + "</div>";
+    list.appendChild(div);
+  }
+  const diff = $("vDifferences"); diff.innerHTML = "";
+  for (const d of plan.keyDifferences || []) { const li = document.createElement("li"); li.textContent = d; diff.appendChild(li); }
+  $("vReply").value = plan.suggestedReply || "";
+  const steps = $("vNextSteps"); steps.innerHTML = "";
+  for (const s of plan.nextSteps || []) { const li = document.createElement("li"); li.textContent = s; steps.appendChild(li); }
+  $("vMeta").textContent = plan.recommendations.length + " 款推荐";
+  $("vehicleResultCard").scrollIntoView({ behavior: "smooth" });
+}
+$("vCopyBtn").addEventListener("click", () => copyToClipboard("vCopyBtn", "复制话术", $("vReply").value));
+$("evalBtn").addEventListener("click", async () => {
+  const conversation = $("evalConversation").value.trim(); const reply = $("evalReply").value.trim();
+  const err = $("evalError"); err.classList.add("hidden");
+  if (!conversation || !reply) { err.textContent = "客户对话与回复都必填"; err.classList.remove("hidden"); return; }
+  const btn = $("evalBtn"); btn.disabled = true; btn.textContent = "评估中…";
+  try { const r = await api("/api/v1/copilot/evaluate-response", { method: "POST", body: JSON.stringify({ conversation, reply }) }); renderEvaluation(r.evaluation); }
+  catch (e) { err.textContent = "评估失败:" + e.message; err.classList.remove("hidden"); }
+  finally { btn.disabled = false; btn.textContent = "评估并改进"; }
+});
+function renderEvaluation(d) {
+  $("evalResultCard").classList.remove("hidden");
+  $("evalScore").textContent = d.score + " 分";
+  const dims = $("evalDims"); dims.innerHTML = "";
+  const labels = { empathy: "共情", structure: "结构", value: "价值传达", compliance: "合规", close: "转化引导" };
+  for (const k of Object.keys(d.dimensions || {})) { const line = document.createElement("div"); line.textContent = labels[k] + ": " + d.dimensions[k] + " / 100"; dims.appendChild(line); }
+  fillList("evalStrengths", d.strengths); fillList("evalImprovements", d.improvements);
+  $("evalSuggested").value = d.suggestedReply || "";
+  $("evalResultCard").scrollIntoView({ behavior: "smooth" });
+}
+function fillList(id, items) { const box = $(id); box.innerHTML = ""; for (const item of items || []) { const li = document.createElement("li"); li.textContent = item; box.appendChild(li); } }
+$("evalCopyBtn").addEventListener("click", () => copyToClipboard("evalCopyBtn", "复制建议话术", $("evalSuggested").value));
+$("digestBtn").addEventListener("click", async () => {
+  const text = $("digestText").value.trim(); const err = $("digestError"); err.classList.add("hidden");
+  if (!text) { err.textContent = "请粘贴文字稿"; err.classList.remove("hidden"); return; }
+  const btn = $("digestBtn"); btn.disabled = true; btn.textContent = "生成中…";
+  try { const r = await api("/api/v1/copilot/voice-digest", { method: "POST", body: JSON.stringify({ transcript: text }) }); const d = r.digest; const box = $("digestBox"); box.innerHTML = "<div><b>画像:</b> " + escapeHtml(d.customerProfile || "") + "</div><div><b>关注点:</b> " + escapeHtml((d.concerns || []).join("、")) + "</div><div><b>阶段:</b> " + escapeHtml(d.progress || "") + "</div><div><b>建议:</b> " + escapeHtml((d.suggestedActions || []).join("; ")) + "</div><div class=\"t\">" + escapeHtml(d.summary || "") + "</div>"; }
+  catch (e) { err.textContent = "总结失败:" + e.message; err.classList.remove("hidden"); }
+  finally { btn.disabled = false; btn.textContent = "生成总结"; }
+});
+$("uploadEntriesBtn").addEventListener("click", async () => {
+  const category = $("docCategory").value.trim() || undefined;
+  const lines = $("docEntries").value.split("\n").map((l) => l.trim()).filter(Boolean);
+  const entries = [];
+  for (const line of lines) { const idx = line.indexOf("::"); if (idx <= 0) continue; entries.push({ title: line.slice(0, idx).trim(), content: line.slice(idx + 2).trim() }); }
+  if (!entries.length) { $("uploadResult").textContent = "请按 标题 :: 内容 逐行填写"; return; }
+  const r = await api("/api/v1/knowledge/batch", { method: "POST", body: JSON.stringify({ category, entries }) });
+  const ok = r.results.filter((x) => !x.skipped).length;
+  $("uploadResult").textContent = "上传完成:新增 " + ok + " 条,跳过 " + (r.results.length - ok) + " 条";
+  loadCandidates(); kbSearch("");
+});
+async function kbSearch(query) {
+  const q = query || $("kbSearch").value.trim();
+  if (!q) { $("kbHits").innerHTML = ""; return; }
+  try {
+    const r = await api("/api/v1/knowledge/search?q=" + encodeURIComponent(q));
+    $("kbHits").innerHTML = "";
+    if (!r.hits || !r.hits.length) { $("kbHits").innerHTML = "无命中"; return; }
+    for (const h of r.hits.slice(0, 10)) {
+      const d = document.createElement("div"); d.className = "item";
+      d.innerHTML = "<b>" + escapeHtml(h.title) + "</b> <span class=\"badge\">" + escapeHtml(h.category || "未分类") + "</span><div class=\"t\">" + escapeHtml(h.snippet) + "</div>";
+      $("kbHits").appendChild(d);
+    }
+  } catch (e) { $("kbHits").textContent = "检索失败:" + e.message; }
+}
+$("kbSearchBtn").addEventListener("click", () => kbSearch(""));
+$("kbSearch").addEventListener("keydown", (e) => { if (e.key === "Enter") kbSearch(""); });
+async function loadCandidates() {
+  const box = $("candidateList");
+  try {
+    const r = await api("/api/v1/knowledge/candidates?status=pending").catch(() => null);
+    if (!r || !r.candidates || !r.candidates.length) { box.innerHTML = "<div class=\"mini\">暂无待沉淀话术</div>"; return; }
+    box.innerHTML = "";
+    for (const c of r.candidates) {
+      const div = document.createElement("div"); div.className = "item";
+      div.innerHTML = "<span class=\"badge\">" + escapeHtml(c.intent) + "</span><div class=\"t\">" + escapeHtml(c.draftContent.slice(0, 140)) + "</div><div style=\"display:flex;gap:6px;margin-top:6px\"><button class=\"secondary\" data-act=\"approve\">入库</button><button class=\"secondary\" data-act=\"reject\">拒绝</button></div>";
+      const approve = div.querySelector("[data-act=approve]"); const reject = div.querySelector("[data-act=reject]");
+      approve.addEventListener("click", async () => { try { await api("/api/v1/knowledge/candidates/" + c.id + "/approve", { method: "POST" }); } catch (e) { alert(e.message); } loadCandidates(); });
+      reject.addEventListener("click", async () => { try { await api("/api/v1/knowledge/candidates/" + c.id + "/reject", { method: "POST" }); } catch (e) { alert(e.message); } loadCandidates(); });
+      box.appendChild(div);
+    }
+  } catch { box.innerHTML = "<div class=\"mini\">候选加载失败</div>"; }
+}
+async function loadTasks() {
+  const box = $("taskList");
+  try {
+    const [r, rem] = await Promise.all([ api("/api/v1/tasks?status=pending&limit=50"), api("/api/v1/reminders/overdue").catch(() => ({ overdue: [] })) ]);
+    const overdueIds = new Set((rem.overdue || []).map((t) => t.id));
+    box.innerHTML = "";
+    if (!r.tasks || !r.tasks.length) { box.innerHTML = "<div class=\"mini\">暂无待办任务</div>"; return; }
+    for (const t of r.tasks) {
+      const div = document.createElement("div"); div.className = "item";
+      const flag = overdueIds.has(t.id) ? " <span class=\"badge danger\">已到期</span>" : "";
+      div.innerHTML = "<div><b>" + escapeHtml(t.customerName || t.customerKey || "未知客户") + "</b>" + flag + "</div><div class=\"t\">" + escapeHtml(t.action) + "</div><div style=\"margin-top:6px\"><button class=\"secondary\">完成</button></div>";
+      div.querySelector("button").addEventListener("click", async () => { try { await api("/api/v1/tasks/" + t.id + "/done", { method: "PATCH" }); } catch (e) { alert(e.message); } loadTasks(); });
+      box.appendChild(div);
+    }
+  } catch { box.innerHTML = "<div class=\"mini\">任务加载失败</div>"; }
+}
+async function loadNotifications() {
+  const box = $("notifyResult");
+  try { const r = await api("/api/v1/notifications").catch(() => null); if (!r || !r.logs || !r.logs.length) { box.textContent = ""; return; } const last = r.logs[0]; box.textContent = "最近推送: " + last.title + " · " + new Date(last.createdAt).toLocaleTimeString() + " · " + last.status; } catch { box.textContent = ""; }
+}
+$("notifyBtn").addEventListener("click", async () => {
+  const box = $("notifyResult"); const btn = $("notifyBtn"); btn.disabled = true;
+  try { const r = await api("/api/v1/notifications/trigger", { method: "POST" }); box.textContent = r.newlyNotified.length ? ("已推送 " + r.newlyNotified.length + " 条") : "无新到期任务(去重)"; loadNotifications(); } catch (e) { box.textContent = "推送失败:" + e.message; } finally { btn.disabled = false; }
+});
+$("tagBtn").addEventListener("click", async () => {
+  const key = $("historyKey").value.trim(); const tagBox = $("tagBox"); const hist = $("historyList");
+  tagBox.innerHTML = ""; hist.innerHTML = "";
+  if (!key) return;
+  try {
+    const [t, h] = await Promise.all([ api("/api/v1/customers/" + encodeURIComponent(key) + "/tags").catch(() => null), api("/api/v1/customers/" + encodeURIComponent(key) + "/analyses").catch(() => null) ]);
+    if (t && t.tags && t.tags.length) { tagBox.innerHTML = t.tags.map((x) => "<span class=\"badge\">" + escapeHtml(x.tag) + "(x" + x.weight + ")</span>").join(" "); } else { tagBox.innerHTML = "<div class=\"mini\">暂无标签</div>"; }
+    hist.innerHTML = "";
+    if (!h || !h.analyses || !h.analyses.length) { hist.innerHTML = "<div class=\"mini\">暂无分析记录</div>"; return; }
+    for (const a of h.analyses) {
+      const d = document.createElement("div"); d.className = "item"; d.style.cursor = "pointer";
+      d.innerHTML = "<b>" + escapeHtml(a.intent || "") + "</b> <span class=\"t\">" + escapeHtml(new Date(a.createdAt).toLocaleString()) + "</span><div class=\"t\">" + escapeHtml((a.summary || "").slice(0, 120)) + "</div>";
+      d.addEventListener("click", () => renderResult(a));
+      hist.appendChild(d);
+    }
+  } catch (e) { hist.innerHTML = "查询失败:" + escapeHtml(e.message); }
+});
+async function loadDigests() {
+  const box = $("digestList");
+  try { const r = await api("/api/v1/assistant/digests?limit=3").catch(() => null); if (!r || !r.digests || !r.digests.length) { box.innerHTML = "<div class=\"mini\">尚未生成晨报</div>"; return; } box.innerHTML = ""; for (const d of r.digests) { const div = document.createElement("div"); div.className = "item"; div.innerHTML = "<b>" + escapeHtml(d.title) + "</b> <span class=\"t\">" + escapeHtml(new Date(d.createdAt).toLocaleString()) + "</span><div class=\"digest-content\">" + escapeHtml(d.content) + "</div>"; box.appendChild(div); } } catch { box.innerHTML = "<div class=\"mini\">晨报加载失败</div>"; }
+}
+$("digestBtn2").addEventListener("click", async () => { const btn = $("digestBtn2"); btn.disabled = true; btn.textContent = "生成中…"; try { await api("/api/v1/assistant/digest", { method: "POST" }); await loadDigests(); } catch (e) { alert("晨报生成失败:" + e.message); } finally { btn.disabled = false; btn.textContent = "生成今日晨报"; } });
+async function loadInsights() {
+  const box = $("insightBox");
+  try { const r = await api("/api/v1/assistant/insights?days=7").catch(() => null); if (!r) { box.innerHTML = "<div class=\"mini\">洞察加载失败</div>"; return; }
+    const intents = (r.topIntents || []).map((i) => i.intent + " ×" + i.count).join("、") || "暂无";
+    const brands = (r.topBrands || []).map((b) => b.brand + " ×" + b.count).join("、") || "暂无";
+    box.innerHTML = "<div class=\"t\">分析 " + r.analyses + " 次 / 待办 " + r.pendingTasks + " / 到期 " + r.overdueTasks + " / 完成率 " + Math.round(r.taskCompletionRate * 100) + "%</div><div class=\"t\">热门意图:" + escapeHtml(intents) + "</div><div class=\"t\">热门品牌:" + escapeHtml(brands) + "</div>";
+    loadImprovements(box);
+  } catch { box.innerHTML = "<div class=\"mini\">洞察加载失败</div>"; }
+}
+async function loadImprovements(box) {
+  try { const r = await api("/api/v1/assistant/improvements?days=30").catch(() => null); if (!r || !r.suggestions || !r.suggestions.length) return; const div = document.createElement("div"); div.innerHTML = "<div style=\"margin-top:10px\"><b>规则改进建议</b></div><ul style=\"font-size:12px\"></ul>"; const ul = div.querySelector("ul"); for (const s of r.suggestions.slice(0, 4)) { const li = document.createElement("li"); li.textContent = s.topic + "(" + s.count + ")·" + s.suggestion; ul.appendChild(li); } box.appendChild(div); } catch {}
+}
+
+document.querySelectorAll(".func-btn").forEach((btn) => btn.addEventListener("click", () => {
+  const cardId = btn.dataset.card;
+  const panel = btn.closest("section.panel");
+  panel.querySelectorAll(".func-card").forEach((c) => c.classList.remove("active"));
+  const target = document.getElementById(cardId);
+  if (target) target.classList.add("active");
+  panel.querySelectorAll(".func-btn").forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active");
+}));
+
+
+checkHealth(); loadConversations(); loadCandidates(); loadTasks(); loadNotifications(); loadDigests(); loadInsights();
+
+
+let agentRunning = false;
+let currentThreadId = null;
+let agentDeltaBuf = "";
+function appendAgentMsg(role, text) {
+  const chat = $("agentChat");
+  const div = document.createElement("div");
+  div.className = "agent-msg " + (role === "user" ? "agent-user" : "agent-assist");
+  const body = document.createElement("div"); body.className = "agent-body";
+  if (role === "assistant") { body.innerHTML = '<div class="md">' + renderMarkdown(text) + '</div>'; }
+  else { body.textContent = text; }
+  div.appendChild(body);
+  const step = document.createElement("div"); step.className = "step-line";
+  const meta = document.createElement("div"); meta.className = "agent-meta";
+  div.appendChild(step);
+  div.appendChild(meta);
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return { div, body, step, meta };
+}
+function attachAgentSteps(wait, steps) {
+  if (!wait || !Array.isArray(steps) || !steps.length) return;
+  wait.step.style.display = "none";
+  const details = document.createElement("details");
+  details.className = "agent-details";
+  const summary = document.createElement("summary");
+  summary.className = "agent-footnote";
+  const names = steps.filter((s) => s.eventType === "tool_start").map((s) => s.toolName);
+  summary.innerHTML = "<span class=\"arrow\">▸</span> 过程 · " + escapeHtml(names.join(" → ") || "无工具调用");
+  details.appendChild(summary);
+  const list = document.createElement("div"); list.className = "agent-steps";
+  for (const s of steps) {
+    const line = document.createElement("div"); line.className = "agent-step";
+    const head = document.createElement("div"); head.className = "agent-step-head";
+    head.textContent = (s.eventType === "tool_start" ? "调用 " : "返回 ") + (s.toolName || "…");
+    line.appendChild(head);
+
+    list.appendChild(line);
+  }
+  details.appendChild(list);
+  wait.div.appendChild(details);
+}
+function extractAgentText(content) {
+  if (!Array.isArray(content)) return "";
+  return content.map((c) => (c && c.type === "text" ? c.text : "")).join("");
+}
+function clearAgentChat() {
+  $("agentChat").innerHTML = "";
+  appendAgentMsg("assist", "你好，我是销售军师。给我一个目标，我会自己查数据、分析并给结论。");
+}
+async function loadAgentThreads() {
+  const list = $("agentThreadList");
+  try {
+    const r = await api("/api/v1/agent/threads");
+    const threads = r.threads || [];
+    if (!threads.length) { list.innerHTML = "<div class=\"mini\" style=\"padding:8px\">暂无会话</div>"; return; }
+    list.innerHTML = "";
+    for (const t of threads) {
+      const d = document.createElement("div");
+      d.className = "thread-item" + (t.id === currentThreadId ? " selected" : "");
+      d.innerHTML = "<div>" + escapeHtml(t.title || "未命名会话") + "</div><div class=\"t\">" + escapeHtml(new Date(t.updatedAt).toLocaleString()) + "</div>";
+      d.addEventListener("click", () => selectThread(t.id));
+      list.appendChild(d);
+    }
+  } catch (e) { list.innerHTML = "加载失败:" + escapeHtml(e.message); }
+}
+async function newThread() {
+  const t = await api("/api/v1/agent/threads", { method: "POST" });
+  currentThreadId = t.id;
+  clearAgentChat();
+  hideTranscript("agentTranscript");
+  loadAgentThreads();
+}
+async function selectThread(id) {
+  currentThreadId = id;
+  loadAgentThreads();
+  const chat = $("agentChat"); chat.innerHTML = "<div class=\"mini\">加载中…</div>";
+  try {
+    const r = await api("/api/v1/agent/threads/" + id);
+    chat.innerHTML = "";
+    for (const m of r.messages || []) {
+      if (m.role === "user" || m.role === "assistant") appendAgentMsg(m.role, extractAgentText(m.content));
+    }
+    if (!(r.messages || []).length) appendAgentMsg("assist", "这是一个新会话，把目标告诉我吧。");
+  } catch (e) { chat.innerHTML = "加载失败:" + escapeHtml(e.message); }
+}
+$("agentSendBtn").addEventListener("click", sendAgent);
+$("agentGoal").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAgent(); } });
+$("agentNewBtn").addEventListener("click", newThread);
+async function sendAgent() {
+  const goal = $("agentGoal").value.trim();
+  if (!goal || agentRunning) return;
+  agentRunning = true;
+  $("agentSendBtn").disabled = true;
+  $("agentGoal").value = "";
+  appendAgentMsg("user", goal);
+  const wait = appendAgentMsg("assist", "正在规划任务…");
+  const steps = [];
+  try {
+    if (!currentThreadId) { const t = await api("/api/v1/agent/threads", { method: "POST" }); currentThreadId = t.id; }
+    await streamAgentRun(goal, wait, steps);
+    loadAgentThreads();
+  } catch (e) {
+    wait.body.innerHTML = '<div class="md">' + escapeHtml("出错了：" + e.message) + '</div>';
+  } finally {
+    agentRunning = false;
+    $("agentSendBtn").disabled = false;
+    $("agentGoal").focus();
+  }
+}
+// 流式执行:NDJSON 事件逐步展示工具过程,最终答复按 Markdown 渲染(表格可用)
+async function streamAgentRun(goal, wait, steps) {
+  agentDeltaBuf = "";
+  const res = await fetch("/api/v1/agent/threads/" + currentThreadId + "/run-stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-tenant-id": "t_demo" },
+    body: JSON.stringify({ goal }),
+  });
+  if (!res.ok) { let msg = "HTTP " + res.status; try { msg = (await res.json()).message || msg; } catch {} throw new Error(msg); }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let idx;
+    while ((idx = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, idx).replace(/\r$/, "");
+      buf = buf.slice(idx + 1);
+      if (!line.trim()) continue;
+      let evt;
+      try { evt = JSON.parse(line); } catch { continue; }
+      handleAgentEvent(evt, wait, steps);
+    }
+  }
+}
+function handleAgentEvent(evt, wait, steps) {
+  if (evt.type === "tool_start") {
+    const name = evt.label || evt.toolName || "工具";
+    steps.push({ eventType: "tool_start", toolName: evt.toolName, label: name, summary: prettyPayload(evt.payload) });
+    wait.step.textContent = "正在调用 " + name + "…";
+  } else if (evt.type === "tool_end") {
+    const name = evt.label || evt.toolName || "工具";
+    steps.push({ eventType: "tool_end", toolName: evt.toolName, label: name, summary: prettyPayload(evt.payload) });
+    wait.step.textContent = name + " 完成,正在整理…";
+    const det = evt.payload && evt.payload.details;
+    if (det && Array.isArray(det.messages) && det.messages.length) {
+      renderTranscript($("agentTrMeta"), $("agentTrList"), "会话 " + String(det.conversationId || "").slice(0, 10) + "…", det.messages);
+      $("agentTranscript").style.display = "flex";
+    }
+  } else if (evt.type === "delta") {
+    agentDeltaBuf += evt.text || "";
+    wait.body.innerHTML = '<div class="md">' + renderMarkdown(agentDeltaBuf) + '</div>';
+  } else if (evt.type === "final") {
+    agentDeltaBuf = "";
+    const answer = evt.final && evt.final.answer ? evt.final.answer : "（未生成答复）";
+    wait.body.innerHTML = '<div class="md">' + renderMarkdown(answer) + '</div>';
+    wait.step.textContent = "";
+    wait.meta.textContent = (evt.final && evt.final.nextSteps && evt.final.nextSteps.length) ? ("下一步：" + evt.final.nextSteps.join(" · ")) : "";
+    attachAgentSteps(wait, steps);
+  } else if (evt.type === "error") {
+    throw new Error(evt.error || "未知错误");
+  }
+}
+function prettyPayload(p) {
+  if (p == null) return "";
+  try {
+    if (p && Array.isArray(p.content)) {
+      const txt = p.content.map((c) => (c && c.type === "text" ? c.text : "")).join(" ").trim();
+      if (txt) return txt;
+    }
+  } catch {}
+  try { return typeof p === "string" ? p : JSON.stringify(p); } catch { return String(p); }
+}
+
+// ── 门店管理 ──
+function fmtDate(d) { return d.toISOString().slice(0, 10); }
+let currentStoreId = null;
+async function loadStores() {
+  try {
+    const r = await api("/api/v1/stores");
+    const list = r.stores || [];
+    const sel = $("storeSel"); const addSel = $("addStoreSel"); const dealSel = $("dealStoreSel");
+    sel.innerHTML = ""; addSel.innerHTML = ""; dealSel.innerHTML = "";
+    if (!list.length) { sel.innerHTML = '<option value="">暂无门店</option>'; }
+    for (const s of list) {
+      const o = document.createElement("option"); o.value = s.id; o.textContent = s.name;
+      sel.appendChild(o); addSel.appendChild(o.cloneNode(true)); dealSel.appendChild(o.cloneNode(true));
+    }
+    if (list.length) { if (!currentStoreId) currentStoreId = list[0].id; sel.value = currentStoreId; }
+    const box = $("storeList"); box.innerHTML = "";
+    if (!list.length) { box.innerHTML = '<div class="mini">暂无门店,先新增一个</div>'; }
+    for (const s of list) {
+      const d = document.createElement("div"); d.className = "item";
+      d.innerHTML = "<div><b>" + escapeHtml(s.name) + "</b></div><div class=\"t\">" + escapeHtml(s.address || "未设置地址") + "</div>";
+      box.appendChild(d);
+    }
+    if (list.length) loadStoreOverview();
+  } catch (e) { $("storeList").innerHTML = "加载失败:" + escapeHtml(e.message); }
+}
+async function loadStoreOverview() {
+  const storeId = $("storeSel").value; if (!storeId) return;
+  const qs = [];
+  if ($("storeFrom").value) qs.push("from=" + encodeURIComponent($("storeFrom").value + "T00:00:00Z"));
+  if ($("storeTo").value) qs.push("to=" + encodeURIComponent($("storeTo").value + "T23:59:59Z"));
+  try {
+    const r = await api("/api/v1/stores/" + storeId + "/overview" + (qs.length ? "?" + qs.join("&") : ""));
+    const stats = $("storeStats"); stats.innerHTML = "";
+    const cards = [["接客次数", r.visits], ["成交量", r.deals], ["成交额", "¥" + Number(r.amount).toLocaleString()], ["成交率", r.conversionRate + "%"]];
+    for (const item of cards) {
+      const d = document.createElement("div"); d.className = "stat-card";
+      d.innerHTML = '<div class="k">' + item[0] + '</div><div class="v">' + escapeHtml(String(item[1])) + '</div>';
+      stats.appendChild(d);
+    }
+    $("storeOvMeta").textContent = (r.from ? new Date(r.from).toLocaleString() : "近30天") + " ~ " + (r.to ? new Date(r.to).toLocaleString() : "现在");
+    const daily = $("storeDaily"); daily.innerHTML = "";
+    if (!r.daily.length) { daily.innerHTML = '<div class="mini">暂无每日数据</div>'; }
+    else {
+      const t = document.createElement("table"); t.className = "mini-table";
+      t.innerHTML = "<tr><th>日期</th><th>接客</th><th>成交</th><th>成交额</th></tr>";
+      for (const d of r.daily) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = "<td>" + escapeHtml(d.date) + "</td><td>" + d.visits + "</td><td>" + d.deals + "</td><td>¥" + Number(d.amount).toLocaleString() + "</td>";
+        t.appendChild(tr);
+      }
+      daily.appendChild(t);
+    }
+    const orders = $("storeOrders"); orders.innerHTML = "";
+    if (!r.orders || !r.orders.length) { orders.innerHTML = '<div class="mini">暂无成交订单</div>'; }
+    else for (const o of r.orders) {
+      const d = document.createElement("div"); d.className = "item";
+      d.innerHTML = "<div><b>" + escapeHtml(o.customerName || "未知客户") + "</b> <span class=\"badge\">¥" + Number(o.amount).toLocaleString() + "</span></div><div class=\"t\">销售:" + escapeHtml(o.salesName || "—") + " · " + escapeHtml(new Date(o.dealed_at).toLocaleString()) + "</div>";
+      orders.appendChild(d);
+    }
+  } catch (e) { $("storeStats").innerHTML = '<div class="error">概览加载失败:' + escapeHtml(e.message) + '</div>'; }
+}
+async function submitNewStore() {
+  const name = $("sName").value.trim(); if (!name) { alert("请输入门店名称"); return; }
+  try {
+    await api("/api/v1/stores", { method: "POST", body: JSON.stringify({ name, address: $("sAddress").value.trim(), managerName: $("mName").value.trim(), managerPhone: $("mPhone").value.trim() }) });
+    $("sName").value = ""; $("sAddress").value = ""; $("mName").value = ""; $("mPhone").value = "";
+    loadStores();
+  } catch (e) { alert("创建失败:" + e.message); }
+}
+async function submitNewSales() {
+  const name = $("salesName").value.trim(); const storeId = $("addStoreSel").value;
+  if (!name || !storeId) { alert("请选择门店并填写姓名"); return; }
+  try {
+    await api("/api/v1/sales", { method: "POST", body: JSON.stringify({ storeId, name, phone: $("salesPhone").value.trim(), role: $("salesRole").value }) });
+    $("salesName").value = ""; $("salesPhone").value = "";
+    loadStores();
+  } catch (e) { alert("新增失败:" + e.message); }
+}
+async function submitDeal() {
+  const customerKey = $("dealKey").value.trim(); const storeId = $("dealStoreSel").value;
+  const amount = Number($("dealAmount").value);
+  if (!customerKey || !storeId || !amount || amount <= 0) { $("dealResult").textContent = "请填写客户标识、门店与成交额"; return; }
+  try {
+    const payload = { customerKey, storeId, amount, dealedAt: $("dealDate").value ? new Date($("dealDate").value + "T12:00:00").toISOString() : undefined };
+    const r = await api("/api/v1/deals", { method: "POST", body: JSON.stringify(payload) });
+    $("dealResult").textContent = "成交已登记:¥" + Number(r.deal.amount).toLocaleString();
+    $("dealAmount").value = "";
+    loadStoreOverview();
+  } catch (e) { $("dealResult").textContent = "登记失败:" + e.message; }
+}
+// ── 右侧对话原文面板 ──
+function renderTranscript(metaBox, listBox, meta, list) {
+  metaBox.textContent = meta || "";
+  listBox.innerHTML = "";
+  if (!list || !list.length) { listBox.innerHTML = '<div class="mini">暂无原文</div>'; return; }
+  for (const m of list) {
+    const d = document.createElement("div"); d.className = "tr-line";
+    const role = m.speakerRole === "customer" ? "客户" : m.speakerRole === "sales" ? "销售" : "其他";
+    const name = m.speakerName ? "·" + escapeHtml(m.speakerName) : "";
+    d.innerHTML = '<div><span class="tr-time">' + (m.spokenAt ? escapeHtml(new Date(m.spokenAt).toLocaleString()) : "—") + '</span><span class="tr-role ' + escapeHtml(m.speakerRole || "") + '">' + role + name + '</span></div><div class="tr-text">' + escapeHtml(m.content) + '</div>';
+    listBox.appendChild(d);
+  }
+}
+function hideTranscript(id) {
+  const box = $(id); box.style.display = "none";
+  document.getElementById("panel-workspace").classList.remove("show-tr");
+}
+function showConversationTranscript(convId) {
+  api("/api/v1/conversations/" + convId + "/transcript").then((r) => {
+    const meta = r.conversation ? ("会话 " + r.conversation.id.slice(0, 10) + "… · " + (r.conversation.customerName || r.conversation.customerKey || "未知客户") + (r.conversation.storeName ? " · " + r.conversation.storeName : "")) : "";
+    renderTranscript($("wsTrMeta"), $("wsTrList"), meta, r.transcript);
+    $("wsTranscript").style.display = "flex";
+    document.getElementById("panel-workspace").classList.add("show-tr");
+  }).catch(() => {});
+}
+$("storeQueryBtn").addEventListener("click", loadStoreOverview);
+$("storeRefreshBtn").addEventListener("click", loadStores);
+$("storeAddBtn").addEventListener("click", submitNewStore);
+$("salesAddBtn").addEventListener("click", submitNewSales);
+$("dealAddBtn").addEventListener("click", submitDeal);
+$("storeSel").addEventListener("change", () => { currentStoreId = $("storeSel").value; loadStoreOverview(); });
+var now = new Date(); $("storeTo").value = fmtDate(now);
+var ago30 = new Date(now.getTime() - 30 * 24 * 3600 * 1000); $("storeFrom").value = fmtDate(ago30);
+loadStores();
+loadAgentThreads();</script>
+</body>
+</html>

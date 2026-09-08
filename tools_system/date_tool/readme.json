@@ -1,0 +1,9 @@
+{
+  "name": "date_tool",
+  "label": "日期转换",
+  "description": "把对话中的「下周X、星期X、今天」等相对日期转换为具体日期。",
+  "category": "通用",
+  "parameters": { "type": "object", "required": ["text"], "properties": { "text": { "type": "string", "description": "含相对日期的文本" }, "baseDate": { "type": "string", "description": "基准日期 YYYY-MM-DD,缺省今天" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}
