@@ -1,0 +1,9 @@
+{
+  "name": "test_drive_manage",
+  "label": "试驾管理",
+  "description": "管理试驾:op=create 登记试驾(支持客户姓名,自动进入试驾阶段);op=complete 完成并反馈(自动生成 24h/3天/7天回访任务);op=cancel 取消;op=list 查看试驾记录。",
+  "category": "销售流程",
+  "parameters": { "type": "object", "properties": { "op": { "type": "string", "enum": ["create", "list", "complete", "cancel"], "default": "list", "description": "操作类型" }, "customerKey": { "type": "string", "description": "客户标识或姓名(create 用)" }, "salesId": { "type": "string", "description": "销售 ID(create 用)" }, "storeId": { "type": "string", "description": "门店 ID" }, "vehicleId": { "type": "string", "description": "试驾车型 ID(create 用)" }, "scheduledAt": { "type": "string", "description": "试驾时间 ISO(create 用)" }, "testDriveId": { "type": "string", "description": "试驾记录 ID(complete/cancel 用)" }, "feedback": { "type": "string", "description": "试驾反馈(complete 用)" }, "competitorCompared": { "type": "string", "description": "对比的竞品(complete 用)" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

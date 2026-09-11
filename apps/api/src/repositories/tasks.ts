@@ -21,6 +21,7 @@ export interface CreateTaskInput {
 	tenantId: string;
 	customerId: string;
 	analysisId?: string;
+	salesId?: string | null;
 	action: string;
 	dueAt?: string;
 }
@@ -30,14 +31,15 @@ export interface ListTasksQuery {
 	status?: TaskStatus;
 	customerId?: string;
 	dueBefore?: string;
+	salesId?: string;
 	limit?: number;
 }
 
 export function createTask(db: DatabaseSync, input: CreateTaskInput): TaskRecord {
 	const id = randomUUID();
 	db.prepare(
-		"INSERT INTO next_step_tasks (id, tenant_id, customer_id, analysis_id, action, due_at) VALUES (?,?,?,?,?,?)",
-	).run(id, input.tenantId, input.customerId, input.analysisId ?? null, input.action, input.dueAt ?? null);
+		"INSERT INTO next_step_tasks (id, tenant_id, customer_id, analysis_id, sales_id, action, due_at) VALUES (?,?,?,?,?,?,?)",
+	).run(id, input.tenantId, input.customerId, input.analysisId ?? null, input.salesId ?? null, input.action, input.dueAt ?? null);
 	return getTask(db, input.tenantId, id)!;
 }
 
@@ -67,6 +69,10 @@ export function listTasks(db: DatabaseSync, query: ListTasksQuery): TaskRecord[]
 	if (query.dueBefore) {
 		clauses.push("(t.due_at IS NULL OR t.due_at <= ?)");
 		params.push(query.dueBefore);
+	}
+	if (query.salesId) {
+		clauses.push("t.sales_id = ?");
+		params.push(query.salesId);
 	}
 	const limit = Math.min(query.limit ?? 50, 200);
 	const rows = db

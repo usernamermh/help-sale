@@ -7,6 +7,7 @@ import { ingestDocument, ingestEntries } from "./services/ingest.js";
 import { searchKnowledge } from "./repositories/knowledge.js";
 import { normalizeAnalyzeMessages, type ConversationMessage } from "./services/conversation.js";
 import { requireTenant, upsertCustomer } from "./repositories/customers.js";
+import { resolveCustomerByKeyOrName } from "./services/customer-resolve.js";
 import { bindAnalysisRequestHash, createAnalysis, findAnalysisByRequestHash, listAnalysesByCustomer } from "./repositories/analyses.js";
 import { createTask, getTask, listTasks, setTaskStatus } from "./repositories/tasks.js";
 import { createVehiclePlan, listVehiclePlansByCustomer } from "./repositories/vehicle-plans.js";
@@ -37,6 +38,10 @@ import { CAPABILITIES, getCapabilityDef } from "./pi/capabilities.js";
 import { createWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled } from "./repositories/agent-capabilities.js";
 import { queryConsoleLogs } from "./services/console-logs.js";
 import { executeToolPage } from "./services/tool-pagination.js";
+import { setFunnelStage, getFunnelStats, listSilentCustomers } from "./repositories/funnel.js";
+import { createTestDrive, getTestDrive, listTestDrives, setTestDriveStatus } from "./repositories/test-drives.js";
+import { scheduleDeliveryFollowups, scheduleTestDriveFollowups } from "./services/followup-rhythm.js";
+import { getSalesWorkbench, getStorePerformance } from "./services/performance.js";
 import { appendThreadMessage, createThread, deleteAllThreads, deleteThread, getThread, listThreadMessages, listThreads, setThreadTitle } from "./repositories/agent-threads.js";
 import type { SessionStore } from "./pi/sessions.js";
 
@@ -792,6 +797,90 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 		return getStoreOverview(deps.db, request.tenantId, { storeId: store.id, from: request.query.from, to: request.query.to });
 	});
 
+	// ── 销售漏斗:客户阶段流转 ──
+	app.post<{ Params: { key: string }; Body: { stage?: string; lostReason?: string } }>("/api/v1/customers/:key/funnel", async (request, reply) => {
+		const stage = String(request.body?.stage ?? "").trim();
+		if (!stage) return reply.code(400).send({ error: "stage is required" });
+		try {
+			const row = setFunnelStage(deps.db, request.tenantId, request.params.key, stage, request.body?.lostReason);
+			if (!row) return reply.code(404).send({ error: "customer_not_found", message: "客户不存在" });
+			return row;
+		} catch (error) {
+			return reply.code(400).send({ error: "invalid_stage", message: error instanceof Error ? error.message : String(error) });
+		}
+	});
+
+	// ── 销售漏斗:门店漏斗统计 ──
+	app.get<{ Params: { id: string } }>("/api/v1/stores/:id/funnel", async (request, reply) => {
+		const scope = await resolveManagerScope(deps.db, request.tenantId, request.headers, request.params.id);
+		if (scope.denied) return reply.code(403).send({ error: "forbidden", message: "店长仅可查看所属门店" });
+		return { storeId: request.params.id, stats: getFunnelStats(deps.db, request.tenantId, request.params.id) };
+	});
+
+	// ── 试驾管理 ──
+	app.post<{ Body: { customerKey?: string; salesId?: string; storeId?: string; vehicleId?: string; scheduledAt?: string } }>("/api/v1/test-drives", async (request, reply) => {
+		const customerKey = String(request.body?.customerKey ?? "").trim();
+		if (!customerKey) return reply.code(400).send({ error: "customerKey is required" });
+		const scope = await resolveManagerScope(deps.db, request.tenantId, request.headers, request.body?.storeId);
+		if (scope.denied) return reply.code(403).send({ error: "forbidden", message: "店长仅可操作所属门店" });
+		const customer = resolveCustomerByKeyOrName(deps.db, request.tenantId, customerKey);
+		const td = createTestDrive(deps.db, {
+			tenantId: request.tenantId,
+			customerId: customer.id,
+			salesId: request.body?.salesId,
+			storeId: scope.storeId ?? request.body?.storeId,
+			vehicleId: request.body?.vehicleId,
+			scheduledAt: request.body?.scheduledAt,
+		});
+		setFunnelStage(deps.db, request.tenantId, customer.key, "test_drive");
+		return { testDrive: td };
+	});
+
+	app.get<{ Querystring: { storeId?: string; status?: string; limit?: string } }>("/api/v1/test-drives", async (request) => {
+		const scope = await resolveManagerScope(deps.db, request.tenantId, request.headers, request.query.storeId);
+		if (scope.denied) return { testDrives: [] };
+		const status = request.query.status === "completed" || request.query.status === "cancelled" || request.query.status === "scheduled" ? request.query.status : undefined;
+		const limit = Number.parseInt(request.query.limit ?? "50", 10);
+		return { testDrives: listTestDrives(deps.db, request.tenantId, { storeId: scope.storeId, status, limit: Number.isFinite(limit) ? limit : 50 }) };
+	});
+
+	app.post<{ Params: { id: string }; Body: { feedback?: string; competitorCompared?: string } }>("/api/v1/test-drives/:id/complete", async (request, reply) => {
+		const td = getTestDrive(deps.db, request.tenantId, request.params.id);
+		if (!td) return reply.code(404).send({ error: "test_drive_not_found", message: "试驾记录不存在" });
+		const done = setTestDriveStatus(deps.db, request.tenantId, td.id, "completed", request.body?.feedback, request.body?.competitorCompared);
+		if (done?.customer_id) {
+			const base = done.scheduled_at ?? done.updated_at;
+			const actions = scheduleTestDriveFollowups(deps.db, request.tenantId, done.customer_id, base);
+			return { testDrive: done, followups: actions };
+		}
+		return { testDrive: done };
+	});
+
+	app.post<{ Params: { id: string } }>("/api/v1/test-drives/:id/cancel", async (request, reply) => {
+		const td = setTestDriveStatus(deps.db, request.tenantId, request.params.id, "cancelled");
+		if (!td) return reply.code(404).send({ error: "test_drive_not_found", message: "试驾记录不存在" });
+		return { testDrive: td };
+	});
+
+	// ── 销售团队:绩效与工作台 ──
+	app.get<{ Params: { id: string }; Querystring: { from?: string; to?: string } }>("/api/v1/stores/:id/performance", async (request, reply) => {
+		const scope = await resolveManagerScope(deps.db, request.tenantId, request.headers, request.params.id);
+		if (scope.denied) return reply.code(403).send({ error: "forbidden", message: "店长仅可查看所属门店" });
+		return { storeId: request.params.id, performance: getStorePerformance(deps.db, request.tenantId, request.params.id, request.query.from, request.query.to) };
+	});
+
+	app.get<{ Params: { id: string } }>("/api/v1/sales/:id/workbench", async (request) => {
+		const wb = getSalesWorkbench(deps.db, request.tenantId, request.params.id);
+		return wb ?? { error: "sales_not_found", message: "销售不存在" };
+	});
+
+	// ── 沉默客户:唤醒名单 ──
+	app.get<{ Params: { id: string }; Querystring: { days?: string } }>("/api/v1/stores/:id/silent-customers", async (request, reply) => {
+		const scope = await resolveManagerScope(deps.db, request.tenantId, request.headers, request.params.id);
+		if (scope.denied) return reply.code(403).send({ error: "forbidden", message: "店长仅可查看所属门店" });
+		const days = Number.parseInt(request.query.days ?? "7", 10);
+		return { storeId: request.params.id, customers: listSilentCustomers(deps.db, request.tenantId, Number.isFinite(days) ? days : 7, request.params.id) };
+	});
 	app.get<{ Querystring: { storeId?: string } }>("/api/v1/sales", async (request) => {
 		return { sales: listSales(deps.db, request.tenantId, request.query.storeId) };
 	});

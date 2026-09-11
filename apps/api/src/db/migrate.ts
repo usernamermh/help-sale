@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 16;
+export const MIGRATION_VERSION = 17;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -97,5 +97,25 @@ export function migrate(db: DatabaseSync): void {
 		db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_analyses_req_hash ON analyses (tenant_id, request_hash) WHERE request_hash IS NOT NULL;");
 	}
 
+	// v17:销售漏斗阶段 + 试驾管理 + 成交明细(车型/折扣)
+	if (current.user_version < 17) {
+		const addCol = (table: string, col: string, ddl: string) => {
+			const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+			if (!cols.some((c) => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl};`);
+		};
+		addCol("customers", "funnel_stage", "TEXT");
+		addCol("customers", "lost_reason", "TEXT");
+		addCol("customers", "funnel_stage_changed_at", "TEXT");
+		addCol("deals", "vehicle_id", "TEXT");
+		addCol("deals", "discount_amount", "REAL NOT NULL DEFAULT 0");
+		addCol("next_step_tasks", "sales_id", "TEXT REFERENCES sales(id) ON DELETE SET NULL");
+		// 存量客户阶段回填:成交→closed_won;洽谈中/未知→contacted
+		db.exec(`UPDATE customers SET funnel_stage = CASE
+			WHEN stage IN ('成交','已成交','closed') THEN 'closed_won'
+			WHEN stage IS NOT NULL AND stage <> '' THEN 'contacted'
+			ELSE funnel_stage END,
+			funnel_stage_changed_at = COALESCE(funnel_stage_changed_at, updated_at)
+			WHERE funnel_stage IS NULL;`);
+	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }
