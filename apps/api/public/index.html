@@ -296,6 +296,7 @@ button.secondary:hover { background:#f1f5f9; }
 <div class="stat-grid" id="storeStats"></div>
 <div style="margin-top:12px"><b>每日明细</b></div><div id="storeDaily"></div>
 <div style="margin-top:14px"><b>成交订单</b></div><div id="storeOrders"></div>
+<div style="margin-top:14px"><b>销售漏斗</b></div><div id="storeFunnel"></div>
 </div>
 <div class="card func-card" id="storeMgmtCard">
 <h2>门店与成员 <button id="storeRefreshBtn" class="secondary" style="padding:4px 10px;font-size:12px;float:right">刷新</button></h2>
@@ -337,6 +338,34 @@ const api = async (path, options = {}) => {
   return body;
 };
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c])); }
+
+function ensureECharts() {
+  if (window.echarts) return Promise.resolve();
+  return new Promise((resolve) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js";
+    s.onload = () => resolve();
+    s.onerror = () => resolve();
+    document.head.appendChild(s);
+  });
+}
+async function renderEChartsBlocks(root) {
+  const codes = Array.from(root.querySelectorAll("code.language-echarts"));
+  if (!codes.length) return;
+  await ensureECharts();
+  if (!window.echarts) return;
+  for (const code of codes) {
+    try {
+      const opt = JSON.parse(code.textContent || "{}");
+      if (!opt || typeof opt !== "object") continue;
+      const wrap = document.createElement("div"); wrap.className = "echarts-render";
+      const pre = code.closest("pre");
+      if (pre) pre.replaceWith(wrap); else code.replaceWith(wrap);
+      const chart = window.echarts.init(wrap);
+      chart.setOption(opt);
+    } catch {}
+  }
+}
 function renderMarkdown(text) {
   try {
     if (typeof marked !== "undefined" && marked.parse) {
@@ -589,7 +618,7 @@ function appendAgentMsg(role, text) {
   const div = document.createElement("div");
   div.className = "agent-msg " + (role === "user" ? "agent-user" : "agent-assist");
   const body = document.createElement("div"); body.className = "agent-body";
-  if (role === "assistant") { body.innerHTML = '<div class="md">' + renderMarkdown(text) + '</div>'; }
+  if (role === "assistant") { body.innerHTML = '<div class="md">' + renderMarkdown(text) + '</div>'; renderEChartsBlocks(body); }
   else { body.textContent = text; }
   div.appendChild(body);
   const step = document.createElement("div"); step.className = "step-line";
@@ -871,7 +900,28 @@ function showConversationTranscript(convId) {
     document.getElementById("panel-workspace").classList.add("show-tr");
   }).catch(() => {});
 }
-$("storeQueryBtn").addEventListener("click", loadStoreOverview);
+$("storeQueryBtn").addEventListener("click", () => { loadStoreOverview(); loadStoreFunnel(); });
+async function loadStoreFunnel() {
+  const storeId = $("storeSel").value; if (!storeId) return;
+  const box = $("storeFunnel");
+  try {
+    const r = await api("/api/v1/stores/" + storeId + "/funnel");
+    const stats = r.stats || { stages: [], conversions: [], lostReasons: [] };
+    const label = { new: "新进店", contacted: "已联系", test_drive: "试驾", quote: "报价", closed_won: "成交", closed_lost: "战败" };
+    const reason = { price: "价格", competitor: "竞品", waiting: "等车周期", disappeared: "客户消失", other: "其他" };
+    let html = '<div class="mini">共 ' + stats.total + ' 位客户</div><table class="mini-table"><tr><th>阶段</th><th>数量</th><th>占比</th><th>平均停留</th></tr>';
+    for (const s of stats.stages || []) {
+      html += "<tr><td>" + escapeHtml(label[s.stage] || s.stage) + "</td><td>" + s.count + "</td><td>" + (s.share * 100).toFixed(1) + "%</td><td>" + (s.avgStayDays == null ? "—" : s.avgStayDays + " 天") + "</td></tr>";
+    }
+    html += "</table><div style=\"margin-top:8px\"><b>转化率</b></div><table class=\"mini-table\"><tr><th>路径</th><th>转化率</th></tr>";
+    for (const c of stats.conversions || []) html += "<tr><td>" + escapeHtml(c.from + "→" + c.to) + "</td><td>" + (c.rate * 100).toFixed(1) + "%</td></tr>";
+    html += "</table><div style=\"margin-top:8px\"><b>战败原因</b></div><table class=\"mini-table\"><tr><th>原因</th><th>数量</th></tr>";
+    const lost = stats.lostReasons && stats.lostReasons.length ? stats.lostReasons : [{ reason: "—", count: 0 }];
+    for (const l of lost) html += "<tr><td>" + escapeHtml(reason[l.reason] || l.reason) + "</td><td>" + l.count + "</td></tr>";
+    html += "</table>";
+    box.innerHTML = html;
+  } catch (e) { box.innerHTML = '<div class="mini">漏斗加载失败:' + escapeHtml(e.message) + '</div>'; }
+}
 $("storeRefreshBtn").addEventListener("click", loadStores);
 $("storeAddBtn").addEventListener("click", submitNewStore);
 $("salesAddBtn").addEventListener("click", submitNewSales);
