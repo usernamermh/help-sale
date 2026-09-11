@@ -1,0 +1,9 @@
+{
+  "name": "chart_generate",
+  "label": "生成统计图",
+  "description": "把统计数据转为交互式统计图(柱状/折线/饼图):传 type(bar/line/pie)、title、categories(x 轴类目)与 series([{name,data}]),前端会渲染为可交互图表(缩放/tooltip/图例)。",
+  "category": "呈现",
+  "parameters": { "type": "object", "required": ["series"], "properties": { "type": { "type": "string", "enum": ["bar", "line", "pie"], "default": "bar", "description": "图表类型" }, "title": { "type": "string", "description": "图表标题" }, "categories": { "type": "array", "items": { "type": "string" }, "description": "x 轴类目(如日期/车型/意图)" }, "series": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" }, "data": { "type": "array", "items": { "type": "number" } } } }, "description": "数据系列,支持多系列对比" } } },
+  "entry": "main.ts",
+  "function_list": ["main.execute"]
+}

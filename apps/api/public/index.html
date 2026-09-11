@@ -338,6 +338,34 @@ const api = async (path, options = {}) => {
   return body;
 };
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c])); }
+
+function ensureECharts() {
+  if (window.echarts) return Promise.resolve();
+  return new Promise((resolve) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js";
+    s.onload = () => resolve();
+    s.onerror = () => resolve();
+    document.head.appendChild(s);
+  });
+}
+async function renderEChartsBlocks(root) {
+  const codes = Array.from(root.querySelectorAll("code.language-echarts"));
+  if (!codes.length) return;
+  await ensureECharts();
+  if (!window.echarts) return;
+  for (const code of codes) {
+    try {
+      const opt = JSON.parse(code.textContent || "{}");
+      if (!opt || typeof opt !== "object") continue;
+      const wrap = document.createElement("div"); wrap.className = "echarts-render";
+      const pre = code.closest("pre");
+      if (pre) pre.replaceWith(wrap); else code.replaceWith(wrap);
+      const chart = window.echarts.init(wrap);
+      chart.setOption(opt);
+    } catch {}
+  }
+}
 function renderMarkdown(text) {
   try {
     if (typeof marked !== "undefined" && marked.parse) {
@@ -590,7 +618,7 @@ function appendAgentMsg(role, text) {
   const div = document.createElement("div");
   div.className = "agent-msg " + (role === "user" ? "agent-user" : "agent-assist");
   const body = document.createElement("div"); body.className = "agent-body";
-  if (role === "assistant") { body.innerHTML = '<div class="md">' + renderMarkdown(text) + '</div>'; }
+  if (role === "assistant") { body.innerHTML = '<div class="md">' + renderMarkdown(text) + '</div>'; renderEChartsBlocks(body); }
   else { body.textContent = text; }
   div.appendChild(body);
   const step = document.createElement("div"); step.className = "step-line";
