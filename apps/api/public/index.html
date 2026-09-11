@@ -589,6 +589,20 @@ async function loadInsights() {
     const intents = (r.topIntents || []).map((i) => i.intent + " ×" + i.count).join("、") || "暂无";
     const brands = (r.topBrands || []).map((b) => b.brand + " ×" + b.count).join("、") || "暂无";
     box.innerHTML = "<div class=\"t\">分析 " + r.analyses + " 次 / 待办 " + r.pendingTasks + " / 到期 " + r.overdueTasks + " / 完成率 " + Math.round(r.taskCompletionRate * 100) + "%</div><div class=\"t\">热门意图:" + escapeHtml(intents) + "</div><div class=\"t\">热门品牌:" + escapeHtml(brands) + "</div>";
+    const chartBox = document.createElement("div");
+    chartBox.innerHTML = '<div style="margin-top:10px"><b>每日分析量</b></div><div class="echarts-render" id="insightDailyChart"></div><div style="margin-top:10px"><b>热门意图分布</b></div><div class="echarts-render" id="insightIntentChart"></div>';
+    box.appendChild(chartBox);
+    await ensureECharts();
+    if (window.echarts) {
+      if (Array.isArray(r.analysesByDay) && r.analysesByDay.length) {
+        const c1 = window.echarts.init($("insightDailyChart"));
+        c1.setOption({ tooltip: { trigger: "axis" }, xAxis: { type: "category", data: r.analysesByDay.map((d) => String(d.date).slice(5)) }, yAxis: { type: "value" }, series: [{ type: "bar", name: "分析量", data: r.analysesByDay.map((d) => d.count) }] });
+      }
+      if (Array.isArray(r.topIntents) && r.topIntents.length) {
+        const c2 = window.echarts.init($("insightIntentChart"));
+        c2.setOption({ tooltip: { trigger: "item" }, series: [{ type: "pie", radius: "60%", data: r.topIntents.map((i) => ({ name: i.intent, value: i.count })) }] });
+      }
+    }
     loadImprovements(box);
   } catch { box.innerHTML = "<div class=\"mini\">洞察加载失败</div>"; }
 }
