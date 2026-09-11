@@ -108,6 +108,12 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 - **Redis**(连接信息在 help-sale.config.yaml redis 段,按部署环境填入凭据):跟进任务到期提醒队列;`GET /api/v1/reminders/overdue` 返回已到期待办,前端「跟进任务」卡片显示「已到期」标记,完成即出队。
 - 连接信息与开关都在 help-sale.config.yaml(mysql/redis 段),按部署环境填入凭据;`enabled: false` 关闭(Redis 自动退化为内存队列)。
 
+
+## 工具清单
+
+业务级:`customer_query`(客户)、`conversation_query`(会话)、`knowledge_search`(话术检索)、`knowledge_ingest`(话术沉淀)、`knowledge_candidate`(话术候选)、`task_manage`(跟进任务)、`vehicle_query`(车型)、`insight_query`(经营洞察)、`funnel_query`(销售漏斗)、`test_drive_manage`(试驾管理)。
+
+系统级:`sql`、`redis`、`kanban`、`subagents`、`table_generate`、`chart_generate`、`file_read`、`file_write_new`、`txt`、`excel`、`ppt`、`browser`、`computer`、`update_memory`、`todo_list`、`embedding`、`cluster`、`keyword_extract_free`、`keyword_extract_strict`、`dialog_extract`、`dialog_select`、`date_tool`。
 ## 目录结构
 
 - `help-sale.config.yaml` 顶层统一配置文件
