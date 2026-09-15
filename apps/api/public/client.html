@@ -319,10 +319,13 @@ async function clearThreads() {
 async function exportThread(id, title) {
   try {
     const r = await api("/api/v1/agent/threads/" + id + "/export");
+    let summary = null;
+    try { const s = await api("/api/v1/agent/threads/" + id + "/summary"); summary = s.summary || null; } catch {}
     const payload = {
       exportedAt: new Date().toISOString(),
       app: "sales-copilot",
       thread: r.thread,
+      summary: summary,
       messages: r.messages || [],
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });

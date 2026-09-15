@@ -47,6 +47,8 @@ import { runAutomationJob } from "./services/automation.js";
 import { listSubTasks } from "./services/subagent-queue.js";
 import { createReflectionCase } from "./repositories/reflection-cases.js";
 import { applyReflectionToMemory, collectReflectionSuggestions } from "./services/reflection.js";
+import { compressHistory, ensureThreadSummary } from "./services/context-compress.js";
+import { getThreadSummary } from "./repositories/thread-summaries.js";
 import { consumeSubagentQueue } from "./services/subagent-runner.js";
 import { appendThreadMessage, createThread, deleteAllThreads, deleteThread, getThread, listThreadMessages, listThreads, setThreadTitle } from "./repositories/agent-threads.js";
 import type { SessionStore } from "./pi/sessions.js";
@@ -445,7 +447,12 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 		const goal = request.body?.goal;
 		if (!goal || !goal.trim()) return reply.code(400).send({ error: "goal is required" });
 		const prior = listThreadMessages(deps.db, request.tenantId, thread.id);
-		const history = prior.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role, content: m.content })) as AgentMessage[];
+		let history = prior.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role, content: m.content })) as AgentMessage[];
+		// 上下文压缩:history 超过 30 条时,早期对话压缩为【历史摘要】注入,保留最近 30 条原文(中期记忆)
+		if (history.length > 30) {
+			const compressed = compressHistory(history as Array<{ role: string; content: unknown }>, { maxMessages: 30 });
+			history = compressed.messages as AgentMessage[];
+		}
 		const result = await runSalesAgent(
 			{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
 			{ goal, history },
@@ -461,13 +468,33 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 		return { threadId: thread.id, runId: result.runId, final: result.final, hasResponse: Boolean(result.final) };
 	});
 
+	app.get<{ Params: { id: string } }>("/api/v1/agent/threads/:id/summary", async (request, reply) => {
+		const thread = getThread(deps.db, request.tenantId, request.params.id);
+		if (!thread) return reply.code(404).send({ error: "thread_not_found", message: "会话不存在" });
+		let summary = getThreadSummary(deps.db, request.tenantId, thread.id);
+		if (!summary) {
+			try {
+				const text = ensureThreadSummary(deps.db, request.tenantId, thread.id);
+				summary = { id: "", tenantId: request.tenantId, threadId: thread.id, summary: text, messageSeqUntil: 0, createdAt: "", updatedAt: "" };
+			} catch {
+				return { threadId: thread.id, summary: null };
+			}
+		}
+		return { threadId: thread.id, summary: summary?.summary ?? null, messageSeqUntil: summary?.messageSeqUntil ?? 0 };
+	});
+
 	app.post<{ Params: { id: string }; Body: { goal?: string } }>("/api/v1/agent/threads/:id/run-stream", async (request, reply) => {
 		const thread = getThread(deps.db, request.tenantId, request.params.id);
 		if (!thread) return reply.code(404).send({ error: "thread_not_found", message: "会话不存在" });
 		const goal = request.body?.goal;
 		if (!goal || !goal.trim()) return reply.code(400).send({ error: "goal is required" });
 		const prior = listThreadMessages(deps.db, request.tenantId, thread.id);
-		const history = prior.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role, content: m.content })) as AgentMessage[];
+		let history = prior.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role, content: m.content })) as AgentMessage[];
+		// 上下文压缩:history 超过 30 条时,早期对话压缩为【历史摘要】注入,保留最近 30 条原文(中期记忆)
+		if (history.length > 30) {
+			const compressed = compressHistory(history as Array<{ role: string; content: unknown }>, { maxMessages: 30 });
+			history = compressed.messages as AgentMessage[];
+		}
 
 		reply.hijack();
 		reply.raw.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
@@ -496,6 +523,12 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 			for (let i = 0; i < answer.length; i += CHUNK) {
 				write({ type: "delta", text: answer.slice(i, i + CHUNK) });
 				if (i + CHUNK < answer.length) await new Promise((r) => setTimeout(r, stepMs));
+			}
+			// 执行后生成并落库会话摘要(中期记忆)
+			try {
+				ensureThreadSummary(deps.db, request.tenantId, thread.id);
+			} catch (error) {
+				console.warn(`[context] 摘要落库失败: ${error instanceof Error ? error.message : String(error)}`);
 			}
 			write({ type: "final", threadId: thread.id, runId: result.runId, final: result.final });
 			reply.raw.end();
