@@ -4,6 +4,7 @@ import { collectWeeklyReport } from "./weekly-report.js";
 import { createDigest, getDigestByDate } from "../repositories/digests.js";
 import { listSilentCustomers } from "../repositories/funnel.js";
 import { createTask } from "../repositories/tasks.js";
+import { applyReflectionToMemory } from "./reflection.js";
 import { getCustomer } from "../repositories/customers.js";
 import { hasAutomationRunOn, listTenantIds, recordAutomationRun, type AutomationJobType } from "../repositories/automation-runs.js";
 
@@ -39,6 +40,13 @@ function isDue(db: DatabaseSync, tenantId: string, jobType: AutomationJobType, r
 	return !hasAutomationRunOn(db, tenantId, jobType, runDate);
 }
 
+
+/** 反思闭环:聚合近 N 天反思案例,把改进建议写入 memory「规则改进」小节。 */
+function runReflection(db: DatabaseSync, tenantId: string, days: number): string {
+	const summary = applyReflectionToMemory(db, tenantId, days);
+	if (summary.suggestions.length === 0) return "本周无反思建议";
+	return `已将 ${summary.suggestions.length} 条反思建议写入记忆「规则改进」`;
+}
 /** 晨报:生成并落库(当天已存在则跳过)。 */
 function runMorningDigest(db: DatabaseSync, tenantId: string, now: Date): string {
 	const date = dateKey(now);
@@ -93,6 +101,7 @@ export function runDueAutomations(deps: AutomationDeps, now = new Date()): Array
 		const jobs: Array<{ type: AutomationJobType; due: boolean; run: () => string }> = [
 			{ type: "morning_digest", due: isDue(db, tenantId, "morning_digest", date, nowMinutes, timeToMinutes(config.morningDigestTime)), run: () => runMorningDigest(db, tenantId, now) },
 			{ type: "weekly_report", due: isWeeklyDay && isDue(db, tenantId, "weekly_report", date, nowMinutes, timeToMinutes(config.weeklyReportTime)), run: () => runWeeklyReport(db, tenantId, now) },
+		{ type: "reflection", due: isWeeklyDay && isDue(db, tenantId, "reflection", date, nowMinutes, timeToMinutes(config.weeklyReportTime) + 30), run: () => runReflection(db, tenantId, 7) },
 			{ type: "silent_wakeup", due: config.silentWakeupEnabled && isDue(db, tenantId, "silent_wakeup", date, nowMinutes, timeToMinutes(config.wakeupTaskTime)), run: () => runSilentWakeup(db, tenantId, config.silentCustomerDays, now) },
 		];
 		for (const job of jobs) {

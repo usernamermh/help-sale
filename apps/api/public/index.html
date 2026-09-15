@@ -264,6 +264,7 @@ button.secondary:hover { background:#f1f5f9; }
 <button class="func-btn" data-card="digestCard2">军师晨报</button>
 <button class="func-btn" data-card="automationCard">自动任务</button>
 <button class="func-btn" data-card="subagentCard">子代理任务</button>
+<button class="func-btn" data-card="reflectionCard">反思改进</button>
 </aside>
 <div class="func-body">
 <div class="card func-card active" id="insightCard">
@@ -275,7 +276,12 @@ button.secondary:hover { background:#f1f5f9; }
 <button id="digestBtn2" class="secondary" style="margin-bottom:10px">生成今日晨报</button>
 <div id="digestList"></div>
 </div>
-<div class="card func-card" id="subagentCard">
+<div class="card func-card" id="reflectionCard">
+<h2>反思与自我改进</h2>
+<div class="section-note">评估低分与运行失败自动进入反思案例,聚合出改进建议;应用后写入系统记忆「规则改进」,影响后续 Agent 行为。</div>
+<div style="display:flex;gap:6px;margin-bottom:10px"><button id="reflectionApplyBtn" class="secondary">应用建议到记忆</button><button id="reflectionRefreshBtn" class="secondary">刷新</button></div>
+<div id="reflectionList"></div>
+</div><div class="card func-card" id="subagentCard">
 <h2>子代理任务</h2>
 <div class="section-note">主 Agent 可把目标拆给子代理并行执行,这里展示队列状态与执行结果。</div>
 <div style="display:flex;gap:6px;margin-bottom:10px"><button id="subagentRunBtn" class="secondary">消费执行队列</button><button id="subagentRefreshBtn" class="secondary">刷新</button></div>
@@ -599,6 +605,8 @@ async function loadDigests() {
   const box = $("digestList");
   try { const r = await api("/api/v1/assistant/digests?limit=3").catch(() => null); if (!r || !r.digests || !r.digests.length) { box.innerHTML = "<div class=\"mini\">尚未生成晨报</div>"; return; } box.innerHTML = ""; for (const d of r.digests) { const div = document.createElement("div"); div.className = "item"; div.innerHTML = "<b>" + escapeHtml(d.title) + "</b> <span class=\"t\">" + escapeHtml(new Date(d.createdAt).toLocaleString()) + "</span><div class=\"digest-content\">" + escapeHtml(d.content) + "</div>"; box.appendChild(div); } } catch { box.innerHTML = "<div class=\"mini\">晨报加载失败</div>"; }
 }
+$("reflectionApplyBtn").addEventListener("click", () => applyReflections($("reflectionApplyBtn")));
+$("reflectionRefreshBtn").addEventListener("click", loadReflections);
 $("subagentRunBtn").addEventListener("click", () => runSubagentQueue($("subagentRunBtn")));
 $("subagentRefreshBtn").addEventListener("click", loadSubagents);
 $("autoDigestBtn").addEventListener("click", () => runAutomation("morning_digest", $("autoDigestBtn")));
@@ -607,6 +615,39 @@ $("autoWakeBtn").addEventListener("click", () => runAutomation("silent_wakeup", 
 $("digestBtn2").addEventListener("click", async () => { const btn = $("digestBtn2"); btn.disabled = true; btn.textContent = "生成中…"; try { await api("/api/v1/assistant/digest", { method: "POST" }); await loadDigests(); } catch (e) { alert("晨报生成失败:" + e.message); } finally { btn.disabled = false; btn.textContent = "生成今日晨报"; } });
 
 
+
+async function loadReflections() {
+  const box = $("reflectionList");
+  try {
+    const r = await api("/api/v1/reflections").catch(() => null);
+    if (!r || !r.summary) { box.innerHTML = '<div class="mini">反思数据加载失败</div>'; return; }
+    const s = r.summary;
+    const counts = (s.caseCounts || []).map((c) => (c.caseType === "evaluation_low" ? "评估低分" : c.caseType === "run_failed" ? "运行失败" : c.caseType) + " " + c.count).join(" / ") || "暂无";
+    let html = '<div class="mini">近 ' + s.days + ' 天案例:' + escapeHtml(counts) + '</div>';
+    if (!s.suggestions || !s.suggestions.length) { html += '<div class="mini" style="margin-top:6px">暂无改进建议</div>'; }
+    else {
+      const t = document.createElement("table"); t.className = "mini-table";
+      t.innerHTML = "<tr><th>主题</th><th>次数</th><th>建议</th></tr>";
+      for (const g of s.suggestions) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = "<td>" + escapeHtml(g.topic) + "</td><td>" + g.count + "</td><td>" + escapeHtml(g.suggestion) + "</td>";
+        t.appendChild(tr);
+      }
+      box.innerHTML = html; box.appendChild(t);
+      return;
+    }
+    box.innerHTML = html;
+  } catch (e) { box.innerHTML = '<div class="mini">反思数据加载失败:' + escapeHtml(e.message) + '</div>'; }
+}
+async function applyReflections(btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const r = await api("/api/v1/reflections/apply", { method: "POST" });
+    alert("已应用 " + (r.applied ? r.applied.suggestions.length : 0) + " 条建议到记忆「规则改进」");
+  } catch (e) { alert("应用失败:" + e.message); }
+  if (btn) btn.disabled = false;
+  loadReflections();
+}
 async function loadSubagents() {
   const box = $("subagentList");
   try {
@@ -702,7 +743,7 @@ document.querySelectorAll(".func-btn").forEach((btn) => btn.addEventListener("cl
 }));
 
 
-checkHealth(); loadConversations(); loadCandidates(); loadTasks(); loadNotifications(); loadDigests(); loadInsights(); loadAutomations(); loadSubagents();
+checkHealth(); loadConversations(); loadCandidates(); loadTasks(); loadNotifications(); loadDigests(); loadInsights(); loadAutomations(); loadSubagents(); loadReflections();
 
 
 let agentRunning = false;
