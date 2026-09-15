@@ -1,9 +1,9 @@
 {
   "name": "subagents",
   "label": "子代理任务",
-  "description": "登记/查看子代理任务(JSON 文件队列):create 写入任务单,list 查看队列;真实子代理由宿主编排消费该队列。",
-  "category": "子代理",
-  "parameters": { "type": "object", "required": ["op"], "properties": { "op": { "type": "string", "enum": ["create", "list"] }, "title": { "type": "string", "description": "create 时任务名称" }, "goal": { "type": "string", "description": "create 时子代理目标" }, "input": { "type": "object", "description": "可选输入" }, "statusFilter": { "type": "string" } } },
+  "description": "登记/查看子代理任务:op=create 把目标拆给子代理执行(可指定 tools 白名单);op=list 查看队列与状态;op=get 查看单个任务结果。子代理由宿主编排器自动消费执行。",
+  "category": "协作",
+  "parameters": { "type": "object", "properties": { "op": { "type": "string", "enum": ["create", "list", "get"], "default": "list", "description": "操作类型" }, "title": { "type": "string", "description": "任务标题(create 用)" }, "goal": { "type": "string", "description": "子代理要完成的目标(create 用)" }, "input": { "type": "object", "description": "传给子代理的额外输入(create 用)" }, "tools": { "type": "array", "items": { "type": "string" }, "description": "允许子代理使用的工具白名单(缺省用默认只读工具)" }, "taskId": { "type": "string", "description": "任务 ID(get 用)" }, "statusFilter": { "type": "string", "description": "按状态过滤:queued/running/done/error" } } },
   "entry": "main.ts",
   "function_list": ["main.execute"]
 }

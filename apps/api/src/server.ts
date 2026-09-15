@@ -2,7 +2,7 @@ import { config } from "./env.js";
 import { buildApp } from "./app.js";
 
 
-const app = buildApp({ logger: true, automation: true });
+const app = buildApp({ logger: true, automation: true, subagents: true });
 
 app
 	.listen({ port: config.port, host: config.host })

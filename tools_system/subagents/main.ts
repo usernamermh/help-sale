@@ -1,15 +1,6 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { randomUUID } from "node:crypto";
+import { createSubTask, getSubTask, listSubTasks } from "../../apps/api/src/services/subagent-queue.js";
 
 interface ToolContext { db: any; tenantId: string; }
-
-interface SubTask { id: string; title: string; goal: string; input?: unknown; status: string; createdAt: string; updatedAt: string; }
-
-const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-// 每次执行时取路径,便于测试用 SUBAGENTS_DIR 重定向
-const queueDir = () => process.env.SUBAGENTS_DIR ?? path.join(repoRoot, "data", "subagents");
 
 export function execute(_ctx: ToolContext, params: any) {
 	const op = String(params?.op ?? "list");
@@ -17,23 +8,21 @@ export function execute(_ctx: ToolContext, params: any) {
 		const title = String(params?.title ?? "").trim();
 		const goal = String(params?.goal ?? "").trim();
 		if (!title || !goal) return { content: [{ type: "text", text: "create 需要 title 与 goal。" }] };
-		mkdirSync(queueDir(), { recursive: true });
-		const now = new Date().toISOString();
-		const id = randomUUID();
-		const task: SubTask = { id, title, goal, input: params?.input, status: "queued", createdAt: now, updatedAt: now };
-		writeFileSync(path.join(queueDir(), `${id}.json`), JSON.stringify(task, null, 2), "utf8");
-		return { content: [{ type: "text", text: `子代理任务已登记 ${id}: ${title}` }], details: { id, path: path.join(queueDir(), `${id}.json`) } };
+		const tools = Array.isArray(params?.tools) ? params.tools.map((s: unknown) => String(s)) : undefined;
+		const task = createSubTask({ tenantId: _ctx.tenantId, title, goal, input: params?.input, tools });
+		return { content: [{ type: "text", text: `子代理任务已登记 ${task.id}: ${title}` }], details: { id: task.id, title: task.title, status: task.status } };
 	}
-	if (op === "list") {
-		if (!existsSync(queueDir())) return { content: [{ type: "text", text: "(子代理队列为空)" }], details: { tasks: [] } };
-		const filter = params?.statusFilter ? String(params.statusFilter) : undefined;
-		const tasks: SubTask[] = [];
-		for (const file of readdirSync(queueDir()).filter((f) => f.endsWith(".json"))) {
-			try { tasks.push(JSON.parse(readFileSync(path.join(queueDir(), file), "utf8")) as SubTask); } catch { /* 跳过损坏 */ }
-		}
-		const items = tasks.filter((t) => !filter || t.status === filter);
-		const text = items.length ? items.map((t) => `[${t.status}] ${t.id.slice(0, 8)} ${t.title}: ${t.goal}`).join("\n") : "(子代理队列为空)";
-		return { content: [{ type: "text", text: `子代理队列(${items.length}):\n${text}` }], details: { tasks: items } };
+	if (op === "get") {
+		const id = String(params?.taskId ?? "").trim();
+		const task = getSubTask(id);
+		if (!task) return { content: [{ type: "text", text: "未找到该子代理任务。" }] };
+		const lines = [`[${task.status}] ${task.title}: ${task.goal}`];
+		if (task.result) lines.push(`结果: ${task.result}`);
+		if (task.error) lines.push(`错误: ${task.error}`);
+		return { content: [{ type: "text", text: lines.join("\n") }], details: task };
 	}
-	return { content: [{ type: "text", text: `未知操作 ${op}(支持 create/list)` }] };
+	const filter = params?.statusFilter ? String(params.statusFilter) : undefined;
+	const tasks = listSubTasks(filter as never);
+	const text = tasks.length ? tasks.map((t) => `[${t.status}] ${t.id.slice(0, 8)} ${t.title}: ${t.goal}${t.result ? ` → ${t.result.slice(0, 60)}` : ""}`).join("\n") : "(子代理队列为空)";
+	return { content: [{ type: "text", text: `子代理队列(${tasks.length}):\n${text}` }], details: { tasks } };
 }
