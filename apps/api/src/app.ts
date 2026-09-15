@@ -14,6 +14,7 @@ import { createMysqlSink, type MysqlSink } from "./integrations/mysql-sink.js";
 import { createSyncMysqlDb } from "./db/mysql/client.js";
 import { createReminderQueue, type ReminderQueue } from "./integrations/reminder-queue.js";
 import { startAutomationScheduler } from "./services/automation.js";
+import { startSubagentConsumer } from "./services/subagent-runner.js";
 import { seedStoreData, seedVehicles } from "./services/seed.js";
 import { appendRuntimeLog } from "./services/runtime-log.js";
 
@@ -32,6 +33,7 @@ export interface AppOptions {
 	mysqlSink?: MysqlSink;
 	reminders?: ReminderQueue;
 	automation?: boolean; // 是否启动定时自动任务(默认 false,生产入口 true)
+	subagents?: boolean; // 是否启动子代理消费者(默认 false,生产入口 true)
 }
 
 export function buildApp(options: AppOptions = {}): FastifyInstance {
@@ -122,6 +124,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		}
 	});
 
+	const stopSubagents = options.subagents === true ? startSubagentConsumer({ db }) : () => undefined;
 	const stopAutomation = startAutomationScheduler({
 		db,
 		config: {
@@ -136,6 +139,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	});
 
 	app.addHook("onClose", async () => {
+		stopSubagents();
 		stopAutomation();
 		const closeTasks: Array<Promise<void> | undefined> = [store.close(), mysqlSink?.close(), reminders.close()];
 		await Promise.allSettled(closeTasks);

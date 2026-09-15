@@ -44,6 +44,8 @@ import { scheduleDeliveryFollowups, scheduleTestDriveFollowups } from "./service
 import { getSalesWorkbench, getStorePerformance } from "./services/performance.js";
 import { listAutomationRuns } from "./repositories/automation-runs.js";
 import { runAutomationJob } from "./services/automation.js";
+import { listSubTasks } from "./services/subagent-queue.js";
+import { consumeSubagentQueue } from "./services/subagent-runner.js";
 import { appendThreadMessage, createThread, deleteAllThreads, deleteThread, getThread, listThreadMessages, listThreads, setThreadTitle } from "./repositories/agent-threads.js";
 import type { SessionStore } from "./pi/sessions.js";
 
@@ -908,6 +910,16 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 		} catch (error) {
 			return reply.code(500).send({ error: "automation_failed", message: error instanceof Error ? error.message : String(error) });
 		}
+	});
+	// ── 子代理任务:队列状态与手动消费 ──
+	app.get<{ Querystring: { status?: string } }>("/api/v1/subagents", async (request) => {
+		const status = request.query.status === "queued" || request.query.status === "running" || request.query.status === "done" || request.query.status === "error" ? request.query.status : undefined;
+		return { tasks: listSubTasks(status) };
+	});
+
+	app.post("/api/v1/subagents/run", async (request) => {
+		const executed = await consumeSubagentQueue({ db: deps.db }, { limit: 2 });
+		return { executed };
 	});
 	app.get<{ Querystring: { storeId?: string } }>("/api/v1/sales", async (request) => {
 		return { sales: listSales(deps.db, request.tenantId, request.query.storeId) };

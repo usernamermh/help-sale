@@ -263,6 +263,7 @@ button.secondary:hover { background:#f1f5f9; }
 <button class="func-btn active" data-card="insightCard">经营洞察</button>
 <button class="func-btn" data-card="digestCard2">军师晨报</button>
 <button class="func-btn" data-card="automationCard">自动任务</button>
+<button class="func-btn" data-card="subagentCard">子代理任务</button>
 </aside>
 <div class="func-body">
 <div class="card func-card active" id="insightCard">
@@ -274,7 +275,12 @@ button.secondary:hover { background:#f1f5f9; }
 <button id="digestBtn2" class="secondary" style="margin-bottom:10px">生成今日晨报</button>
 <div id="digestList"></div>
 </div>
-<div class="card func-card" id="automationCard">
+<div class="card func-card" id="subagentCard">
+<h2>子代理任务</h2>
+<div class="section-note">主 Agent 可把目标拆给子代理并行执行,这里展示队列状态与执行结果。</div>
+<div style="display:flex;gap:6px;margin-bottom:10px"><button id="subagentRunBtn" class="secondary">消费执行队列</button><button id="subagentRefreshBtn" class="secondary">刷新</button></div>
+<div id="subagentList"></div>
+</div><div class="card func-card" id="automationCard">
 <h2>自动任务</h2>
 <div class="section-note">每日晨报 / 每周周报 / 沉默客户唤醒由系统定时自动执行,这里展示执行状态,也可手动触发。</div>
 <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
@@ -593,11 +599,43 @@ async function loadDigests() {
   const box = $("digestList");
   try { const r = await api("/api/v1/assistant/digests?limit=3").catch(() => null); if (!r || !r.digests || !r.digests.length) { box.innerHTML = "<div class=\"mini\">尚未生成晨报</div>"; return; } box.innerHTML = ""; for (const d of r.digests) { const div = document.createElement("div"); div.className = "item"; div.innerHTML = "<b>" + escapeHtml(d.title) + "</b> <span class=\"t\">" + escapeHtml(new Date(d.createdAt).toLocaleString()) + "</span><div class=\"digest-content\">" + escapeHtml(d.content) + "</div>"; box.appendChild(div); } } catch { box.innerHTML = "<div class=\"mini\">晨报加载失败</div>"; }
 }
+$("subagentRunBtn").addEventListener("click", () => runSubagentQueue($("subagentRunBtn")));
+$("subagentRefreshBtn").addEventListener("click", loadSubagents);
 $("autoDigestBtn").addEventListener("click", () => runAutomation("morning_digest", $("autoDigestBtn")));
 $("autoWeeklyBtn").addEventListener("click", () => runAutomation("weekly_report", $("autoWeeklyBtn")));
 $("autoWakeBtn").addEventListener("click", () => runAutomation("silent_wakeup", $("autoWakeBtn")));
 $("digestBtn2").addEventListener("click", async () => { const btn = $("digestBtn2"); btn.disabled = true; btn.textContent = "生成中…"; try { await api("/api/v1/assistant/digest", { method: "POST" }); await loadDigests(); } catch (e) { alert("晨报生成失败:" + e.message); } finally { btn.disabled = false; btn.textContent = "生成今日晨报"; } });
 
+
+async function loadSubagents() {
+  const box = $("subagentList");
+  try {
+    const r = await api("/api/v1/subagents").catch(() => null);
+    if (!r || !r.tasks || !r.tasks.length) { box.innerHTML = '<div class="mini">暂无子代理任务(模型可通过 subagents 工具登记)</div>'; return; }
+    const statusLabel = { queued: "排队中", running: "执行中", done: "已完成", error: "失败" };
+    const color = { queued: "#64748b", running: "#2563eb", done: "#16a34a", error: "#b91c1c" };
+    box.innerHTML = "";
+    const t = document.createElement("table"); t.className = "mini-table";
+    t.innerHTML = "<tr><th>状态</th><th>标题</th><th>目标</th><th>结果/错误</th></tr>";
+    for (const task of r.tasks.slice(0, 30)) {
+      const tr = document.createElement("tr");
+      const detail = task.result || task.error || "—";
+      tr.innerHTML = "<td style=\"color:" + (color[task.status] || "#64748b") + "\">" + (statusLabel[task.status] || task.status) + "</td><td>" + escapeHtml(task.title) + "</td><td>" + escapeHtml(String(task.goal).slice(0, 60)) + "</td><td>" + escapeHtml(String(detail).slice(0, 80)) + "</td>";
+      t.appendChild(tr);
+    }
+    box.appendChild(t);
+  } catch (e) { box.innerHTML = '<div class="mini">子代理任务加载失败:' + escapeHtml(e.message) + '</div>'; }
+}
+async function runSubagentQueue(btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const r = await api("/api/v1/subagents/run", { method: "POST" });
+    const n = (r.executed || []).length;
+    alert(n ? "已执行 " + n + " 个子代理任务" : "队列中没有待执行任务");
+  } catch (e) { alert("执行失败:" + e.message); }
+  if (btn) btn.disabled = false;
+  loadSubagents();
+}
 async function loadAutomations() {
   const box = $("automationList");
   try {
@@ -664,7 +702,7 @@ document.querySelectorAll(".func-btn").forEach((btn) => btn.addEventListener("cl
 }));
 
 
-checkHealth(); loadConversations(); loadCandidates(); loadTasks(); loadNotifications(); loadDigests(); loadInsights(); loadAutomations();
+checkHealth(); loadConversations(); loadCandidates(); loadTasks(); loadNotifications(); loadDigests(); loadInsights(); loadAutomations(); loadSubagents();
 
 
 let agentRunning = false;
