@@ -356,3 +356,15 @@ CREATE TABLE IF NOT EXISTS reflection_cases (
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_rc_tenant ON reflection_cases (tenant_id, case_type, created_at DESC);
+
+-- v20:会话摘要(中期记忆:thread 长对话压缩落库,超长 history 注入摘要)
+CREATE TABLE IF NOT EXISTS thread_summaries (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	thread_id TEXT NOT NULL,
+	summary TEXT NOT NULL,
+	message_seq_until INTEGER NOT NULL DEFAULT 0,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	UNIQUE (tenant_id, thread_id)
+);
