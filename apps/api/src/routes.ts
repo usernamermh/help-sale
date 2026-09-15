@@ -45,6 +45,8 @@ import { getSalesWorkbench, getStorePerformance } from "./services/performance.j
 import { listAutomationRuns } from "./repositories/automation-runs.js";
 import { runAutomationJob } from "./services/automation.js";
 import { listSubTasks } from "./services/subagent-queue.js";
+import { createReflectionCase } from "./repositories/reflection-cases.js";
+import { applyReflectionToMemory, collectReflectionSuggestions } from "./services/reflection.js";
 import { consumeSubagentQueue } from "./services/subagent-runner.js";
 import { appendThreadMessage, createThread, deleteAllThreads, deleteThread, getThread, listThreadMessages, listThreads, setThreadTitle } from "./repositories/agent-threads.js";
 import type { SessionStore } from "./pi/sessions.js";
@@ -376,12 +378,21 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 	app.post<{ Body: { goal?: string; customerKey?: string; conversationId?: string; history?: AgentMessage[] } }>("/api/v1/agent/run", async (request, reply) => {
 		const { goal, customerKey, conversationId, history } = request.body ?? {};
 		if (!goal || !goal.trim()) return reply.code(400).send({ error: "goal is required" });
-		const result = await runSalesAgent(
-			{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
-			{ goal, customerKey, conversationId, history },
-		);
-	
-	return { runId: result.runId, final: result.final, hasResponse: Boolean(result.final) };
+		let result;
+		try {
+			result = await runSalesAgent(
+				{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
+				{ goal, customerKey, conversationId, history },
+			);
+		} catch (error) {
+			createReflectionCase(deps.db, {
+				tenantId: request.tenantId,
+				caseType: "run_failed",
+				detail: { error: error instanceof Error ? error.message : String(error), goal: goal.slice(0, 200) },
+			});
+			return reply.code(500).send({ error: "agent_run_failed", message: error instanceof Error ? error.message : String(error) });
+		}
+		return { runId: result.runId, final: result.final, hasResponse: Boolean(result.final) };
 	});
 
 	app.post("/api/v1/agent/threads", async (request) => {
@@ -731,6 +742,15 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 			{ text: `【客户对话】\n${conversation}\n\n【销售回复】\n${replyText}` },
 		);
 		if (!result.details) return reply.code(502).send({ error: "agent produced no evaluation" });
+		const evalDetails = result.details as { score?: number; improvements?: string[] };
+		if (typeof evalDetails.score === "number" && evalDetails.score < 70) {
+			createReflectionCase(deps.db, {
+				tenantId: request.tenantId,
+				caseType: "evaluation_low",
+				refId: result.conversationId,
+				detail: { score: evalDetails.score, improvements: evalDetails.improvements ?? [] },
+			});
+		}
 		const salesEval = resolveSalesperson(deps.db, request.tenantId, salesContextFrom(request.body as unknown as Record<string, unknown> | undefined, request.headers));
 		const evalMsgs = normalizeAnalyzeMessages({ transcript: conversation });
 		upsertConversation(deps.db, { id: result.conversationId, tenantId: request.tenantId, salesName: salesEval.salesName, salesId: salesEval.salesId, salesPhone: salesEval.salesPhone, storeId: salesEval.storeId, messageCount: evalMsgs.length });
@@ -921,6 +941,20 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 		const executed = await consumeSubagentQueue({ db: deps.db }, { limit: 2 });
 		return { executed };
 	});
+	// ── 反思与自我改进:案例摘要与应用到记忆 ──
+	app.get("/api/v1/reflections", async (request) => {
+		return { summary: collectReflectionSuggestions(deps.db, request.tenantId, 7) };
+	});
+
+	app.post("/api/v1/reflections/apply", async (request, reply) => {
+		try {
+			const applied = applyReflectionToMemory(deps.db, request.tenantId, 7);
+			return { applied };
+		} catch (error) {
+			return reply.code(500).send({ error: "reflection_apply_failed", message: error instanceof Error ? error.message : String(error) });
+		}
+	});
+
 	app.get<{ Querystring: { storeId?: string } }>("/api/v1/sales", async (request) => {
 		return { sales: listSales(deps.db, request.tenantId, request.query.storeId) };
 	});

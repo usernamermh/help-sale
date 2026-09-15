@@ -345,3 +345,14 @@ CREATE TABLE IF NOT EXISTS automation_runs (
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_ar_tenant ON automation_runs (tenant_id, job_type, run_date DESC);
+
+-- v19:反思案例(话术评估低分/运行失败),供自我改进闭环聚合
+CREATE TABLE IF NOT EXISTS reflection_cases (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	case_type TEXT NOT NULL,
+	ref_id TEXT,
+	detail_json TEXT,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_rc_tenant ON reflection_cases (tenant_id, case_type, created_at DESC);
