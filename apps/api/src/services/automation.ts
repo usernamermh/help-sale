@@ -5,6 +5,7 @@ import { createDigest, getDigestByDate } from "../repositories/digests.js";
 import { listSilentCustomers } from "../repositories/funnel.js";
 import { createTask } from "../repositories/tasks.js";
 import { applyReflectionToMemory } from "./reflection.js";
+import { createNotificationLog } from "../repositories/notification-logs.js";
 import { getCustomer } from "../repositories/customers.js";
 import { hasAutomationRunOn, listTenantIds, recordAutomationRun, type AutomationJobType } from "../repositories/automation-runs.js";
 
@@ -53,7 +54,9 @@ function runMorningDigest(db: DatabaseSync, tenantId: string, now: Date): string
 	if (getDigestByDate(db, tenantId, date)) return "晨报当天已存在,跳过";
 	const d = collectDigest(db, { tenantId, now });
 	createDigest(db, { tenantId, digestDate: date, title: d.title, content: d.content, statsJson: JSON.stringify(d.stats) });
-	return `已生成晨报:待办 ${d.stats.pendingTasks} / 到期 ${d.stats.overdueTasks} / 近24h分析 ${d.stats.analyses24h}`;
+	const summary = `已生成晨报:待办 ${d.stats.pendingTasks} / 到期 ${d.stats.overdueTasks} / 近24h分析 ${d.stats.analyses24h}`;
+	createNotificationLog(db, { tenantId, channel: "automation", title: `📰 ${d.title}`, contentJson: JSON.stringify({ summary, content: d.content }), status: "sent" });
+	return summary;
 }
 
 /** 周报:汇总近 7 天经营数据并落库(复用 digests,标题区分周报)。 */
@@ -62,7 +65,9 @@ function runWeeklyReport(db: DatabaseSync, tenantId: string, now: Date): string 
 	const key = `weekly-${r.stats.from}-${r.stats.to}`;
 	if (getDigestByDate(db, tenantId, key)) return "周报当天已存在,跳过";
 	createDigest(db, { tenantId, digestDate: key, title: r.title, content: r.content, statsJson: JSON.stringify(r.stats) });
-	return `已生成周报:成交 ${r.stats.deals} 单 / ¥${r.stats.dealAmount.toLocaleString()} / 完成率 ${Math.round(r.stats.taskRate * 100)}%`;
+	const summary = `已生成周报:成交 ${r.stats.deals} 单 / ¥${r.stats.dealAmount.toLocaleString()} / 完成率 ${Math.round(r.stats.taskRate * 100)}%`;
+	createNotificationLog(db, { tenantId, channel: "automation", title: `📊 ${r.title}`, contentJson: JSON.stringify({ summary, content: r.content }), status: "sent" });
+	return summary;
 }
 
 /** 沉默客户唤醒:为近 N 天未跟进客户建唤醒任务(该客户已有 pending 唤醒任务则跳过)。 */
