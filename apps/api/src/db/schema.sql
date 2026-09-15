@@ -332,3 +332,16 @@ CREATE TABLE IF NOT EXISTS test_drives (
 	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_td_tenant ON test_drives (tenant_id, store_id, scheduled_at);
+
+-- v18:自动任务执行记录(晨报/周报/沉默唤醒等,前端可查看状态)
+CREATE TABLE IF NOT EXISTS automation_runs (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	job_type TEXT NOT NULL,
+	run_date TEXT NOT NULL,
+	status TEXT NOT NULL,
+	summary TEXT,
+	detail_json TEXT,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_ar_tenant ON automation_runs (tenant_id, job_type, run_date DESC);

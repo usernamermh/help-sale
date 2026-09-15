@@ -13,6 +13,7 @@ import { registerRoutes } from "./routes.js";
 import { createMysqlSink, type MysqlSink } from "./integrations/mysql-sink.js";
 import { createSyncMysqlDb } from "./db/mysql/client.js";
 import { createReminderQueue, type ReminderQueue } from "./integrations/reminder-queue.js";
+import { startAutomationScheduler } from "./services/automation.js";
 import { seedStoreData, seedVehicles } from "./services/seed.js";
 import { appendRuntimeLog } from "./services/runtime-log.js";
 
@@ -30,6 +31,7 @@ export interface AppOptions {
 	seedVehiclesFor?: string[] | false;
 	mysqlSink?: MysqlSink;
 	reminders?: ReminderQueue;
+	automation?: boolean; // 是否启动定时自动任务(默认 false,生产入口 true)
 }
 
 export function buildApp(options: AppOptions = {}): FastifyInstance {
@@ -120,7 +122,21 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		}
 	});
 
+	const stopAutomation = startAutomationScheduler({
+		db,
+		config: {
+			enabled: options.automation === true && config.automationEnabled,
+			morningDigestTime: config.morningDigestTime,
+			weeklyReportWeekday: config.weeklyReportWeekday,
+			weeklyReportTime: config.weeklyReportTime,
+			silentCustomerDays: config.silentCustomerDays,
+			silentWakeupEnabled: config.silentWakeupEnabled,
+			wakeupTaskTime: config.wakeupTaskTime,
+		},
+	});
+
 	app.addHook("onClose", async () => {
+		stopAutomation();
 		const closeTasks: Array<Promise<void> | undefined> = [store.close(), mysqlSink?.close(), reminders.close()];
 		await Promise.allSettled(closeTasks);
 		db.close();

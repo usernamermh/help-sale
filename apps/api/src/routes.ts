@@ -42,6 +42,8 @@ import { setFunnelStage, getFunnelStats, listSilentCustomers } from "./repositor
 import { createTestDrive, getTestDrive, listTestDrives, setTestDriveStatus } from "./repositories/test-drives.js";
 import { scheduleDeliveryFollowups, scheduleTestDriveFollowups } from "./services/followup-rhythm.js";
 import { getSalesWorkbench, getStorePerformance } from "./services/performance.js";
+import { listAutomationRuns } from "./repositories/automation-runs.js";
+import { runAutomationJob } from "./services/automation.js";
 import { appendThreadMessage, createThread, deleteAllThreads, deleteThread, getThread, listThreadMessages, listThreads, setThreadTitle } from "./repositories/agent-threads.js";
 import type { SessionStore } from "./pi/sessions.js";
 
@@ -880,6 +882,32 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 		if (scope.denied) return reply.code(403).send({ error: "forbidden", message: "店长仅可查看所属门店" });
 		const days = Number.parseInt(request.query.days ?? "7", 10);
 		return { storeId: request.params.id, customers: listSilentCustomers(deps.db, request.tenantId, Number.isFinite(days) ? days : 7, request.params.id) };
+	});
+	// ── 自动任务:执行记录查询与手动触发 ──
+	app.get<{ Querystring: { limit?: string } }>("/api/v1/automations", async (request) => {
+		const limit = Number.parseInt(request.query.limit ?? "50", 10);
+		return { runs: listAutomationRuns(deps.db, request.tenantId, Number.isFinite(limit) ? limit : 50) };
+	});
+
+	app.post<{ Body: { job?: string } }>("/api/v1/automations/run", async (request, reply) => {
+		const job = String(request.body?.job ?? "");
+		if (!["morning_digest", "weekly_report", "silent_wakeup"].includes(job)) {
+			return reply.code(400).send({ error: "invalid_job", message: "job 可选 morning_digest/weekly_report/silent_wakeup" });
+		}
+		try {
+			const summary = runAutomationJob(deps.db, request.tenantId, job as "morning_digest" | "weekly_report" | "silent_wakeup", {
+				enabled: config.automationEnabled,
+				morningDigestTime: config.morningDigestTime,
+				weeklyReportWeekday: config.weeklyReportWeekday,
+				weeklyReportTime: config.weeklyReportTime,
+				silentCustomerDays: config.silentCustomerDays,
+				silentWakeupEnabled: config.silentWakeupEnabled,
+				wakeupTaskTime: config.wakeupTaskTime,
+			});
+			return { job, summary };
+		} catch (error) {
+			return reply.code(500).send({ error: "automation_failed", message: error instanceof Error ? error.message : String(error) });
+		}
 	});
 	app.get<{ Querystring: { storeId?: string } }>("/api/v1/sales", async (request) => {
 		return { sales: listSales(deps.db, request.tenantId, request.query.storeId) };

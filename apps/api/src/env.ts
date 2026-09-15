@@ -61,6 +61,14 @@ export interface AppConfig {
 	remindersTakeLimit: number;
 	analysisHistoryLimit: number;
 	vehicleSearchLimit: number;
+	// 自动任务(晨报/周报/沉默唤醒)
+	automationEnabled: boolean;
+	morningDigestTime: string;
+	weeklyReportWeekday: number;
+	weeklyReportTime: string;
+	silentCustomerDays: number;
+	silentWakeupEnabled: boolean;
+	wakeupTaskTime: string;
 }
 
 export interface FileConfig {
@@ -92,6 +100,15 @@ export interface FileConfig {
 	redis?: { enabled?: boolean; host?: string; port?: number; password?: string };
 	notification?: { enabled?: boolean; webhookUrl?: string };
 	company?: { name?: string; team?: string };
+	automation?: {
+		enabled?: boolean;
+		morningDigestTime?: string;
+		weeklyReportWeekday?: number;
+		weeklyReportTime?: string;
+		silentCustomerDays?: number;
+		silentWakeupEnabled?: boolean;
+		wakeupTaskTime?: string;
+	};
 	defaults?: {
 		insightsDays?: number;
 		improvementsDays?: number;
@@ -237,6 +254,13 @@ export function loadConfig(): AppConfig {
 		remindersTakeLimit: num(file.defaults!.remindersTakeLimit!),
 		analysisHistoryLimit: num(file.defaults!.analysisHistoryLimit!),
 		vehicleSearchLimit: num(file.defaults!.vehicleSearchLimit!),
+		automationEnabled: bool(file.automation!.enabled!),
+		morningDigestTime: String(file.automation!.morningDigestTime!),
+		weeklyReportWeekday: num(file.automation!.weeklyReportWeekday!),
+		weeklyReportTime: String(file.automation!.weeklyReportTime!),
+		silentCustomerDays: num(file.automation!.silentCustomerDays!),
+		silentWakeupEnabled: bool(file.automation!.silentWakeupEnabled!),
+		wakeupTaskTime: String(file.automation!.wakeupTaskTime!),
 	};
 }
 
