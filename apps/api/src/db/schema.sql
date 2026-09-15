@@ -19,6 +19,9 @@ CREATE TABLE IF NOT EXISTS customers (
 	phone TEXT,
 	intended_vehicles TEXT,
 	region TEXT,
+	funnel_stage TEXT,
+	lost_reason TEXT,
+	funnel_stage_changed_at TEXT,
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	UNIQUE (tenant_id, key)
@@ -83,6 +86,7 @@ CREATE TABLE IF NOT EXISTS next_step_tasks (
 	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
 	customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
 	analysis_id TEXT,
+	sales_id TEXT REFERENCES sales(id) ON DELETE SET NULL,
 	action TEXT NOT NULL,
 	due_at TEXT,
 	status TEXT NOT NULL DEFAULT 'pending',
@@ -291,7 +295,9 @@ CREATE TABLE IF NOT EXISTS deals (
 	sales_id TEXT REFERENCES sales(id) ON DELETE SET NULL,
 	customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
 	conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+	vehicle_id TEXT,
 	amount REAL NOT NULL DEFAULT 0,
+	discount_amount REAL NOT NULL DEFAULT 0,
 	status TEXT NOT NULL DEFAULT 'closed',
 	dealed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
@@ -309,3 +315,33 @@ CREATE TABLE IF NOT EXISTS tool_call_cache (
 	UNIQUE (tenant_id, tool_name, cache_key)
 );
 CREATE INDEX IF NOT EXISTS idx_tcc_tenant ON tool_call_cache (tenant_id, tool_name);
+
+-- v17:试驾管理(预约/完成/取消,自动生成回访节奏)
+CREATE TABLE IF NOT EXISTS test_drives (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
+	sales_id TEXT REFERENCES sales(id) ON DELETE SET NULL,
+	store_id TEXT REFERENCES stores(id) ON DELETE SET NULL,
+	vehicle_id TEXT,
+	scheduled_at TEXT,
+	status TEXT NOT NULL DEFAULT 'scheduled',
+	feedback TEXT,
+	competitor_compared TEXT,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_td_tenant ON test_drives (tenant_id, store_id, scheduled_at);
+
+-- v18:自动任务执行记录(晨报/周报/沉默唤醒等,前端可查看状态)
+CREATE TABLE IF NOT EXISTS automation_runs (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	job_type TEXT NOT NULL,
+	run_date TEXT NOT NULL,
+	status TEXT NOT NULL,
+	summary TEXT,
+	detail_json TEXT,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_ar_tenant ON automation_runs (tenant_id, job_type, run_date DESC);

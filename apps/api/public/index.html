@@ -262,6 +262,7 @@ button.secondary:hover { background:#f1f5f9; }
 <div class="menu-title">洞察晨报</div>
 <button class="func-btn active" data-card="insightCard">经营洞察</button>
 <button class="func-btn" data-card="digestCard2">军师晨报</button>
+<button class="func-btn" data-card="automationCard">自动任务</button>
 </aside>
 <div class="func-body">
 <div class="card func-card active" id="insightCard">
@@ -272,6 +273,16 @@ button.secondary:hover { background:#f1f5f9; }
 <h2>军师晨报</h2>
 <button id="digestBtn2" class="secondary" style="margin-bottom:10px">生成今日晨报</button>
 <div id="digestList"></div>
+</div>
+<div class="card func-card" id="automationCard">
+<h2>自动任务</h2>
+<div class="section-note">每日晨报 / 每周周报 / 沉默客户唤醒由系统定时自动执行,这里展示执行状态,也可手动触发。</div>
+<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+<button id="autoDigestBtn" class="secondary">立即生成晨报</button>
+<button id="autoWeeklyBtn" class="secondary">立即生成周报</button>
+<button id="autoWakeBtn" class="secondary">立即扫描沉默客户</button>
+</div>
+<div id="automationList"></div>
 </div>
 </div>
 </section>
@@ -582,7 +593,39 @@ async function loadDigests() {
   const box = $("digestList");
   try { const r = await api("/api/v1/assistant/digests?limit=3").catch(() => null); if (!r || !r.digests || !r.digests.length) { box.innerHTML = "<div class=\"mini\">尚未生成晨报</div>"; return; } box.innerHTML = ""; for (const d of r.digests) { const div = document.createElement("div"); div.className = "item"; div.innerHTML = "<b>" + escapeHtml(d.title) + "</b> <span class=\"t\">" + escapeHtml(new Date(d.createdAt).toLocaleString()) + "</span><div class=\"digest-content\">" + escapeHtml(d.content) + "</div>"; box.appendChild(div); } } catch { box.innerHTML = "<div class=\"mini\">晨报加载失败</div>"; }
 }
+$("autoDigestBtn").addEventListener("click", () => runAutomation("morning_digest", $("autoDigestBtn")));
+$("autoWeeklyBtn").addEventListener("click", () => runAutomation("weekly_report", $("autoWeeklyBtn")));
+$("autoWakeBtn").addEventListener("click", () => runAutomation("silent_wakeup", $("autoWakeBtn")));
 $("digestBtn2").addEventListener("click", async () => { const btn = $("digestBtn2"); btn.disabled = true; btn.textContent = "生成中…"; try { await api("/api/v1/assistant/digest", { method: "POST" }); await loadDigests(); } catch (e) { alert("晨报生成失败:" + e.message); } finally { btn.disabled = false; btn.textContent = "生成今日晨报"; } });
+
+async function loadAutomations() {
+  const box = $("automationList");
+  try {
+    const r = await api("/api/v1/automations?limit=50").catch(() => null);
+    if (!r || !r.runs || !r.runs.length) { box.innerHTML = '<div class="mini">暂无自动任务执行记录(定时任务将在设定时间自动运行)</div>'; return; }
+    const jobLabel = { morning_digest: "每日晨报", weekly_report: "每周周报", silent_wakeup: "沉默客户唤醒" };
+    box.innerHTML = "";
+    const t = document.createElement("table"); t.className = "mini-table";
+    t.innerHTML = "<tr><th>任务</th><th>日期</th><th>状态</th><th>结果</th></tr>";
+    for (const run of r.runs) {
+      const tr = document.createElement("tr");
+      const status = run.status === "success" ? "成功" : run.status === "error" ? "失败" : "跳过";
+      const color = run.status === "success" ? "#16a34a" : run.status === "error" ? "#b91c1c" : "#64748b";
+      tr.innerHTML = "<td>" + escapeHtml(jobLabel[run.jobType] || run.jobType) + "</td><td>" + escapeHtml(run.runDate) + "</td><td style=\"color:" + color + "\">" + status + "</td><td>" + escapeHtml(run.summary || "") + "</td>";
+      t.appendChild(tr);
+    }
+    box.appendChild(t);
+  } catch (e) { box.innerHTML = '<div class="mini">自动任务加载失败:' + escapeHtml(e.message) + '</div>'; }
+}
+async function runAutomation(job, btn) {
+  if (btn) { btn.disabled = true; }
+  try {
+    const r = await api("/api/v1/automations/run", { method: "POST", body: JSON.stringify({ job }) });
+    alert("执行完成:" + (r.summary || ""));
+  } catch (e) { alert("执行失败:" + e.message); }
+  if (btn) { btn.disabled = false; }
+  loadAutomations(); loadDigests(); loadInsights();
+}
 async function loadInsights() {
   const box = $("insightBox");
   try { const r = await api("/api/v1/assistant/insights?days=7").catch(() => null); if (!r) { box.innerHTML = "<div class=\"mini\">洞察加载失败</div>"; return; }
@@ -621,7 +664,7 @@ document.querySelectorAll(".func-btn").forEach((btn) => btn.addEventListener("cl
 }));
 
 
-checkHealth(); loadConversations(); loadCandidates(); loadTasks(); loadNotifications(); loadDigests(); loadInsights();
+checkHealth(); loadConversations(); loadCandidates(); loadTasks(); loadNotifications(); loadDigests(); loadInsights(); loadAutomations();
 
 
 let agentRunning = false;
