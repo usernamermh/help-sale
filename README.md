@@ -48,6 +48,47 @@
 - **趋势洞察**:近 N 天(默认 7 天)分析量、热门意图、任务完成率、车型偏好(品牌分布)。
 - **门店经营概况**:按时间周期统计门店接客次数、成交量、成交额、成交率、成交订单。
 - **前端**:洞察晨报标签页;工具 `insight_query(type=morning|trend)` 供 Agent 调用。
+
+### 5. 销售漏斗与客户阶段
+
+- **阶段状态机**:客户可流转 新进店 → 已联系 → 试驾 → 报价 → 成交/战败,记录战败原因与进入阶段时间;`POST /api/v1/customers/:key/funnel` 流转。
+- **漏斗看板**:各阶段数量/占比/平均停留、关键转化率(已联系/试驾/报价/成交)、战败原因分布;前端门店管理页展示;工具 `funnel_query`。
+- **沉默客户**:近 N 天无会话/任务/试驾的客户自动进入唤醒名单。
+
+### 6. 试驾管理与回访节奏
+
+- **试驾登记**:预约/完成/取消,记录试驾反馈与对比竞品;完成自动把客户推进试驾阶段。
+- **自动回访**:试驾完成自动生成 24 小时 / 3 天 / 7 天三段回访任务;提车关怀(3 天回访 + 30 天保养/转介绍提醒)。
+- **前端**:工具 `test_drive_manage` + 门店管理接口 `POST/GET /api/v1/test-drives`。
+
+### 7. 销售团队绩效
+
+- **绩效看板**:按销售聚合成交量/额、试驾转化、回访完成率、折扣率与门店排名(`GET /api/v1/stores/:id/performance`)。
+- **销售工作台**:今日/逾期待办、跟进中客户、本月成交(`GET /api/v1/sales/:id/workbench`)。
+
+### 8. 定时与主动任务
+
+- **调度器**:服务内每分钟 tick,按租户到点执行——每日晨报(默认 08:00)、每周周报(周一 09:00)、沉默客户唤醒(08:30,自动建唤醒任务),生成后推送通知日志。
+- **执行记录**:`automation_runs` 落库(类型/日期/状态/摘要);前端工作台「自动任务」卡片展示并支持手动触发(`GET/POST /api/v1/automations*`)。
+
+### 9. 子代理任务编排
+
+- **队列消费**:`subagents` 工具登记任务后,宿主编排器自动消费,每个子任务由独立 Agent 执行(可指定工具白名单),结果/错误回填(queued→running→done/error)。
+- **前端**:工作台「子代理任务」卡片展示队列状态与结果,支持手动消费(`GET/POST /api/v1/subagents`)。
+
+### 10. 反思与自我改进闭环
+
+- **案例采集**:话术评估低分(<70)与 Agent 运行失败自动进入 `reflection_cases`。
+- **闭环**:每周一自动聚合改进建议并写入 memory「规则改进」小节(去重),拼入系统提示词影响后续行为;前端「反思改进」卡片可手动应用(`GET/POST /api/v1/reflections`)。
+
+### 11. 上下文压缩与记忆分层
+
+- **三层记忆**:短期=当前轮次+最近消息;中期=会话摘要(thread_summaries);长期=memory.md + 知识库 + 客户档案。
+- **超长压缩**:history 超过 30 条时,早期对话压缩为【历史摘要】注入,保留最近 30 条原文;会话摘要自动落库,导出 JSON 带摘要(`GET /api/v1/agent/threads/:id/summary`)。
+
+### 12. 统计图
+
+- **交互式统计图**:工具 `chart_generate` 生成 ECharts 配置(柱状/折线/饼图,支持多系列),聊天端与工作台渲染为可交互图表(tooltip/图例/缩放);工作台经营洞察自带每日分析量柱状图与意图分布饼图。
 ## 技术栈
 
 - Node.js >= 24(`node:sqlite`) + TypeScript + Fastify + Vitest
@@ -99,6 +140,15 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 | GET | /api/v1/notifications | 通知推送日志 |
 | GET | /api/v1/customers/:key/vehicle-plans | 客户车型优选历史 |
 | GET | /api/v1/customers/:key/analyses | 客户分析历史 |
+| GET | /api/v1/stores/:id/funnel | 销售漏斗(阶段/转化/战败原因) |
+| POST/GET | /api/v1/test-drives | 试驾登记/列表 |
+| GET | /api/v1/stores/:id/performance | 销售绩效排名 |
+| GET | /api/v1/sales/:id/workbench | 销售个人工作台 |
+| GET | /api/v1/stores/:id/silent-customers | 沉默客户名单 |
+| GET/POST | /api/v1/automations* | 自动任务状态/手动触发 |
+| GET/POST | /api/v1/subagents | 子代理任务队列 |
+| GET/POST | /api/v1/reflections | 反思案例/应用改进 |
+| GET | /api/v1/agent/threads/:id/summary | 会话摘要(中期记忆) |
 
 请求头 `x-tenant-id` 指定租户(默认见配置 tenant.defaultTenantId)。
 
