@@ -17,6 +17,7 @@ function makeTool(rel: string, json: unknown): string {
 beforeEach(() => {
 	root = fs.mkdtempSync(path.join(os.tmpdir(), "ext-tools-"));
 	dirs.push(root);
+	fs.mkdirSync(path.join(process.cwd(), ".tmp"), { recursive: true });
 });
 afterEach(() => {
 	for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
