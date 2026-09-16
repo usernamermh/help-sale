@@ -350,7 +350,7 @@ function appendAgentMsg(role, text) {
   const chat = $("chat");
   const div = document.createElement("div");
   div.className = "agent-msg " + (role === "user" ? "agent-user" : "agent-assist");
-  const body = document.createElement("div"); body.className = "agent-body"; if (role === "assistant") { body.innerHTML = '<div class="md">' + renderMarkdown(text) + '</div>'; renderMermaidBlocks(body); renderEChartsBlocks(body); } else { body.textContent = text; }
+  const body = document.createElement("div"); body.className = "agent-body"; if (role === "assistant") { body.innerHTML = '<div class="md">' + renderMarkdown(text) + '</div>'; renderMermaidBlocks(body); if (typeof renderEChartsBlocks === "function") renderEChartsBlocks(body); } else { body.textContent = text; }
   div.appendChild(body);
   const step = document.createElement("div"); step.style.display = "none";
   const meta = document.createElement("div"); meta.className = "agent-meta";
@@ -520,11 +520,11 @@ function handleStreamEvent(evt, wait, steps) {
     deltaBuf += evt.text || "";
     wait.body.innerHTML = '<div class="md">' + renderMarkdown(deltaBuf) + '</div>';
     if (window.mermaid) renderMermaidBlocks(wait.body);
-    if (window.echarts) renderEChartsBlocks(wait.body);
+    if (window.echarts && typeof renderEChartsBlocks === "function") renderEChartsBlocks(wait.body);
   } else if (evt.type === "final") {
     deltaBuf = "";
     const answer = evt.final && evt.final.answer ? evt.final.answer : "（未生成答复）";
-    wait.body.innerHTML = '<div class="md">' + renderMarkdown(answer) + '</div>'; renderMermaidBlocks(wait.body); renderEChartsBlocks(wait.body);
+    wait.body.innerHTML = '<div class="md">' + renderMarkdown(answer) + '</div>'; renderMermaidBlocks(wait.body); if (typeof renderEChartsBlocks === "function") renderEChartsBlocks(wait.body);
     wait.meta.textContent = (evt.final && evt.final.nextSteps && evt.final.nextSteps.length) ? ("下一步：" + evt.final.nextSteps.join(" · ")) : "";
     attachAgentSteps(wait, steps);
     if (wait.pager) attachPager(wait);
