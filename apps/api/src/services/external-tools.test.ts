@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { loadExternalAgentTools, buildExternalToolsText, scanExternalTools } from "./external-tools.js";
+import { repoRoot } from "../../../../tools_system/_shared/file-utils.js";
 
 let root: string;
 const dirs: string[] = [];
@@ -89,7 +90,7 @@ describe("buildExternalToolsText", () => {
 });
 
 describe("tools_system 基础工具", () => {
-	const SYS_ROOTS = ["E:\\proj_help_sale\\tools", "E:\\proj_help_sale\\tools_system"];
+	const SYS_ROOTS = [path.join(repoRoot(), "tools"), path.join(repoRoot(), "tools_system")];
 	async function loadAll() {
 		return loadExternalAgentTools(SYS_ROOTS, { db: null, tenantId: "t1" } as never);
 	}
@@ -152,7 +153,7 @@ describe("tools_system 基础工具", () => {
 	});
 
 describe("文件读取工具(txt/excel/ppt)", () => {
-	const SYS = ["E:\\proj_help_sale\\tools_system"];
+	const SYS = [path.join(repoRoot(), "tools_system")];
 	async function loadAll() {
 		return loadExternalAgentTools(SYS, { db: null, tenantId: "t1" } as never);
 	}
