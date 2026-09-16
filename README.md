@@ -1,4 +1,8 @@
 # 助销 Agent — 销售军师(Sales Copilot)
+![CI](https://img.shields.io/github/actions/workflow/status/usernamermh/help-sale/ci.yml?branch=main&label=CI)
+![License](https://img.shields.io/github/license/usernamermh/help-sale)
+![Stars](https://img.shields.io/github/stars/usernamermh/help-sale)
+![Language](https://img.shields.io/github/languages/top/usernamermh/help-sale)
 
 面向销售团队的 AI 军师:基于数据库导入导出的客户会话记录,自动检索团队话术库、识别意向与风险、给出可复制的应对话术与跟进建议,**并形成自动闭环(loop agent 设计见规划第 13 章)**。
 
