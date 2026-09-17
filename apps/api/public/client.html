@@ -121,11 +121,21 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .pager-btn:hover:not(:disabled) { background:#eff6ff; border-color:#bfdbfe; }
 .pager-btn:disabled { opacity:.45; cursor:not-allowed; }
 .pager-info { white-space:nowrap; }
+.modal-mask { position:fixed; inset:0; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; z-index:100; }
+.modal-box { width:min(620px,92vw); max-height:80vh; overflow:auto; background:#fff; border-radius:16px; box-shadow:0 20px 60px rgba(15,23,42,.3); padding:18px 20px; }
+.modal-head { display:flex; align-items:center; justify-content:space-between; font-weight:600; font-size:15px; margin-bottom:12px; }
+.modal-close { border:0; background:#f1f5f9; color:#334155; border-radius:8px; padding:4px 10px; cursor:pointer; font-size:13px; }
+.job-card { border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; background:#fafbfc; }
+.job-card .job-name { font-weight:600; color:#1d4ed8; }
+.job-card .job-time { display:inline-block; background:#eef2ff; color:#1d4ed8; border-radius:6px; padding:1px 8px; font-size:11px; margin-left:8px; }
+.job-card .job-desc { margin-top:5px; font-size:12.5px; color:#334155; }
+.job-card .job-status { margin-top:6px; font-size:12px; color:#64748b; }
+.job-card .job-status.ok { color:#16a34a; } .job-card .job-status.err { color:#b91c1c; }
 .pager-pre { background:#f8fafc; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:12px; white-space:pre-wrap; word-break:break-word; margin:8px 0; }
 </style>
 </head>
 <body>
-<header><h1>销售军师</h1><span class="sub">客户端 · 对话助销</span><span class="header-left"><button id="headerCapsBtn" class="hdr-btn active" title="显示/隐藏业务逻辑功能"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>业务逻辑功能</button><button id="headerThreadsBtn" class="hdr-btn active" title="显示/隐藏历史会话"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>历史会话</button></span><span class="nav"><button id="headerRunBtn" class="hdr-btn" title="显示/隐藏本轮任务"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>本轮任务</button><button id="headerTrBtn" class="hdr-btn" title="显示/隐藏对话原文"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>对话原文</button><a href="/console">进入编排端</a></span></header>
+<header><h1>销售军师</h1><span class="sub">客户端 · 对话助销</span><span class="header-left"><button id="headerCapsBtn" class="hdr-btn active" title="显示/隐藏业务逻辑功能"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>业务逻辑功能</button><button id="headerThreadsBtn" class="hdr-btn active" title="显示/隐藏历史会话"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>历史会话</button></span><span class="nav"><button id="headerRunBtn" class="hdr-btn" title="显示/隐藏本轮任务"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>本轮任务</button><button id="headerTrBtn" class="hdr-btn" title="显示/隐藏对话原文"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>对话原文</button><button id="headerJobsBtn" class="hdr-btn" title="查看定时任务"><svg viewBox="0 0 24 24"><path d="M12 8v4l3 3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>定时任务</button><a href="/console">进入编排端</a></span></header>
 <div class="client-layout">
 <aside class="side" id="side">
 <div class="side-block grow" id="capsBlock"><div class="side-title">业务逻辑功能</div><div id="capList">加载中…</div></div>
@@ -148,6 +158,12 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 <div class="tr-list" id="trList"></div>
 </aside>
 </div>
+</div>
+<div id="jobsModal" class="modal-mask" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><span>⏰ 定时任务</span><button class="modal-close" onclick="closeJobsModal()">关闭</button></div>
+    <div id="jobsList">加载中…</div>
+  </div>
 </div>
 <script src="/vendor/marked.min.js"></script>
 <script src="/vendor/purify.min.js"></script>
@@ -576,6 +592,40 @@ function prettyPayload(p) {
   try { return typeof p === "string" ? p : JSON.stringify(p); } catch { return String(p); }
 }
 
+
+// ── 定时任务弹窗 ──
+const JOB_DEFS = [
+  { type: "morning_digest", name: "每日晨报", time: "每天 08:00", desc: "自动生成团队晨报:待办/到期任务、近24小时分析量、优先跟进客户,并推送通知日志。" },
+  { type: "weekly_report", name: "每周周报", time: "每周一 09:00", desc: "汇总近 7 天经营数据:分析量、成交量额、任务完成率、热门意图、车型分布与销售漏斗。" },
+  { type: "silent_wakeup", name: "沉默客户唤醒", time: "每天 08:30", desc: "为近 7 天未跟进(无会话/任务/试驾)的客户自动创建「唤醒回访」任务,已有待办自动跳过。" },
+  { type: "reflection", name: "反思改进", time: "每周一 09:30", desc: "聚合近 7 天反思案例(评估低分/运行失败),把改进建议写入系统记忆「规则改进」,影响后续 Agent 行为。" },
+];
+function openJobsModal() {
+  $("jobsModal").style.display = "flex";
+  loadJobsModal();
+}
+function closeJobsModal() { $("jobsModal").style.display = "none"; }
+async function loadJobsModal() {
+  const box = $("jobsList");
+  let runs = [];
+  try { const r = await api("/api/v1/automations?limit=50"); runs = r.runs || []; } catch {}
+  const latest = {};
+  for (const r of runs) if (!latest[r.jobType]) latest[r.jobType] = r;
+  box.innerHTML = "";
+  for (const def of JOB_DEFS) {
+    const rec = latest[def.type];
+    const card = document.createElement("div"); card.className = "job-card";
+    let status = '<div class="job-status">最近执行:暂无记录(到点自动运行)</div>';
+    if (rec) {
+      const ok = rec.status === "success";
+      status = '<div class="job-status ' + (ok ? "ok" : "err") + '">最近执行:' + (ok ? "成功" : (rec.status === "error" ? "失败" : "跳过")) + " · " + escapeHtml(String(rec.runDate)) + (rec.summary ? " · " + escapeHtml(String(rec.summary)) : "") + "</div>";
+    }
+    card.innerHTML = '<div><span class="job-name">' + escapeHtml(def.name) + '</span><span class="job-time">' + escapeHtml(def.time) + "</span></div><div class=\"job-desc\">" + escapeHtml(def.desc) + "</div>" + status;
+    box.appendChild(card);
+  }
+}
+$("headerJobsBtn").addEventListener("click", openJobsModal);
+$("jobsModal").addEventListener("click", (e) => { if (e.target === $("jobsModal")) closeJobsModal(); });
 // ── 表格手动翻页:直接执行工具翻页,只替换表格原文,不经过大模型 ──
 function attachPager(wait) {
   const body = wait.body;
