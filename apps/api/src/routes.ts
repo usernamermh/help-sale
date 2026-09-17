@@ -160,7 +160,8 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 }
 
 /** 自定义任务调度文案(与前端展示一致)。 */
-function automationScheduleText(job: { scheduleType: string; intervalDays: number | null; intervalUnit: "day" | "hour"; weekday: number | null; scheduleTime: string }): string {
+function automationScheduleText(job: { scheduleType: string; intervalDays: number | null; intervalUnit: "day" | "hour"; weekday: number | null; scheduleTime: string; onceDate: string | null }): string {
+	if (job.scheduleType === "once") return `一次性 ${job.onceDate ?? ""} ${job.scheduleTime}`;
 	if (job.scheduleType === "interval") return job.intervalUnit === "hour" ? `每 ${job.intervalDays ?? 1} 小时 ${job.scheduleTime}` : `每 ${job.intervalDays ?? 1} 天 ${job.scheduleTime}`;
 	if (job.scheduleType === "weekly") return `每周${job.weekday ?? 1} ${job.scheduleTime}`;
 	return `每天 ${job.scheduleTime}`;
@@ -990,7 +991,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		return { jobs: listAutomationJobs(deps.db, request.tenantId) };
 	});
 
-	app.post<{ Body: { name?: string; scheduleType?: string; weekday?: number; intervalDays?: number; intervalUnit?: string; scheduleTime?: string; description?: string; action?: unknown; enabled?: boolean } }>("/api/v1/automations/jobs", async (request, reply) => {
+	app.post<{ Body: { name?: string; scheduleType?: string; weekday?: number; intervalDays?: number; intervalUnit?: string; onceDate?: string; scheduleTime?: string; description?: string; action?: unknown; enabled?: boolean } }>("/api/v1/automations/jobs", async (request, reply) => {
 		const name = String(request.body?.name ?? "").trim();
 		const time = String(request.body?.scheduleTime ?? "").trim();
 		if (!name || !/^\d{2}:\d{2}$/.test(time)) {
@@ -998,12 +999,18 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		}
 		const weekday = request.body?.weekday;
 		if (weekday != null && (weekday < 1 || weekday > 7)) return reply.code(400).send({ error: "invalid_weekday", message: "weekday 取 1-7" });
+		const scheduleType = request.body?.scheduleType === "weekly" ? "weekly" : request.body?.scheduleType === "once" ? "once" : request.body?.scheduleType === "interval" ? "interval" : "daily";
+		const onceDate = scheduleType === "once" ? String(request.body?.onceDate ?? "").trim() : null;
+		if (scheduleType === "once" && !/^\d{4}-\d{2}-\d{2}$/.test(onceDate ?? "")) {
+			return reply.code(400).send({ error: "invalid_once_date", message: "指定日期任务需传 onceDate(YYYY-MM-DD)" });
+		}
 		const job = createAutomationJob(deps.db, {
 			tenantId: request.tenantId,
 			name,
-			scheduleType: request.body?.scheduleType === "weekly" ? "weekly" : request.body?.scheduleType === "interval" ? "interval" : "daily",
-			intervalDays: request.body?.scheduleType === "interval" ? request.body?.intervalDays ?? 1 : null,
-			intervalUnit: request.body?.scheduleType === "interval" ? (request.body?.intervalUnit === "hour" ? "hour" : "day") : "day",
+			scheduleType,
+			intervalDays: scheduleType === "interval" ? request.body?.intervalDays ?? 1 : null,
+			intervalUnit: scheduleType === "interval" ? (request.body?.intervalUnit === "hour" ? "hour" : "day") : "day",
+			onceDate,
 			weekday: weekday ?? null,
 			scheduleTime: time,
 			description: request.body?.description,
@@ -1013,14 +1020,19 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		return { job };
 	});
 
-	app.put<{ Params: { id: string }; Body: { name?: string; scheduleType?: string; weekday?: number; intervalDays?: number; intervalUnit?: string; scheduleTime?: string; description?: string; action?: unknown; enabled?: boolean } }>("/api/v1/automations/jobs/:id", async (request, reply) => {
+	app.put<{ Params: { id: string }; Body: { name?: string; scheduleType?: string; weekday?: number; intervalDays?: number; intervalUnit?: string; onceDate?: string; scheduleTime?: string; description?: string; action?: unknown; enabled?: boolean } }>("/api/v1/automations/jobs/:id", async (request, reply) => {
 		const time = String(request.body?.scheduleTime ?? "").trim();
 		if (time && !/^\d{2}:\d{2}$/.test(time)) return reply.code(400).send({ error: "invalid_time", message: "scheduleTime 需 HH:MM" });
+		const onceDate = request.body?.onceDate !== undefined ? String(request.body.onceDate ?? "").trim() : undefined;
+		if (onceDate !== undefined && onceDate !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(onceDate)) {
+			return reply.code(400).send({ error: "invalid_once_date", message: "onceDate 需 YYYY-MM-DD" });
+		}
 		const job = updateAutomationJob(deps.db, request.tenantId, request.params.id, {
 			name: request.body?.name,
-			scheduleType: request.body?.scheduleType === "weekly" ? "weekly" : request.body?.scheduleType === "interval" ? "interval" : request.body?.scheduleType === "daily" ? "daily" : undefined,
+			scheduleType: request.body?.scheduleType === "weekly" ? "weekly" : request.body?.scheduleType === "once" ? "once" : request.body?.scheduleType === "interval" ? "interval" : request.body?.scheduleType === "daily" ? "daily" : undefined,
 			intervalDays: request.body?.intervalDays,
 			intervalUnit: request.body?.intervalUnit === "hour" ? "hour" : request.body?.intervalUnit === "day" ? "day" : undefined,
+			onceDate,
 			weekday: request.body?.weekday,
 			scheduleTime: time || undefined,
 			description: request.body?.description,

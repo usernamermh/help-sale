@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 24;
+export const MIGRATION_VERSION = 25;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -130,6 +130,13 @@ export function migrate(db: DatabaseSync): void {
 		const cols = db.prepare("PRAGMA table_info(automation_jobs)").all() as Array<{ name: string }>;
 		if (!cols.some((c) => c.name === "interval_unit")) {
 			db.exec("ALTER TABLE automation_jobs ADD COLUMN interval_unit TEXT NOT NULL DEFAULT 'day';");
+		}
+	}
+	// v25:一次性定时任务(指定日期 YYYY-MM-DD,到点执行一次后自动停用)
+	if (current.user_version < 25) {
+		const cols = db.prepare("PRAGMA table_info(automation_jobs)").all() as Array<{ name: string }>;
+		if (!cols.some((c) => c.name === "once_date")) {
+			db.exec("ALTER TABLE automation_jobs ADD COLUMN once_date TEXT;");
 		}
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);

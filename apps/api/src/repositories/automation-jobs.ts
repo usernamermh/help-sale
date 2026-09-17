@@ -5,9 +5,10 @@ export interface AutomationJob {
 	id: string;
 	tenantId: string;
 	name: string;
-	scheduleType: "daily" | "weekly" | "interval";
+	scheduleType: "daily" | "weekly" | "interval" | "once";
 	intervalDays: number | null;
 	intervalUnit: "day" | "hour";
+	onceDate: string | null; // 一次性任务执行日期 YYYY-MM-DD
 	weekday: number | null; // 1=周一 … 7=周日
 	scheduleTime: string; // HH:MM
 	description: string | null;
@@ -20,9 +21,10 @@ export interface AutomationJob {
 export interface AutomationJobInput {
 	tenantId: string;
 	name: string;
-	scheduleType?: "daily" | "weekly" | "interval";
+	scheduleType?: "daily" | "weekly" | "interval" | "once";
 	intervalDays?: number | null;
 	intervalUnit?: "day" | "hour";
+	onceDate?: string | null;
 	weekday?: number | null;
 	scheduleTime: string;
 	description?: string | null;
@@ -33,8 +35,8 @@ export interface AutomationJobInput {
 export function createAutomationJob(db: DatabaseSync, input: AutomationJobInput): AutomationJob {
 	const id = randomUUID();
 	db.prepare(
-		"INSERT INTO automation_jobs (id, tenant_id, name, schedule_type, interval_days, interval_unit, weekday, schedule_time, description, action_json, enabled) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-	).run(id, input.tenantId, input.name, input.scheduleType ?? "daily", input.intervalDays ?? null, input.intervalUnit ?? "day", input.weekday ?? null, input.scheduleTime, input.description ?? null, JSON.stringify(input.action ?? {}), input.enabled === false ? 0 : 1);
+		"INSERT INTO automation_jobs (id, tenant_id, name, schedule_type, interval_days, interval_unit, once_date, weekday, schedule_time, description, action_json, enabled) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+	).run(id, input.tenantId, input.name, input.scheduleType ?? "daily", input.intervalDays ?? null, input.intervalUnit ?? "day", input.onceDate ?? null, input.weekday ?? null, input.scheduleTime, input.description ?? null, JSON.stringify(input.action ?? {}), input.enabled === false ? 0 : 1);
 	return getAutomationJob(db, input.tenantId, id)!;
 }
 
@@ -59,12 +61,13 @@ export function updateAutomationJob(
 	const existing = getAutomationJob(db, tenantId, id);
 	if (!existing) return undefined;
 	db.prepare(
-		`UPDATE automation_jobs SET name = ?, schedule_type = ?, interval_days = ?, interval_unit = ?, weekday = ?, schedule_time = ?, description = ?, action_json = ?, enabled = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`,
+		`UPDATE automation_jobs SET name = ?, schedule_type = ?, interval_days = ?, interval_unit = ?, once_date = ?, weekday = ?, schedule_time = ?, description = ?, action_json = ?, enabled = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`,
 	).run(
 		patch.name ?? existing.name,
 		patch.scheduleType ?? existing.scheduleType,
 		patch.intervalDays !== undefined ? patch.intervalDays : existing.intervalDays,
 		patch.intervalUnit !== undefined ? patch.intervalUnit : existing.intervalUnit,
+		patch.onceDate !== undefined ? patch.onceDate : existing.onceDate,
 		patch.weekday !== undefined ? patch.weekday : existing.weekday,
 		patch.scheduleTime ?? existing.scheduleTime,
 		patch.description !== undefined ? patch.description : existing.description,
@@ -87,9 +90,10 @@ function mapRow(row: Record<string, unknown>): AutomationJob {
 		id: String(row.id),
 		tenantId: String(row.tenant_id),
 		name: String(row.name),
-		scheduleType: String(row.schedule_type) as "daily" | "weekly" | "interval",
+		scheduleType: String(row.schedule_type) as "daily" | "weekly" | "interval" | "once",
 		intervalDays: row.interval_days != null ? Number(row.interval_days) : null,
 		intervalUnit: row.interval_unit === "hour" ? "hour" : "day",
+		onceDate: row.once_date ? String(row.once_date) : null,
 		weekday: row.weekday != null ? Number(row.weekday) : null,
 		scheduleTime: String(row.schedule_time),
 		description: row.description ? String(row.description) : null,

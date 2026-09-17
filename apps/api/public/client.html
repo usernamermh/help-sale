@@ -44,7 +44,7 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .welcome-btn:hover { border-color:#2563eb; box-shadow:0 3px 10px rgba(37,99,235,.15); }
 .wb-name { font-weight:600; color:#1e293b; font-size:13px; }
 .wb-time { font-size:11px; color:var(--muted); margin-top:2px; }
-.welcome-result { text-align:left; max-width:760px; margin:0 auto; }
+.welcome-result { text-align:left; max-width:1120px; margin:0 auto; }
 .welcome-back { display:inline-block; margin-bottom:10px; cursor:pointer; color:#2563eb; font-size:13px; background:none; border:none; padding:0; }
 .agent-body { white-space:pre-wrap; word-break:break-word; }
 .agent-body .md { white-space:normal; }
@@ -124,9 +124,9 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .pager-btn:disabled { opacity:.45; cursor:not-allowed; }
 .pager-info { white-space:nowrap; }
 .modal-mask { position:fixed; inset:0; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; z-index:100; }
-.modal-box { width:min(940px,96vw); height:86vh; display:flex; flex-direction:column; background:#fff; border-radius:16px; box-shadow:0 20px 60px rgba(15,23,42,.3); padding:16px 18px; overflow:hidden; }
+.modal-box { width:min(1280px,98vw); height:88vh; display:flex; flex-direction:column; background:#fff; border-radius:16px; box-shadow:0 20px 60px rgba(15,23,42,.3); padding:16px 18px; overflow:hidden; }
 .jobs-layout { display:flex; flex:1; min-height:0; gap:14px; }
-.jobs-list { width:250px; flex-shrink:0; overflow:auto; border-right:1px solid var(--line); padding-right:10px; display:flex; flex-direction:column; gap:8px; }
+.jobs-list { width:320px; flex-shrink:0; overflow:auto; border-right:1px solid var(--line); padding-right:10px; display:flex; flex-direction:column; gap:8px; }
 .jobs-item { border:1px solid var(--line); border-radius:10px; padding:9px 11px; cursor:pointer; font-size:12.5px; background:#fff; transition:border-color .15s, background .15s; }
 .jobs-item:hover { border-color:#bfdbfe; background:#f8fafc; }
 .jobs-item.active { border-color:#2563eb; background:#eff6ff; }
@@ -665,6 +665,7 @@ const JOB_DEFS = [
 const JOB_WEEK = ["", "一", "二", "三", "四", "五", "六", "日"];
 function describeJobSchedule(j) {
   if (!j) return "";
+  if (j.scheduleType === "once") return "一次性 " + (j.onceDate || "") + " " + (j.scheduleTime || "");
   if (j.scheduleType === "interval") return (j.intervalUnit === "hour" ? "每 " + (j.intervalDays || 1) + " 小时 " : "每 " + (j.intervalDays || 1) + " 天 ") + (j.scheduleTime || "");
   if (j.scheduleType === "weekly") return "每周" + (JOB_WEEK[j.weekday || 1] || "一") + " " + (j.scheduleTime || "");
   return "每天 " + (j.scheduleTime || "");
@@ -732,11 +733,13 @@ function renderJobForm(job) {
   const action = (job && job.actionJson) ? JSON.parse(job.actionJson) : {};
   const actKind = action.kind === "agent_goal" ? "agent_goal" : "notify";
   const isHour = j.scheduleType === "interval" && j.intervalUnit === "hour";
+  const isOnce = j.scheduleType === "once";
   box.innerHTML = '<div class="jd-name">' + (isEdit ? "编辑任务" : "新增任务") + '</div><div class="job-form">' +
     '<label>任务名称</label><input id="jfName" value="' + escapeHtml(j.name || "") + '">' +
-    '<div class="row2"><div><label>类型</label><select id="jfType"><option value="interval"' + ((j.scheduleType === "interval" && !isHour) || !j.scheduleType ? " selected" : "") + '>每 N 天</option><option value="interval_hour"' + (isHour ? " selected" : "") + '>每 N 小时</option></select></div>' +
+    '<div class="row2"><div><label>类型</label><select id="jfType"><option value="interval"' + ((j.scheduleType === "interval" && !isHour) || !j.scheduleType ? " selected" : "") + '>每 N 天</option><option value="interval_hour"' + (isHour ? " selected" : "") + '>每 N 小时</option><option value="once"' + (isOnce ? " selected" : "") + '>指定日期(一次性)</option></select></div>' +
     '<div><label>时间(HH:MM)</label><input id="jfTime" value="' + escapeHtml(j.scheduleTime || "09:00") + '"></div></div>' +
-    '<div id="jfIntervalRow"><label id="jfIntervalLabel">' + (isHour ? "间隔小时数(每 N 小时执行一次)" : "间隔天数(每 N 天执行一次)") + '</label><input id="jfIntervalDays" type="number" min="1" max="365" value="' + (j.intervalDays || 3) + '"></div>' +
+    '<div id="jfOnceRow" style="' + (isOnce ? "" : "display:none") + '"><label>执行日期</label><input id="jfDate" type="date" value="' + escapeHtml(j.onceDate || "") + '"></div>' +
+    '<div id="jfIntervalRow" style="' + (isOnce ? "display:none" : "") + '"><label id="jfIntervalLabel">' + (isHour ? "间隔小时数(每 N 小时执行一次)" : "间隔天数(每 N 天执行一次)") + '</label><input id="jfIntervalDays" type="number" min="1" max="365" value="' + (j.intervalDays || 3) + '"></div>' +
     '<label>任务说明</label><textarea id="jfDesc" rows="2">' + escapeHtml(j.description || "") + '</textarea>' +
     '<div class="row2"><div><label>动作类型</label><select id="jfAction"><option value="notify"' + (actKind === "notify" ? " selected" : "") + '>通知</option><option value="agent_goal"' + (actKind === "agent_goal" ? " selected" : "") + '>Agent 自主执行</option></select></div></div>' +
     '<div id="jfNotifyBlock"><label>通知标题</label><input id="jfTitle" value="' + escapeHtml(action.title || "") + '"><label>通知内容</label><textarea id="jfContent" rows="2">' + escapeHtml(action.content || "") + '</textarea></div>' +
@@ -744,7 +747,9 @@ function renderJobForm(job) {
     '<div style="margin-top:10px;display:flex;gap:8px"><button class="primary" onclick="saveJob()">保存</button><button onclick="cancelJobForm()">取消</button></div></div>';
   const syncForm = () => {
     const t = $("jfType").value;
+    $("jfIntervalRow").style.display = (t === "interval" || t === "interval_hour") ? "" : "none";
     $("jfIntervalLabel").textContent = t === "interval_hour" ? "间隔小时数(每 N 小时执行一次)" : "间隔天数(每 N 天执行一次)";
+    $("jfOnceRow").style.display = t === "once" ? "" : "none";
     const a = $("jfAction").value;
     $("jfNotifyBlock").style.display = a === "agent_goal" ? "none" : "";
     $("jfGoalBlock").style.display = a === "agent_goal" ? "" : "none";
@@ -767,7 +772,15 @@ async function saveJob() {
     action = { kind: "notify", title: $("jfTitle").value.trim(), content: $("jfContent").value.trim() };
   }
   const editing = jobsState.editing || {};
-  const body = { name: name, scheduleType: "interval", scheduleTime: time, intervalDays: Number($("jfIntervalDays").value) || 1, intervalUnit: type === "interval_hour" ? "hour" : "day", weekday: null, description: $("jfDesc").value.trim(), action: action, enabled: true };
+  const description = $("jfDesc").value.trim();
+  let body;
+  if (type === "once") {
+    const onceDate = $("jfDate").value.trim();
+    if (!onceDate) { alert("请选择执行日期"); return; }
+    body = { name: name, scheduleType: "once", scheduleTime: time, onceDate: onceDate, intervalDays: null, intervalUnit: "day", weekday: null, description: description, action: action, enabled: true };
+  } else {
+    body = { name: name, scheduleType: "interval", scheduleTime: time, intervalDays: Number($("jfIntervalDays").value) || 1, intervalUnit: type === "interval_hour" ? "hour" : "day", weekday: null, description: description, action: action, enabled: true };
+  }
   try {
     if (editing.id) { await api("/api/v1/automations/jobs/" + editing.id, { method: "PUT", body: JSON.stringify(body) }); jobsState.selected = { kind: "custom", id: editing.id }; }
     else { const r = await api("/api/v1/automations/jobs", { method: "POST", body: JSON.stringify(body) }); jobsState.selected = { kind: "custom", id: r.job.id }; }

@@ -7,6 +7,7 @@ import { listSilentCustomers } from "../repositories/funnel.js";
 import { listTasks } from "../repositories/tasks.js";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import { fauxProvider, fauxToolCall, fauxAssistantMessage } from "@earendil-works/pi-ai/providers/faux";
+import { createAutomationJob, getAutomationJob } from "../repositories/automation-jobs.js";
 import { runAgentGoalJob, runDueAutomations, runAutomationJob, type AutomationConfig } from "./automation.js";
 
 let db: DatabaseSync;
@@ -118,6 +119,27 @@ describe("定时与主动任务", () => {
 		expect(detail.answer).toBe("报告完成");
 		expect(detail.summary).toBe("一句话摘要");
 		expect(detail.nextSteps).toEqual(["跟进"]);
+	});
+
+	it("一次性任务:指定日期到点执行一次,执行后自动停用", () => {
+		const job = createAutomationJob(db, {
+			tenantId: "t1",
+			name: "一次性提醒",
+			scheduleType: "once",
+			onceDate: "2026-09-14",
+			scheduleTime: "10:00",
+			action: { kind: "notify", title: "提醒" },
+			enabled: true,
+		});
+		// 非执行日不到点
+		expect(runDueAutomations({ db, store: stubStore, config }, new Date("2026-09-13T10:05:00Z")).some((r) => r.jobType === "custom:" + job.id)).toBe(false);
+		// 执行日到点执行
+		const runs = runDueAutomations({ db, store: stubStore, config }, new Date("2026-09-14T10:05:00Z"));
+		expect(runs.some((r) => r.jobType === "custom:" + job.id && r.status === "success")).toBe(true);
+		// 执行后自动停用,不再触发
+		const after = getAutomationJob(db, "t1", job.id)!;
+		expect(after.enabled).toBe(false);
+		expect(runDueAutomations({ db, store: stubStore, config }, new Date("2026-09-15T10:05:00Z")).some((r) => r.jobType === "custom:" + job.id)).toBe(false);
 	});
 
 	it("手动触发:忽略时间窗立即执行并记录结构化结果", () => {
