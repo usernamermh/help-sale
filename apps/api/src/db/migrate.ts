@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 23;
+export const MIGRATION_VERSION = 24;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -124,6 +124,13 @@ export function migrate(db: DatabaseSync): void {
 			if (!cols.some((c) => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl};`);
 		};
 		addCol("automation_jobs", "interval_days", "INTEGER");
+	}
+	// v24:自定义任务间隔单位(day/hour)
+	if (current.user_version < 24) {
+		const cols = db.prepare("PRAGMA table_info(automation_jobs)").all() as Array<{ name: string }>;
+		if (!cols.some((c) => c.name === "interval_unit")) {
+			db.exec("ALTER TABLE automation_jobs ADD COLUMN interval_unit TEXT NOT NULL DEFAULT 'day';");
+		}
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }

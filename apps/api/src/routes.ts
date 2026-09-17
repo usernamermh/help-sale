@@ -960,7 +960,7 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 		return { jobs: listAutomationJobs(deps.db, request.tenantId) };
 	});
 
-	app.post<{ Body: { name?: string; scheduleType?: string; weekday?: number; intervalDays?: number; scheduleTime?: string; description?: string; action?: unknown; enabled?: boolean } }>("/api/v1/automations/jobs", async (request, reply) => {
+	app.post<{ Body: { name?: string; scheduleType?: string; weekday?: number; intervalDays?: number; intervalUnit?: string; scheduleTime?: string; description?: string; action?: unknown; enabled?: boolean } }>("/api/v1/automations/jobs", async (request, reply) => {
 		const name = String(request.body?.name ?? "").trim();
 		const time = String(request.body?.scheduleTime ?? "").trim();
 		if (!name || !/^\d{2}:\d{2}$/.test(time)) {
@@ -982,7 +982,7 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 		return { job };
 	});
 
-	app.put<{ Params: { id: string }; Body: { name?: string; scheduleType?: string; weekday?: number; intervalDays?: number; scheduleTime?: string; description?: string; action?: unknown; enabled?: boolean } }>("/api/v1/automations/jobs/:id", async (request, reply) => {
+	app.put<{ Params: { id: string }; Body: { name?: string; scheduleType?: string; weekday?: number; intervalDays?: number; intervalUnit?: string; scheduleTime?: string; description?: string; action?: unknown; enabled?: boolean } }>("/api/v1/automations/jobs/:id", async (request, reply) => {
 		const time = String(request.body?.scheduleTime ?? "").trim();
 		if (time && !/^\d{2}:\d{2}$/.test(time)) return reply.code(400).send({ error: "invalid_time", message: "scheduleTime 需 HH:MM" });
 		const job = updateAutomationJob(deps.db, request.tenantId, request.params.id, {

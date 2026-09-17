@@ -52,6 +52,16 @@ function isDue(db: DatabaseSync, tenantId: string, jobType: AutomationJobType, r
 
 
 
+
+/** 检查 interval(hour)任务是否到点:距上次执行(created_at)已满 N 小时;无历史则首次到点即可执行。 */
+function isHourlyDue(db: DatabaseSync, tenantId: string, jobId: string, now: Date, hours: number): boolean {
+	const last = db
+		.prepare("SELECT created_at FROM automation_runs WHERE tenant_id = ? AND job_type = ? ORDER BY created_at DESC LIMIT 1")
+		.get(tenantId, `custom:${jobId}`) as { created_at: string } | undefined;
+	if (!last) return true;
+	const lastMs = Date.parse(last.created_at);
+	return Number.isFinite(lastMs) && now.getTime() - lastMs >= hours * 3600000;
+}
 /** 检查 interval(每 N 天)任务是否到点:距上次执行已满 intervalDays 且今天未执行。 */
 function isIntervalDue(db: DatabaseSync, tenantId: string, jobId: string, runDate: string, intervalDays: number): boolean {
 	if (hasAutomationRunOn(db, tenantId, `custom:${jobId}`, runDate)) return false;
@@ -164,7 +174,7 @@ export function runDueAutomations(deps: AutomationDeps, now = new Date()): Array
 		// 自定义定时任务:按 schedule_type(每天/每周/每N天)与时间到点执行;notify 同步,agent_goal 由 Agent 异步自主执行
 		for (const job of listAutomationJobs(db, tenantId, true)) {
 			let jobDue = false;
-			if (job.scheduleType === "interval") jobDue = isIntervalDue(db, tenantId, job.id, date, job.intervalDays ?? 1);
+			if (job.scheduleType === "interval") jobDue = job.intervalUnit === "hour" ? isHourlyDue(db, tenantId, job.id, now, job.intervalDays ?? 1) : isIntervalDue(db, tenantId, job.id, date, job.intervalDays ?? 1);
 			else if (job.scheduleType === "daily") jobDue = isDue(db, tenantId, `custom:${job.id}`, date, nowMinutes, timeToMinutes(job.scheduleTime));
 			else jobDue = isWeeklyDay && isDue(db, tenantId, `custom:${job.id}`, date, nowMinutes, timeToMinutes(job.scheduleTime));
 			if (!jobDue) continue;

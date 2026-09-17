@@ -145,6 +145,7 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .jd-runs .run-line.ok { color:#16a34a; } .jd-runs .run-line.err { color:#b91c1c; }
 .job-form label { display:block; font-size:12px; color:#64748b; margin:8px 0 3px; }
 .job-form input, .job-form select, .job-form textarea { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:8px; padding:6px 9px; font-size:13px; font-family:inherit; }
+.job-form textarea { resize:vertical; }
 .job-form .row2 { display:flex; gap:10px; } .job-form .row2 > div { flex:1; }
 .job-add { border:1px dashed #93c5fd; background:#f8faff; color:#1d4ed8; border-radius:10px; padding:8px; text-align:center; cursor:pointer; font-size:12.5px; }
 .modal-head { display:flex; align-items:center; justify-content:space-between; font-weight:600; font-size:15px; margin-bottom:12px; }
@@ -688,12 +689,13 @@ function renderJobForm(job) {
   const j = job || {};
   const action = (job && job.actionJson) ? JSON.parse(job.actionJson) : {};
   const actKind = action.kind === "agent_goal" ? "agent_goal" : "notify";
+  const isHour = j.scheduleType === "interval" && j.intervalUnit === "hour";
   box.innerHTML = '<div class="jd-name">' + (isEdit ? "编辑任务" : "新增任务") + '</div><div class="job-form">' +
     '<label>任务名称</label><input id="jfName" value="' + escapeHtml(j.name || "") + '">' +
-    '<div class="row2"><div><label>类型</label><select id="jfType"><option value="daily"' + ((j.scheduleType || "daily") === "daily" ? " selected" : "") + '>每天</option><option value="weekly"' + (j.scheduleType === "weekly" ? " selected" : "") + '>每周</option><option value="interval"' + (j.scheduleType === "interval" ? " selected" : "") + '>每 N 天</option></select></div>' +
+    '<div class="row2"><div><label>类型</label><select id="jfType"><option value="daily"' + ((j.scheduleType || "daily") === "daily" ? " selected" : "") + '>每天</option><option value="weekly"' + (j.scheduleType === "weekly" ? " selected" : "") + '>每周</option><option value="interval"' + (j.scheduleType === "interval" && !isHour ? " selected" : "") + '>每 N 天</option><option value="interval_hour"' + (isHour ? " selected" : "") + '>每 N 小时</option></select></div>' +
     '<div><label>时间(HH:MM)</label><input id="jfTime" value="' + escapeHtml(j.scheduleTime || "09:00") + '"></div></div>' +
     '<div id="jfWeekRow" style="' + (j.scheduleType === "weekly" ? "" : "display:none") + '"><label>星期(1=周一…7=周日)</label><input id="jfWeekday" type="number" min="1" max="7" value="' + (j.weekday || 1) + '"></div>' +
-    '<div id="jfIntervalRow" style="' + (j.scheduleType === "interval" ? "" : "display:none") + '"><label>间隔天数(每 N 天执行一次)</label><input id="jfIntervalDays" type="number" min="1" max="365" value="' + (j.intervalDays || 3) + '"></div>' +
+    '<div id="jfIntervalRow" style="' + (j.scheduleType === "interval" ? "" : "display:none") + '"><label id="jfIntervalLabel">' + (isHour ? "间隔小时数(每 N 小时执行一次)" : "间隔天数(每 N 天执行一次)") + '</label><input id="jfIntervalDays" type="number" min="1" max="365" value="' + (j.intervalDays || 3) + '"></div>' +
     '<label>任务说明</label><textarea id="jfDesc" rows="2">' + escapeHtml(j.description || "") + '</textarea>' +
     '<div class="row2"><div><label>动作类型</label><select id="jfAction"><option value="notify"' + (actKind === "notify" ? " selected" : "") + '>通知</option><option value="agent_goal"' + (actKind === "agent_goal" ? " selected" : "") + '>Agent 自主执行</option></select></div></div>' +
     '<div id="jfNotifyBlock"><label>通知标题</label><input id="jfTitle" value="' + escapeHtml(action.title || "") + '"><label>通知内容</label><textarea id="jfContent" rows="2">' + escapeHtml(action.content || "") + '</textarea></div>' +
@@ -702,7 +704,8 @@ function renderJobForm(job) {
   const syncForm = () => {
     const t = $("jfType").value;
     $("jfWeekRow").style.display = t === "weekly" ? "" : "none";
-    $("jfIntervalRow").style.display = t === "interval" ? "" : "none";
+    $("jfIntervalRow").style.display = (t === "interval" || t === "interval_hour") ? "" : "none";
+    $("jfIntervalLabel").textContent = t === "interval_hour" ? "间隔小时数(每 N 小时执行一次)" : "间隔天数(每 N 天执行一次)";
     const a = $("jfAction").value;
     $("jfNotifyBlock").style.display = a === "agent_goal" ? "none" : "";
     $("jfGoalBlock").style.display = a === "agent_goal" ? "" : "none";
@@ -725,7 +728,8 @@ async function saveJob() {
     action = { kind: "notify", title: $("jfTitle").value.trim(), content: $("jfContent").value.trim() };
   }
   const editing = jobsState.editing || {};
-  const body = { name: name, scheduleType: type, scheduleTime: time, intervalDays: type === "interval" ? Number($("jfIntervalDays").value) || 1 : null, weekday: type === "weekly" ? Number($("jfWeekday").value) || 1 : null, description: $("jfDesc").value.trim(), action: action, enabled: true };
+  const intervalType = type === "interval_hour" ? "interval" : type;
+  const body = { name: name, scheduleType: intervalType, scheduleTime: time, intervalDays: (type === "interval" || type === "interval_hour") ? Number($("jfIntervalDays").value) || 1 : null, intervalUnit: type === "interval_hour" ? "hour" : "day", weekday: type === "weekly" ? Number($("jfWeekday").value) || 1 : null, description: $("jfDesc").value.trim(), action: action, enabled: true };
   try {
     if (editing.id) { await api("/api/v1/automations/jobs/" + editing.id, { method: "PUT", body: JSON.stringify(body) }); jobsState.selected = { kind: "custom", id: editing.id }; }
     else { const r = await api("/api/v1/automations/jobs", { method: "POST", body: JSON.stringify(body) }); jobsState.selected = { kind: "custom", id: r.job.id }; }

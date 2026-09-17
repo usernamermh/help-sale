@@ -96,3 +96,18 @@ describe("自定义定时任务", () => {
 		const runs2 = runDueAutomations({ db, store: stubStore, config }, new Date("2026-09-15T08:10:00Z"));
 		expect(runs2.some((r) => r.jobType === "morning_digest")).toBe(true);
 	});
+
+	it("间隔小时任务:满 N 小时再次执行,未满不触发", () => {
+		const job = createAutomationJob(db, { tenantId: "t1", name: "每2小时检查", scheduleType: "interval", intervalDays: 2, intervalUnit: "hour", scheduleTime: "00:00", action: { kind: "notify", title: "检查", content: "x" } });
+		// 首次触发
+		const first = runDueAutomations({ db, store: stubStore, config }, new Date("2026-09-14T10:00:00Z"));
+		expect(first.some((r) => r.jobType === `custom:${job.id}`)).toBe(true);
+		// 把执行记录时间对齐到测试时间(created_at 由真实时钟生成)
+		db.prepare("UPDATE automation_runs SET created_at = ? WHERE job_type = ?").run("2026-09-14T10:00:00Z", `custom:${job.id}`);
+		// 1 小时后未满 2 小时:不触发
+		const soon = runDueAutomations({ db, store: stubStore, config }, new Date("2026-09-14T11:00:00Z"));
+		expect(soon.some((r) => r.jobType === `custom:${job.id}`)).toBe(false);
+		// 满 2 小时后:再次触发
+		const later = runDueAutomations({ db, store: stubStore, config }, new Date("2026-09-14T12:30:00Z"));
+		expect(later.some((r) => r.jobType === `custom:${job.id}`)).toBe(true);
+	});

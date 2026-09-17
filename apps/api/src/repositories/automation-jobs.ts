@@ -7,6 +7,7 @@ export interface AutomationJob {
 	name: string;
 	scheduleType: "daily" | "weekly" | "interval";
 	intervalDays: number | null;
+	intervalUnit: "day" | "hour";
 	weekday: number | null; // 1=周一 … 7=周日
 	scheduleTime: string; // HH:MM
 	description: string | null;
@@ -21,6 +22,7 @@ export interface AutomationJobInput {
 	name: string;
 	scheduleType?: "daily" | "weekly" | "interval";
 	intervalDays?: number | null;
+	intervalUnit?: "day" | "hour";
 	weekday?: number | null;
 	scheduleTime: string;
 	description?: string | null;
@@ -31,8 +33,8 @@ export interface AutomationJobInput {
 export function createAutomationJob(db: DatabaseSync, input: AutomationJobInput): AutomationJob {
 	const id = randomUUID();
 	db.prepare(
-		"INSERT INTO automation_jobs (id, tenant_id, name, schedule_type, interval_days, weekday, schedule_time, description, action_json, enabled) VALUES (?,?,?,?,?,?,?,?,?,?)",
-	).run(id, input.tenantId, input.name, input.scheduleType ?? "daily", input.intervalDays ?? null, input.weekday ?? null, input.scheduleTime, input.description ?? null, JSON.stringify(input.action ?? {}), input.enabled === false ? 0 : 1);
+		"INSERT INTO automation_jobs (id, tenant_id, name, schedule_type, interval_days, interval_unit, weekday, schedule_time, description, action_json, enabled) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+	).run(id, input.tenantId, input.name, input.scheduleType ?? "daily", input.intervalDays ?? null, input.intervalUnit ?? "day", input.weekday ?? null, input.scheduleTime, input.description ?? null, JSON.stringify(input.action ?? {}), input.enabled === false ? 0 : 1);
 	return getAutomationJob(db, input.tenantId, id)!;
 }
 
@@ -57,11 +59,12 @@ export function updateAutomationJob(
 	const existing = getAutomationJob(db, tenantId, id);
 	if (!existing) return undefined;
 	db.prepare(
-		`UPDATE automation_jobs SET name = ?, schedule_type = ?, interval_days = ?, weekday = ?, schedule_time = ?, description = ?, action_json = ?, enabled = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`,
+		`UPDATE automation_jobs SET name = ?, schedule_type = ?, interval_days = ?, interval_unit = ?, weekday = ?, schedule_time = ?, description = ?, action_json = ?, enabled = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`,
 	).run(
 		patch.name ?? existing.name,
 		patch.scheduleType ?? existing.scheduleType,
 		patch.intervalDays !== undefined ? patch.intervalDays : existing.intervalDays,
+		patch.intervalUnit !== undefined ? patch.intervalUnit : existing.intervalUnit,
 		patch.weekday !== undefined ? patch.weekday : existing.weekday,
 		patch.scheduleTime ?? existing.scheduleTime,
 		patch.description !== undefined ? patch.description : existing.description,
@@ -86,6 +89,7 @@ function mapRow(row: Record<string, unknown>): AutomationJob {
 		name: String(row.name),
 		scheduleType: String(row.schedule_type) as "daily" | "weekly" | "interval",
 		intervalDays: row.interval_days != null ? Number(row.interval_days) : null,
+		intervalUnit: row.interval_unit === "hour" ? "hour" : "day",
 		weekday: row.weekday != null ? Number(row.weekday) : null,
 		scheduleTime: String(row.schedule_time),
 		description: row.description ? String(row.description) : null,
