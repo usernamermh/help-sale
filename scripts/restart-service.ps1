@@ -30,13 +30,13 @@ $configPath = Join-Path $repoRoot 'help-sale.config.yaml'
 $apiRoot = Join-Path $repoRoot 'apps\api'
 
 function Read-Config {
-    if (-not (Test-Path $configPath)) { throw "配置文件不存在: $configPath" }
+    if (-not (Test-Path $configPath)) { throw "Config file not found: $configPath" }
     Push-Location $repoRoot
     $tmpJson = Join-Path $env:TEMP ("hs-config-" + [guid]::NewGuid().ToString('N') + '.json')
     try {
         # node 把 YAML 转 JSON 写入临时文件(UTF-8),PowerShell 显式按 UTF-8 读取,避免管道编码导致中文乱码/JSON 截断
         & node -e "const fs=require('fs');const y=require('yaml');fs.writeFileSync(process.argv[2], JSON.stringify(y.parse(fs.readFileSync(process.argv[1],'utf8'))),'utf8')" $configPath $tmpJson
-        if ($LASTEXITCODE -ne 0) { throw '无法解析 help-sale.config.yaml(yaml 依赖缺失?)' }
+        if ($LASTEXITCODE -ne 0) { throw 'Failed to parse help-sale.config.yaml (yaml dependency missing?)' }
         $json = [System.IO.File]::ReadAllText($tmpJson, [System.Text.Encoding]::UTF8)
         return $json | ConvertFrom-Json
     } finally {
@@ -52,8 +52,8 @@ if ([string]::IsNullOrWhiteSpace($rawLogDir)) { $rawLogDir = 'apps/api/log' }
 $logDir = if ([IO.Path]::IsPathRooted($rawLogDir)) { $rawLogDir } else { Join-Path $repoRoot $rawLogDir }
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
-Write-Host "==> 目标服务: ${hostBind}:$port (配置: $configPath)"
-Write-Host "==> 日志目录: $logDir"
+Write-Host "==> Target service: ${hostBind}:$port (config: $configPath)"
+Write-Host "==> Log directory: $logDir"
 
 $script:killPids = [System.Collections.Generic.List[int]]::new()
 function Add-KillTree([int]$ParentPid) {
@@ -68,7 +68,7 @@ function Add-KillTree([int]$ParentPid) {
 $listeners = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
 $ownerPids = @($listeners | Select-Object -ExpandProperty OwningProcess -Unique)
 if ($ownerPids.Count -eq 0) {
-    Write-Host "端口 $port 当前无监听进程,跳过停止"
+    Write-Host "Port $port has no listener, skip stopping"
 } else {
     foreach ($owner in $ownerPids) {
         $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$owner" -ErrorAction SilentlyContinue
@@ -76,13 +76,13 @@ if ($ownerPids.Count -eq 0) {
         $cmd = [string]$proc.CommandLine
         $isOurs = ($proc.Name -like 'node*' -or $cmd -match 'tsx') -and $cmd -match 'proj_help_sale'
         if (-not $isOurs) {
-            Write-Warning ("端口 $port 的进程不是本项目服务,跳过: PID=$owner Name={0} Cmd={1}" -f $proc.Name, $cmd.Substring(0, [Math]::Min(140, $cmd.Length)))
+            Write-Warning ("Process on port $port is not this project service, skip: PID=$owner Name={0} Cmd={1}" -f $proc.Name, $cmd.Substring(0, [Math]::Min(140, $cmd.Length)))
             continue
         }
         $script:killPids.Clear()
         $script:killPids.Add([int]$owner)
         Add-KillTree ([int]$owner)
-        Write-Host "停止服务进程树: 根PID=$owner -> $($script:killPids -join ',')"
+        Write-Host "Stopping service process tree: root PID=$owner -> $($script:killPids -join ',')"
         if (-not $DryRun) {
             foreach ($kill in ($script:killPids | Sort-Object -Descending)) {
                 Stop-Process -Id $kill -Force -ErrorAction SilentlyContinue
@@ -97,16 +97,16 @@ $outLog = Join-Path $logDir 'service.log'
 $pidFile = Join-Path $logDir 'service.pid'
 $cmdLine = "cd /d $apiRoot && npm run dev >> $outLog 2>&1"
 if ($DryRun) {
-    Write-Host "==> [DryRun] 将执行: cmd /d /c $cmdLine (隐藏窗口后台启动)"
-    Write-Host "==> [DryRun] PID 记录: $pidFile"
+    Write-Host "==> [DryRun] Will run: cmd /d /c $cmdLine (hidden window background start)"
+    Write-Host "==> [DryRun] PID file: $pidFile"
     exit 0
 }
 $p = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/c', $cmdLine) -WindowStyle Hidden -PassThru
 $p.Id | Out-File -FilePath $pidFile -Encoding utf8
-Write-Host "已启动新服务: 启动器 PID=$($p.Id) (记录于 $pidFile)"
+Write-Host "Started new service: launcher PID=$($p.Id) (recorded in $pidFile)"
 
 # ── 3) 等待健康检查 ──
-if ($NoWait) { Write-Host '==> 完成(NoWait,跳过健康检查)'; exit 0 }
+if ($NoWait) { Write-Host '==> Done (NoWait, skipped health check)'; exit 0 }
 $healthUrl = "http://127.0.0.1:$port/api/v1/health"
 $ok = $false
 for ($i = 0; $i -lt 120; $i++) {
@@ -119,8 +119,8 @@ for ($i = 0; $i -lt 120; $i++) {
     }
 }
 if ($ok) {
-    Write-Host "服务已就绪: $healthUrl -> 200 (约 $([math]::Round(($i + 0.5) / 2, 1)) 秒)"
+    Write-Host "Service ready: $healthUrl -> 200 (~ $([math]::Round(($i + 0.5) / 2, 1))s)"
     exit 0
 }
-Write-Warning "等待 $port 健康检查超时(60s),请查看 $outLog"
+Write-Warning "Health check timeout for port $port (60s). See $outLog"
 exit 1
