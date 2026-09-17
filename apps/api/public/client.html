@@ -290,6 +290,7 @@ async function renderMermaidBlocks(root) {
       if (pre) pre.replaceWith(wrap); else code.replaceWith(wrap);
     } catch {}
   }
+}
 
 function ensureECharts() {
   if (window.echarts) return Promise.resolve();
@@ -357,7 +358,7 @@ async function renderEChartsBlocks(root) {
       }
     } catch {}
   }
-}}async function api(path, opt) {
+}async function api(path, opt) {
   const o = opt || {};
   const headers = { "x-tenant-id": "t_demo" };
   if (o.body != null) headers["Content-Type"] = "application/json";
