@@ -53,6 +53,28 @@ describe("表格防幻觉", () => {
 	});
 });
 
+describe("图表保真", () => {
+	it("工具返回的 ECharts 图表块原样追加到最终答复", async () => {
+		const fa = fauxProvider();
+		fa.setResponses([
+			fauxAssistantMessage([
+				fauxToolCall("chart_generate", {
+					type: "bar",
+					title: "销售漏斗",
+					categories: ["新进店", "已联系", "试驾", "成交"],
+					series: [{ name: "客户数量", data: [52, 4, 1, 2] }],
+				}),
+			]),
+			fauxAssistantMessage([fauxToolCall("emit_final", { answer: "销售漏斗图已生成完毕。" })]),
+		]);
+		const streamFn: StreamFn = async (model, context, options) => fa.provider.stream(model as never, context, options);
+		const result = await runSalesAgent({ db, tenantId: "t1", store, streamFn }, { goal: "生成销售漏斗图" });
+		expect(result.final?.answer).toContain("```echarts");
+		expect(result.final?.answer).toContain("销售漏斗");
+		expect(result.final?.answer).toContain("[52,4,1,2]");
+	});
+});
+
 describe("规划-执行-验证(P-E-V)", () => {
 	it("runPlanPhase:规划阶段输出 emit_plan 步骤", async () => {
 		const fa = fauxProvider();

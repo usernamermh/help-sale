@@ -102,6 +102,29 @@ export function stripMarkdownTables(text: string): string {
 	return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+/** 图表保真:收集本轮工具返回的 ECharts 代码块(```echarts),最终答复原样追加,由前端渲染交互式图表。 */
+function collectRawCharts(messages: unknown[]): string[] {
+	const blocks: string[] = [];
+	for (const message of messages) {
+		const m = message as { role?: string; content?: unknown };
+		if (m.role !== "toolResult") continue;
+		const text = assistantText(m.content);
+		const re = /```echarts\s*\n?([\s\S]*?)```/g;
+		let mm: RegExpExecArray | null;
+		while ((mm = re.exec(text)) !== null) {
+			const block = "```echarts\n" + mm[1].trim() + "\n```";
+			if (!blocks.includes(block)) blocks.push(block);
+		}
+	}
+	return blocks;
+}
+
+function appendRawCharts(answer: string, messages: unknown[]): string {
+	const blocks = collectRawCharts(messages);
+	if (blocks.length === 0) return answer;
+	return answer ? `${answer}\n\n${blocks.join("\n\n")}` : blocks.join("\n\n");
+}
+
 function appendRawTables(answer: string, messages: unknown[]): string {
 	// 模型文本一律不允许出现 Markdown 表格(无论本轮是否有工具表格),避免模型自造/转述导致幻觉
 	let out = stripMarkdownTables(answer);
@@ -226,6 +249,8 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 
 	// 表格保真:模型若未原样呈现工具表格(转述/重排),在最终答复末尾追加原始表格
 	if (final?.answer) final.answer = appendRawTables(final.answer, messages);
+	// 图表保真:工具返回的 ECharts 图表块原样追加到最终答复,由前端渲染
+	if (final?.answer) final.answer = appendRawCharts(final.answer, messages);
 	return { runId, final, messages, executedTools };
 }
 
