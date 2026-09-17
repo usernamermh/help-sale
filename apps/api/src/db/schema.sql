@@ -383,3 +383,19 @@ CREATE TABLE IF NOT EXISTS agent_plans (
 	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_ap_run ON agent_plans (tenant_id, run_id);
+
+-- v22:自定义定时任务(弹窗管理:新增/编辑/删除/启停)
+CREATE TABLE IF NOT EXISTS automation_jobs (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	name TEXT NOT NULL,
+	schedule_type TEXT NOT NULL DEFAULT 'daily',
+	weekday INTEGER,
+	schedule_time TEXT NOT NULL,
+	description TEXT,
+	action_json TEXT NOT NULL DEFAULT '{}',
+	enabled INTEGER NOT NULL DEFAULT 1,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_aj_tenant ON automation_jobs (tenant_id, enabled, schedule_type);

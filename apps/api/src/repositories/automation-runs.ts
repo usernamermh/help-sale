@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
-export type AutomationJobType = "morning_digest" | "weekly_report" | "silent_wakeup" | "reflection";
+export type AutomationJobType = "morning_digest" | "weekly_report" | "silent_wakeup" | "reflection" | (string & {});
 
 export interface AutomationRun {
 	id: string;

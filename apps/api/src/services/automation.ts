@@ -4,8 +4,9 @@ import { collectWeeklyReport } from "./weekly-report.js";
 import { createDigest, getDigestByDate } from "../repositories/digests.js";
 import { listSilentCustomers } from "../repositories/funnel.js";
 import { createTask } from "../repositories/tasks.js";
-import { applyReflectionToMemory } from "./reflection.js";
+import { listAutomationJobs } from "../repositories/automation-jobs.js";
 import { createNotificationLog } from "../repositories/notification-logs.js";
+import { applyReflectionToMemory } from "./reflection.js";
 import { getCustomer } from "../repositories/customers.js";
 import { hasAutomationRunOn, listTenantIds, recordAutomationRun, type AutomationJobType } from "../repositories/automation-runs.js";
 
@@ -47,6 +48,23 @@ function runReflection(db: DatabaseSync, tenantId: string, days: number): string
 	const summary = applyReflectionToMemory(db, tenantId, days);
 	if (summary.suggestions.length === 0) return "本周无反思建议";
 	return `已将 ${summary.suggestions.length} 条反思建议写入记忆「规则改进」`;
+}
+
+/** 自定义任务:到点执行 action(当前支持 notify 通知日志)。 */
+export function runCustomJob(db: DatabaseSync, tenantId: string, job: { id: string; name: string; actionJson: string }): string {
+	const action = JSON.parse(job.actionJson || "{}") as { kind?: string; title?: string; content?: string };
+	const kind = action.kind ?? "notify";
+	if (kind === "notify") {
+		createNotificationLog(db, {
+			tenantId,
+			channel: "automation",
+			title: action.title ? String(action.title) : `⏰ ${job.name}`,
+			contentJson: JSON.stringify({ jobId: job.id, content: action.content ?? "" }),
+			status: "sent",
+		});
+		return `已触发通知:${action.title ?? job.name}`;
+	}
+	return `未知自定义任务动作:${kind}`;
 }
 /** 晨报:生成并落库(当天已存在则跳过)。 */
 function runMorningDigest(db: DatabaseSync, tenantId: string, now: Date): string {
@@ -103,6 +121,22 @@ export function runDueAutomations(deps: AutomationDeps, now = new Date()): Array
 	const isWeeklyDay = weekday === config.weeklyReportWeekday;
 
 	for (const tenantId of listTenantIds(db)) {
+		// 自定义定时任务:按 schedule_type(每天/每周)与时间到点执行
+		for (const job of listAutomationJobs(db, tenantId, true)) {
+			const jobDue = job.scheduleType === "daily"
+				? isDue(db, tenantId, `custom:${job.id}`, date, nowMinutes, timeToMinutes(job.scheduleTime))
+				: isWeeklyDay && isDue(db, tenantId, `custom:${job.id}`, date, nowMinutes, timeToMinutes(job.scheduleTime));
+			if (!jobDue) continue;
+			try {
+				const summary = runCustomJob(db, tenantId, job);
+				recordAutomationRun(db, { tenantId, jobType: `custom:${job.id}`, runDate: date, status: "success", summary });
+				out.push({ tenantId, jobType: `custom:${job.id}`, status: "success", summary });
+			} catch (error) {
+				const msg = error instanceof Error ? error.message : String(error);
+				recordAutomationRun(db, { tenantId, jobType: `custom:${job.id}`, runDate: date, status: "error", summary: msg });
+				out.push({ tenantId, jobType: `custom:${job.id}`, status: "error", summary: msg });
+			}
+		}
 		const jobs: Array<{ type: AutomationJobType; due: boolean; run: () => string }> = [
 			{ type: "morning_digest", due: isDue(db, tenantId, "morning_digest", date, nowMinutes, timeToMinutes(config.morningDigestTime)), run: () => runMorningDigest(db, tenantId, now) },
 			{ type: "weekly_report", due: isWeeklyDay && isDue(db, tenantId, "weekly_report", date, nowMinutes, timeToMinutes(config.weeklyReportTime)), run: () => runWeeklyReport(db, tenantId, now) },

@@ -43,7 +43,8 @@ import { createTestDrive, getTestDrive, listTestDrives, setTestDriveStatus } fro
 import { scheduleDeliveryFollowups, scheduleTestDriveFollowups } from "./services/followup-rhythm.js";
 import { getSalesWorkbench, getStorePerformance } from "./services/performance.js";
 import { listAutomationRuns } from "./repositories/automation-runs.js";
-import { runAutomationJob } from "./services/automation.js";
+import { createAutomationJob, deleteAutomationJob, getAutomationJob, listAutomationJobs, updateAutomationJob } from "./repositories/automation-jobs.js";
+import { runAutomationJob, runCustomJob } from "./services/automation.js";
 import { listSubTasks } from "./services/subagent-queue.js";
 import { createReflectionCase } from "./repositories/reflection-cases.js";
 import { applyReflectionToMemory, collectReflectionSuggestions } from "./services/reflection.js";
@@ -939,6 +940,63 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 		return { storeId: request.params.id, customers: listSilentCustomers(deps.db, request.tenantId, Number.isFinite(days) ? days : 7, request.params.id) };
 	});
 	// ── 自动任务:执行记录查询与手动触发 ──
+	// ── 自定义定时任务:CRUD(弹窗管理) ──
+	app.get("/api/v1/automations/jobs", async (request) => {
+		return { jobs: listAutomationJobs(deps.db, request.tenantId) };
+	});
+
+	app.post<{ Body: { name?: string; scheduleType?: string; weekday?: number; scheduleTime?: string; description?: string; action?: unknown; enabled?: boolean } }>("/api/v1/automations/jobs", async (request, reply) => {
+		const name = String(request.body?.name ?? "").trim();
+		const time = String(request.body?.scheduleTime ?? "").trim();
+		if (!name || !/^\d{2}:\d{2}$/.test(time)) {
+			return reply.code(400).send({ error: "invalid_input", message: "name 与 scheduleTime(HH:MM) 必填" });
+		}
+		const weekday = request.body?.weekday;
+		if (weekday != null && (weekday < 1 || weekday > 7)) return reply.code(400).send({ error: "invalid_weekday", message: "weekday 取 1-7" });
+		const job = createAutomationJob(deps.db, {
+			tenantId: request.tenantId,
+			name,
+			scheduleType: request.body?.scheduleType === "weekly" ? "weekly" : "daily",
+			weekday: weekday ?? null,
+			scheduleTime: time,
+			description: request.body?.description,
+			action: request.body?.action,
+			enabled: request.body?.enabled,
+		});
+		return { job };
+	});
+
+	app.put<{ Params: { id: string }; Body: { name?: string; scheduleType?: string; weekday?: number; scheduleTime?: string; description?: string; action?: unknown; enabled?: boolean } }>("/api/v1/automations/jobs/:id", async (request, reply) => {
+		const time = String(request.body?.scheduleTime ?? "").trim();
+		if (time && !/^\d{2}:\d{2}$/.test(time)) return reply.code(400).send({ error: "invalid_time", message: "scheduleTime 需 HH:MM" });
+		const job = updateAutomationJob(deps.db, request.tenantId, request.params.id, {
+			name: request.body?.name,
+			scheduleType: request.body?.scheduleType === "weekly" ? "weekly" : request.body?.scheduleType === "daily" ? "daily" : undefined,
+			weekday: request.body?.weekday,
+			scheduleTime: time || undefined,
+			description: request.body?.description,
+			action: request.body?.action,
+			enabled: request.body?.enabled,
+		});
+		if (!job) return reply.code(404).send({ error: "job_not_found", message: "任务不存在" });
+		return { job };
+	});
+
+	app.post<{ Params: { id: string } }>("/api/v1/automations/jobs/:id/run", async (request, reply) => {
+		const job = getAutomationJob(deps.db, request.tenantId, request.params.id);
+		if (!job) return reply.code(404).send({ error: "job_not_found", message: "任务不存在" });
+		try {
+			const summary = runCustomJob(deps.db, request.tenantId, job);
+			return { summary };
+		} catch (error) {
+			return reply.code(500).send({ error: "job_run_failed", message: error instanceof Error ? error.message : String(error) });
+		}
+	});
+	app.delete<{ Params: { id: string } }>("/api/v1/automations/jobs/:id", async (request, reply) => {
+		const ok = deleteAutomationJob(deps.db, request.tenantId, request.params.id);
+		if (!ok) return reply.code(404).send({ error: "job_not_found", message: "任务不存在" });
+		return { deleted: true };
+	});
 	app.get<{ Querystring: { limit?: string } }>("/api/v1/automations", async (request) => {
 		const limit = Number.parseInt(request.query.limit ?? "50", 10);
 		return { runs: listAutomationRuns(deps.db, request.tenantId, Number.isFinite(limit) ? limit : 50) };
