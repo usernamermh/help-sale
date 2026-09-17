@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import { openDatabase } from "../db/database.js";
 import { requireTenant, upsertCustomer } from "../repositories/customers.js";
-import { listAutomationRuns } from "../repositories/automation-runs.js";
+import { listAutomationRuns, recordAutomationRun } from "../repositories/automation-runs.js";
 import { listSilentCustomers } from "../repositories/funnel.js";
 import { listTasks } from "../repositories/tasks.js";
-import { runDueAutomations, runAutomationJob, type AutomationConfig } from "./automation.js";
+import type { StreamFn } from "@earendil-works/pi-agent-core";
+import { fauxProvider, fauxToolCall, fauxAssistantMessage } from "@earendil-works/pi-ai/providers/faux";
+import { runAgentGoalJob, runDueAutomations, runAutomationJob, type AutomationConfig } from "./automation.js";
 
 let db: DatabaseSync;
 const stubStore = {
@@ -76,11 +78,54 @@ describe("定时与主动任务", () => {
 		expect(listTasks(db, { tenantId: "t1", status: "pending" }).filter((t) => t.action.includes("唤醒回访"))).toHaveLength(1);
 	});
 
-	it("手动触发:忽略时间窗立即执行并记录", () => {
+	it("晨报执行结果结构化落库:detail_json 含 stats/content", () => {
+		runDueAutomations({ db, store: stubStore, config }, new Date("2026-09-14T08:10:00Z"));
+		const run = listAutomationRuns(db, "t1").find((r) => r.jobType === "morning_digest")!;
+		expect(run.detailJson).toBeTruthy();
+		const detail = JSON.parse(run.detailJson!) as { stats?: { pendingTasks?: number }; content?: string };
+		expect(detail.stats?.pendingTasks).toBeTypeOf("number");
+		expect(detail.content).toContain("销售军师晨报");
+	});
+
+	it("沉默客户唤醒执行结果结构化落库:detail_json 含 created/skipped", () => {
+		upsertCustomer(db, { tenantId: "t1", key: "c_silent2", name: "沉默客户2" });
+		db.prepare("UPDATE customers SET updated_at = datetime('now', '-30 days') WHERE key = 'c_silent2'").run();
+		runDueAutomations({ db, store: stubStore, config }, new Date("2026-09-14T08:40:00Z"));
+		const run = listAutomationRuns(db, "t1").find((r) => r.jobType === "silent_wakeup")!;
+		const detail = JSON.parse(run.detailJson!) as { total: number; created: number; skipped: number };
+		expect(detail.total).toBeGreaterThan(0);
+		expect(detail.created).toBeGreaterThan(0);
+		expect(detail.skipped).toBe(0);
+	});
+
+	it("Agent 自主执行任务:完成后结构化结果回填 detail_json", async () => {
+		const fa = fauxProvider();
+		fa.setResponses([
+			fauxAssistantMessage([fauxToolCall("emit_final", { answer: "报告完成", summary: "一句话摘要", nextSteps: ["跟进"] })]),
+		]);
+		const streamFn: StreamFn = async (model, context, options) => fa.provider.stream(model as never, context, options);
+		const run = recordAutomationRun(db, { tenantId: "t1", jobType: "custom:job-1", runDate: "2026-09-14", status: "running", summary: "Agent 任务排队执行" });
+		runAgentGoalJob({ db, store: stubStore, config, streamFn } as never, "t1", { id: "job-1", actionJson: JSON.stringify({ kind: "agent_goal", goal: "生成经营报告" }) }, run.id, new Date("2026-09-14T09:00:00Z"));
+		const deadline = Date.now() + 5000;
+		while (Date.now() < deadline) {
+			const cur = listAutomationRuns(db, "t1").find((x) => x.id === run.id)!;
+			if (cur.status !== "running") break;
+			await new Promise((resolve) => setTimeout(resolve, 50));
+		}
+		const latest = listAutomationRuns(db, "t1").find((x) => x.id === run.id)!;
+		expect(latest.status).toBe("success");
+		const detail = JSON.parse(latest.detailJson!) as { answer: string; summary: string; nextSteps: string[] };
+		expect(detail.answer).toBe("报告完成");
+		expect(detail.summary).toBe("一句话摘要");
+		expect(detail.nextSteps).toEqual(["跟进"]);
+	});
+
+	it("手动触发:忽略时间窗立即执行并记录结构化结果", () => {
 		const summary = runAutomationJob(db, "t1", "morning_digest", config, new Date("2026-09-15T00:10:00Z"));
 		expect(summary).toContain("晨报");
 		const runs = listAutomationRuns(db, "t1", 10);
 		expect(runs[0].jobType).toBe("morning_digest");
 		expect(runs[0].status).toBe("success");
+		expect(runs[0].detailJson).toBeTruthy();
 	});
 });

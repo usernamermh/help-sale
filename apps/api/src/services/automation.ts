@@ -3,8 +3,8 @@ import type { StreamFn } from "@earendil-works/pi-agent-core";
 import type { ModelRuntime } from "../pi/models.js";
 import type { SessionStore } from "../pi/sessions.js";
 import { runSalesAgent } from "../pi/agent-runtime.js";
-import { collectDigest } from "./digest.js";
-import { collectWeeklyReport } from "./weekly-report.js";
+import { collectDigest, type DigestStats } from "./digest.js";
+import { collectWeeklyReport, type WeeklyReport } from "./weekly-report.js";
 import { createDigest, getDigestByDate } from "../repositories/digests.js";
 import { listSilentCustomers } from "../repositories/funnel.js";
 import { createTask } from "../repositories/tasks.js";
@@ -12,7 +12,7 @@ import { listAutomationJobs } from "../repositories/automation-jobs.js";
 import { createNotificationLog } from "../repositories/notification-logs.js";
 import { getBuiltinJobEnabled } from "../repositories/builtin-job-settings.js";
 import { updateAutomationRunStatus } from "../repositories/automation-runs.js";
-import { applyReflectionToMemory } from "./reflection.js";
+import { applyReflectionToMemory, type ReflectionSummary } from "./reflection.js";
 import { getCustomer } from "../repositories/customers.js";
 import { hasAutomationRunOn, listTenantIds, recordAutomationRun, type AutomationJobType } from "../repositories/automation-runs.js";
 
@@ -86,18 +86,25 @@ export function runAgentGoalJob(deps: AutomationDeps, tenantId: string, job: { i
 	updateAutomationRunStatus(db, tenantId, runId, "running", `Agent 执行中:${goal.slice(0, 60)}…`);
 	runSalesAgent({ db, tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn }, { goal })
 		.then((res) => {
-			const answer = res.final?.answer ?? "";
-			updateAutomationRunStatus(db, tenantId, runId, "success", answer ? `Agent 完成:${answer.slice(0, 200)}` : "Agent 完成");
+			const final = res.final;
+			const answer = final?.answer ?? "";
+			const summary = answer ? `Agent 完成:${answer.slice(0, 200)}` : "Agent 完成";
+			updateAutomationRunStatus(db, tenantId, runId, "success", summary, {
+				answer,
+				summary: final?.summary ?? null,
+				nextSteps: final?.nextSteps ?? [],
+				executedTools: res.executedTools ?? [],
+			});
 		})
 		.catch((error) => {
-			updateAutomationRunStatus(db, tenantId, runId, "error", error instanceof Error ? error.message : String(error));
+			updateAutomationRunStatus(db, tenantId, runId, "error", error instanceof Error ? error.message : String(error), { goal: goal.slice(0, 500) });
 		});
 }
 /** 反思闭环:聚合近 N 天反思案例,把改进建议写入 memory「规则改进」小节。 */
-function runReflection(db: DatabaseSync, tenantId: string, days: number): string {
-	const summary = applyReflectionToMemory(db, tenantId, days);
-	if (summary.suggestions.length === 0) return "本周无反思建议";
-	return `已将 ${summary.suggestions.length} 条反思建议写入记忆「规则改进」`;
+function runReflection(db: DatabaseSync, tenantId: string, days: number): { summary: string; detail: { suggestions: ReflectionSummary["suggestions"]; caseCounts: ReflectionSummary["caseCounts"] } } {
+	const result = applyReflectionToMemory(db, tenantId, days);
+	const summary = result.suggestions.length === 0 ? "本周无反思建议" : `已将 ${result.suggestions.length} 条反思建议写入记忆「规则改进」`;
+	return { summary, detail: { suggestions: result.suggestions, caseCounts: result.caseCounts } };
 }
 
 /** 自定义任务:到点执行 action(当前支持 notify 通知日志)。 */
@@ -117,29 +124,39 @@ export function runCustomJob(db: DatabaseSync, tenantId: string, job: { id: stri
 	return `未知自定义任务动作:${kind}`;
 }
 /** 晨报:生成并落库(当天已存在则跳过)。 */
-function runMorningDigest(db: DatabaseSync, tenantId: string, now: Date): string {
+function runMorningDigest(db: DatabaseSync, tenantId: string, now: Date): { summary: string; detail: { title: string; content: string; stats: DigestStats } } {
 	const date = dateKey(now);
-	if (getDigestByDate(db, tenantId, date)) return "晨报当天已存在,跳过";
+	const existing = getDigestByDate(db, tenantId, date);
+	if (existing) {
+		let stats: DigestStats = { date, pendingTasks: 0, overdueTasks: 0, analyses24h: 0, vehiclePlans7d: 0, customers: 0, topIntents: [], priorityTasks: [] };
+		try { stats = JSON.parse(existing.statsJson ?? "{}") as DigestStats; } catch { /* 保持默认 */ }
+		return { summary: "晨报当天已存在,跳过", detail: { title: existing.title, content: existing.content, stats } };
+	}
 	const d = collectDigest(db, { tenantId, now });
 	createDigest(db, { tenantId, digestDate: date, title: d.title, content: d.content, statsJson: JSON.stringify(d.stats) });
 	const summary = `已生成晨报:待办 ${d.stats.pendingTasks} / 到期 ${d.stats.overdueTasks} / 近24h分析 ${d.stats.analyses24h}`;
 	createNotificationLog(db, { tenantId, channel: "automation", title: `📰 ${d.title}`, contentJson: JSON.stringify({ summary, content: d.content }), status: "sent" });
-	return summary;
+	return { summary, detail: { title: d.title, content: d.content, stats: d.stats } };
 }
 
 /** 周报:汇总近 7 天经营数据并落库(复用 digests,标题区分周报)。 */
-function runWeeklyReport(db: DatabaseSync, tenantId: string, now: Date): string {
+function runWeeklyReport(db: DatabaseSync, tenantId: string, now: Date): { summary: string; detail: { title: string; content: string; stats: WeeklyReport["stats"] } } {
 	const r = collectWeeklyReport(db, tenantId, now);
 	const key = `weekly-${r.stats.from}-${r.stats.to}`;
-	if (getDigestByDate(db, tenantId, key)) return "周报当天已存在,跳过";
+	const existing = getDigestByDate(db, tenantId, key);
+	if (existing) {
+		let stats: WeeklyReport["stats"] = { from: "", to: "", analyses: 0, deals: 0, dealAmount: 0, taskRate: 0, newCustomers: 0, topIntents: [], topVehicles: [], funnel: [] };
+		try { stats = JSON.parse(existing.statsJson ?? "{}") as WeeklyReport["stats"]; } catch { /* 保持默认 */ }
+		return { summary: "周报当天已存在,跳过", detail: { title: existing.title, content: existing.content, stats } };
+	}
 	createDigest(db, { tenantId, digestDate: key, title: r.title, content: r.content, statsJson: JSON.stringify(r.stats) });
 	const summary = `已生成周报:成交 ${r.stats.deals} 单 / ¥${r.stats.dealAmount.toLocaleString()} / 完成率 ${Math.round(r.stats.taskRate * 100)}%`;
 	createNotificationLog(db, { tenantId, channel: "automation", title: `📊 ${r.title}`, contentJson: JSON.stringify({ summary, content: r.content }), status: "sent" });
-	return summary;
+	return { summary, detail: { title: r.title, content: r.content, stats: r.stats } };
 }
 
 /** 沉默客户唤醒:为近 N 天未跟进客户建唤醒任务(该客户已有 pending 唤醒任务则跳过)。 */
-function runSilentWakeup(db: DatabaseSync, tenantId: string, days: number, now: Date): string {
+function runSilentWakeup(db: DatabaseSync, tenantId: string, days: number, now: Date): { summary: string; detail: { total: number; created: number; skipped: number } } {
 	const silent = listSilentCustomers(db, tenantId, days);
 	let created = 0;
 	let skipped = 0;
@@ -156,7 +173,8 @@ function runSilentWakeup(db: DatabaseSync, tenantId: string, days: number, now: 
 		createTask(db, { tenantId, customerId: c.id, action: `唤醒回访:客户 ${c.name ?? c.key} 近 ${days} 天未跟进,请主动联系`, dueAt: now.toISOString() });
 		created++;
 	}
-	return `沉默客户 ${silent.length} 位:新建唤醒任务 ${created} 条,已有待办跳过 ${skipped} 条`;
+	const summary = `沉默客户 ${silent.length} 位:新建唤醒任务 ${created} 条,已有待办跳过 ${skipped} 条`;
+	return { summary, detail: { total: silent.length, created, skipped } };
 }
 
 /** 执行到期自动任务(按租户循环),返回本次执行的记录摘要。 */
@@ -195,7 +213,7 @@ export function runDueAutomations(deps: AutomationDeps, now = new Date()): Array
 				out.push({ tenantId, jobType: `custom:${job.id}`, status: "error", summary: msg });
 			}
 		}
-		const jobs: Array<{ type: AutomationJobType; due: boolean; run: () => string }> = [
+		const jobs: Array<{ type: AutomationJobType; due: boolean; run: () => { summary: string; detail: Record<string, unknown> } }> = [
 			{ type: "morning_digest", due: getBuiltinJobEnabled(db, tenantId, "morning_digest") && isDue(db, tenantId, "morning_digest", date, nowMinutes, timeToMinutes(config.morningDigestTime)), run: () => runMorningDigest(db, tenantId, now) },
 			{ type: "weekly_report", due: getBuiltinJobEnabled(db, tenantId, "weekly_report") && isWeeklyDay && isDue(db, tenantId, "weekly_report", date, nowMinutes, timeToMinutes(config.weeklyReportTime)), run: () => runWeeklyReport(db, tenantId, now) },
 			{ type: "reflection", due: getBuiltinJobEnabled(db, tenantId, "reflection") && isWeeklyDay && isDue(db, tenantId, "reflection", date, nowMinutes, timeToMinutes(config.weeklyReportTime) + 30), run: () => runReflection(db, tenantId, 7) },
@@ -204,9 +222,9 @@ export function runDueAutomations(deps: AutomationDeps, now = new Date()): Array
 		for (const job of jobs) {
 			if (!job.due) continue;
 			try {
-				const summary = job.run();
-				recordAutomationRun(db, { tenantId, jobType: job.type, runDate: date, status: "success", summary });
-				out.push({ tenantId, jobType: job.type, status: "success", summary });
+				const result = job.run();
+				recordAutomationRun(db, { tenantId, jobType: job.type, runDate: date, status: "success", summary: result.summary, detail: result.detail });
+				out.push({ tenantId, jobType: job.type, status: "success", summary: result.summary });
 			} catch (error) {
 				const msg = error instanceof Error ? error.message : String(error);
 				recordAutomationRun(db, { tenantId, jobType: job.type, runDate: date, status: "error", summary: msg });
@@ -241,9 +259,9 @@ export function runAutomationJob(db: DatabaseSync, tenantId: string, jobType: Au
 		return runSilentWakeup(db, tenantId, config.silentCustomerDays, now);
 	};
 	try {
-		const summary = run();
-		recordAutomationRun(db, { tenantId, jobType, runDate: date, status: "success", summary });
-		return summary;
+		const result = run();
+		recordAutomationRun(db, { tenantId, jobType, runDate: date, status: "success", summary: result.summary, detail: result.detail });
+		return result.summary;
 	} catch (error) {
 		const msg = error instanceof Error ? error.message : String(error);
 		recordAutomationRun(db, { tenantId, jobType, runDate: date, status: "error", summary: msg });

@@ -36,6 +36,16 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .agent-msg { margin:0 0 14px; padding:11px 14px; border-radius:16px; max-width:88%; line-height:1.6; }
 .agent-user { background:linear-gradient(135deg,#2563eb,#4f46e5); color:#fff; border:0; margin-left:auto; border-bottom-right-radius:6px; box-shadow:0 4px 12px rgba(37,99,235,.22); }
 .agent-assist { background:#f8fafc; border:1px solid var(--line); border-bottom-left-radius:6px; }
+.welcome { padding:38px 20px; text-align:center; color:var(--muted); }
+.welcome-title { font-size:16px; font-weight:600; color:#334155; margin-bottom:6px; }
+.welcome-sub { font-size:13px; margin-bottom:18px; }
+.welcome-btns { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+.welcome-btn { border:1px solid var(--line); background:#fff; border-radius:10px; padding:10px 14px; cursor:pointer; text-align:left; min-width:160px; box-shadow:0 1px 3px rgba(15,23,42,.06); transition:border-color .15s, box-shadow .15s; }
+.welcome-btn:hover { border-color:#2563eb; box-shadow:0 3px 10px rgba(37,99,235,.15); }
+.wb-name { font-weight:600; color:#1e293b; font-size:13px; }
+.wb-time { font-size:11px; color:var(--muted); margin-top:2px; }
+.welcome-result { text-align:left; max-width:760px; margin:0 auto; }
+.welcome-back { display:inline-block; margin-bottom:10px; cursor:pointer; color:#2563eb; font-size:13px; background:none; border:none; padding:0; }
 .agent-body { white-space:pre-wrap; word-break:break-word; }
 .agent-body .md { white-space:normal; }
 .agent-body .md p { margin:0 0 8px; }
@@ -389,8 +399,79 @@ async function removeThread(id) {
   } catch (e) { alert("删除失败:" + e.message); }
 }let running = false; let currentThreadId = null; let deltaBuf = "";
 const PAGE_TOOLS = ["customer_query", "vehicle_query", "excel", "table_generate"];
+// ── 新会话欢迎区:默认定时任务结果按钮,点击展示结构化结果 ──
+let welcomeResults = null;
+function welcomeAll() { return (welcomeResults || []).filter((x) => x.kind === "builtin" || x.kind === "custom"); }
+function welcomeButtonsHtml() {
+  const all = welcomeAll();
+  if (!all.length) return '<div class="welcome-sub">暂无定时任务</div>';
+  return '<div class="welcome-btns">' + all.map((res, i) => {
+    const state = res.status ? (res.status === "success" ? " · 已生成" : " · " + escapeHtml(String(res.status))) : "";
+    return '<button class="welcome-btn" data-idx="' + i + '"><div class="wb-name">' + escapeHtml(res.name) + '</div><div class="wb-time">' + escapeHtml(res.schedule || "") + state + "</div></button>";
+  }).join("") + "</div>";
+}
+function bindWelcomeClicks(wrap) {
+  wrap.addEventListener("click", (e) => {
+    const b = e.target && e.target.closest ? e.target.closest(".welcome-btn") : null;
+    if (!b) return;
+    const all = welcomeAll();
+    const res = all[Number(b.dataset.idx)];
+    if (res) showJobResult(res);
+  });
+}
+function welcomeHead() {
+  return '<div class="welcome-title">📊 定时任务结果</div><div class="welcome-sub">点击按钮查看最近一次的结构化执行结果</div>';
+}
+async function renderWelcome() {
+  const chat = $("chat");
+  if (!chat || chat.children.length || $("welcome")) return;
+  try { const r = await api("/api/v1/automations/results"); welcomeResults = r.results || []; } catch { welcomeResults = welcomeResults || []; }
+  if (!chat || chat.children.length || $("welcome")) return;
+  const wrap = document.createElement("div"); wrap.className = "welcome"; wrap.id = "welcome";
+  wrap.innerHTML = welcomeHead() + welcomeButtonsHtml();
+  bindWelcomeClicks(wrap);
+  chat.appendChild(wrap); chat.scrollTop = chat.scrollHeight;
+}
+function refreshWelcomeButtons() {
+  const wrap = $("welcome"); if (!wrap) return;
+  wrap.innerHTML = welcomeHead() + welcomeButtonsHtml();
+  bindWelcomeClicks(wrap);
+}
+function showJobResult(res) {
+  const wrap = $("welcome"); if (!wrap || !res) return;
+  wrap.innerHTML = '<button class="welcome-back" onclick="refreshWelcomeButtons()">‹ 返回任务列表</button><div class="welcome-result md">' + renderMarkdown(renderJobResultMarkdown(res)) + "</div>";
+}
+function statsTable(stats) {
+  const kv = [["date", "日期"], ["pendingTasks", "进行中任务"], ["overdueTasks", "已到期"], ["analyses24h", "近24h分析"], ["vehiclePlans7d", "近7天方案"], ["customers", "客户总数"], ["analyses", "会话分析"], ["deals", "成交"], ["dealAmount", "成交额(元)"], ["taskRate", "任务完成率"], ["newCustomers", "新增客户"]];
+  const rows = [];
+  for (const [k, label] of kv) {
+    const v = stats[k];
+    if (v == null) continue;
+    if (k === "dealAmount") rows.push([label, "¥" + Number(v).toLocaleString()]);
+    else if (k === "taskRate") rows.push([label, Math.round(Number(v) * 100) + "%"]);
+    else rows.push([label, String(v)]);
+  }
+  if (!rows.length) return "";
+  return "| 指标 | 数值 |\n| --- | --- |\n" + rows.map((r) => "| " + r[0] + " | " + r[1] + " |").join("\n");
+}
+function renderJobResultMarkdown(res) {
+  const d = res.detail || {};
+  let md = "## " + res.name + (res.runDate ? " · " + String(res.runDate) : "");
+  if (!res.status) return md + "\n\n暂无执行记录,可到顶部「定时任务」中点击「立即运行」生成。";
+  if (res.status !== "success") return md + "\n\n执行状态:**" + escapeHtml(String(res.status)) + "**" + (res.summary ? "\n\n" + res.summary : "");
+  if (d.stats) { const t = statsTable(d.stats); if (t) md += "\n\n" + t; }
+  if (d.content) md += "\n\n" + d.content;
+  if (d.answer) md += "\n\n" + d.answer;
+  if (Array.isArray(d.suggestions) && d.suggestions.length) {
+    md += "\n\n**改进建议**\n" + d.suggestions.map((s) => "- " + (s.topic || "规则") + "(" + (s.count || 1) + " 次):" + (s.suggestion || "")).join("\n");
+  }
+  if (typeof d.created === "number") md += "\n\n- 沉默客户总数:" + d.total + "\n- 新建唤醒任务:" + d.created + " 条\n- 已有待办跳过:" + d.skipped + " 条";
+  if (res.summary) md += "\n\n> " + res.summary;
+  return md;
+}
 function appendAgentMsg(role, text) {
   const chat = $("chat");
+  const wel = $("welcome"); if (wel) wel.remove();
   const div = document.createElement("div");
   div.className = "agent-msg " + (role === "user" ? "agent-user" : "agent-assist");
   const body = document.createElement("div"); body.className = "agent-body"; if (role === "assistant") { body.innerHTML = '<div class="md">' + renderMarkdown(text) + '</div>'; renderMermaidBlocks(body); if (typeof renderEChartsBlocks === "function") renderEChartsBlocks(body); } else { body.textContent = text; }
@@ -402,7 +483,7 @@ function appendAgentMsg(role, text) {
   return { div, body, step, meta };
 }
 function extractAgentText(content) { if (!Array.isArray(content)) return ""; return content.map((c) => (c && c.type === "text" ? c.text : "")).join(""); }
-function clearChat() { $("chat").innerHTML = ""; }
+function clearChat() { $("chat").innerHTML = ""; renderWelcome(); }
 async function loadThreads() {
   const box = $("threadList");
   try {
@@ -430,7 +511,7 @@ async function selectThread(id) {
     const r = await api("/api/v1/agent/threads/" + id);
     chat.innerHTML = "";
     for (const m of r.messages || []) { if (m.role === "user" || m.role === "assistant") appendAgentMsg(m.role, extractAgentText(m.content)); }
-    if (!(r.messages || []).length) appendAgentMsg("assist", "这是一个新会话，把目标告诉我吧。");
+    if (!(r.messages || []).length) renderWelcome();
   } catch (e) { chat.innerHTML = "加载失败:" + escapeHtml(e.message); }
 }
 $("sendBtn").addEventListener("click", send);
@@ -748,7 +829,7 @@ async function flipPager(wait, dir) {
   }
 }
 syncRightCol();
-loadCapabilities(); loadThreads();
+loadCapabilities(); loadThreads(); renderWelcome();
 </script>
 </body>
 </html>

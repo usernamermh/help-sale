@@ -69,7 +69,11 @@ function mapRow(row: Record<string, unknown>): AutomationRun {
 		createdAt: String(row.created_at),
 	};
 }
-/** 更新执行状态(agent 类任务先记 running,完成后回填 success/error)。 */
-export function updateAutomationRunStatus(db: DatabaseSync, tenantId: string, runId: string, status: AutomationRun["status"], summary?: string): void {
-	db.prepare("UPDATE automation_runs SET status = ?, summary = ? WHERE tenant_id = ? AND id = ?").run(status, summary ?? null, tenantId, runId);
+/** 更新执行状态(agent 类任务先记 running,完成后回填 success/error);可选写入结构化结果 detail_json。 */
+export function updateAutomationRunStatus(db: DatabaseSync, tenantId: string, runId: string, status: AutomationRun["status"], summary?: string, detail?: unknown): void {
+	if (detail !== undefined) {
+		db.prepare("UPDATE automation_runs SET status = ?, summary = ?, detail_json = ? WHERE tenant_id = ? AND id = ?").run(status, summary ?? null, JSON.stringify(detail), tenantId, runId);
+	} else {
+		db.prepare("UPDATE automation_runs SET status = ?, summary = ? WHERE tenant_id = ? AND id = ?").run(status, summary ?? null, tenantId, runId);
+	}
 }

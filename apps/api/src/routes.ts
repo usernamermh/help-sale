@@ -42,7 +42,7 @@ import { setFunnelStage, getFunnelStats, listSilentCustomers } from "./repositor
 import { createTestDrive, getTestDrive, listTestDrives, setTestDriveStatus } from "./repositories/test-drives.js";
 import { scheduleDeliveryFollowups, scheduleTestDriveFollowups } from "./services/followup-rhythm.js";
 import { getSalesWorkbench, getStorePerformance } from "./services/performance.js";
-import { listAutomationRuns } from "./repositories/automation-runs.js";
+import { listAutomationRuns, type AutomationRun } from "./repositories/automation-runs.js";
 import { createAutomationJob, deleteAutomationJob, getAutomationJob, listAutomationJobs, updateAutomationJob } from "./repositories/automation-jobs.js";
 import { getBuiltinJobEnabled, setBuiltinJobEnabled } from "./repositories/builtin-job-settings.js";
 import { runAutomationJob, runCustomJob } from "./services/automation.js";
@@ -157,7 +157,37 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 	if (!sales.salesId) return sales;
 	const sp = upsertSalesperson(db, tenantId, { storeId: sales.storeId, name: sales.salesName ?? "未知销售", phone: sales.salesPhone, role: "sales" });
 	return { salesName: sp.name, salesId: sp.id, salesPhone: sp.phone ?? undefined, storeId: sp.store_id ?? undefined };
-}export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
+}
+
+/** 自定义任务调度文案(与前端展示一致)。 */
+function automationScheduleText(job: { scheduleType: string; intervalDays: number | null; intervalUnit: "day" | "hour"; weekday: number | null; scheduleTime: string }): string {
+	if (job.scheduleType === "interval") return job.intervalUnit === "hour" ? `每 ${job.intervalDays ?? 1} 小时 ${job.scheduleTime}` : `每 ${job.intervalDays ?? 1} 天 ${job.scheduleTime}`;
+	if (job.scheduleType === "weekly") return `每周${job.weekday ?? 1} ${job.scheduleTime}`;
+	return `每天 ${job.scheduleTime}`;
+}
+
+/** 组装单个任务的最近一次结构化执行结果。 */
+function automationResult(jobType: string, kind: string, name: string, schedule: string, run: AutomationRun | undefined): Record<string, unknown> {
+	let detail: unknown = null;
+	if (run?.detailJson) {
+		try {
+			detail = JSON.parse(run.detailJson);
+		} catch {
+			detail = null;
+		}
+	}
+	return {
+		jobType,
+		kind,
+		name,
+		schedule,
+		runDate: run?.runDate ?? null,
+		status: run?.status ?? null,
+		summary: run?.summary ?? null,
+		detail,
+	};
+}
+export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	app.addHook("preHandler", async (request) => {
 		requireTenant(deps.db, request.tenantId, "API 租户");
 	});
@@ -1019,6 +1049,24 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 	app.get<{ Querystring: { limit?: string } }>("/api/v1/automations", async (request) => {
 		const limit = Number.parseInt(request.query.limit ?? "50", 10);
 		return { runs: listAutomationRuns(deps.db, request.tenantId, Number.isFinite(limit) ? limit : 50) };
+	});
+
+	// ── 定时任务结构化结果:内置 + 自定义任务最近一次执行结果(新会话默认按钮展示用) ──
+	app.get("/api/v1/automations/results", async (request) => {
+		const runs = listAutomationRuns(deps.db, request.tenantId, 500);
+		const latest = new Map<string, AutomationRun>();
+		for (const r of runs) if (!latest.has(r.jobType)) latest.set(r.jobType, r); // runs 按 created_at 倒序,首个即最新
+		const defs = [
+			{ jobType: "morning_digest", name: "每日晨报", schedule: "每天 08:00" },
+			{ jobType: "weekly_report", name: "每周周报", schedule: "每周一 09:00" },
+			{ jobType: "silent_wakeup", name: "沉默客户唤醒", schedule: "每天 08:30" },
+			{ jobType: "reflection", name: "反思改进", schedule: "每周一 09:30" },
+		];
+		const results: Array<Record<string, unknown>> = defs.map((d) => automationResult(d.jobType, "builtin", d.name, d.schedule, latest.get(d.jobType)));
+		for (const job of listAutomationJobs(deps.db, request.tenantId)) {
+			results.push(automationResult(`custom:${job.id}`, "custom", job.name, automationScheduleText(job), latest.get(`custom:${job.id}`)));
+		}
+		return { results };
 	});
 
 	app.post<{ Body: { job?: string } }>("/api/v1/automations/run", async (request, reply) => {
