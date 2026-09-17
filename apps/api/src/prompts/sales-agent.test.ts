@@ -2,16 +2,21 @@ import { describe, expect, it } from "vitest";
 import { getSalesAgentSystemPrompt } from "./sales-agent.js";
 
 describe("sales-agent prompt", () => {
-	it("自动拼接 tools / tools_system 目录的外部工具(readme.json)", () => {
+	it("工具经函数调用(tools 字段)注册,不再拼接进系统提示词", () => {
 		const prompt = getSalesAgentSystemPrompt({ companyName: "智造云", teamName: "销售团队" });
-		expect(prompt).toContain("【外部工具】");
-		expect(prompt).toContain("todo_list");
-		expect(prompt).toContain("创建、细化、标记完成 todo list");
-		expect(prompt).toContain("main.createTodoList");
-		expect(prompt).toContain("date_tool");
+		expect(prompt).toContain("【工具调用】");
+		expect(prompt).toContain("tools 字段");
+		expect(prompt).not.toContain("【外部工具】");
+		expect(prompt).not.toContain("main.createTodoList");
+		expect(prompt).not.toContain("(tools_system/");
 		expect(prompt).toContain("【系统记忆】");
 		expect(prompt).toContain("## 工具经验");
-		expect(prompt).toContain("data.mode");
+	});
+
+	it("明确禁止模型输出 Markdown 表格", () => {
+		const prompt = getSalesAgentSystemPrompt();
+		expect(prompt).toContain("禁止在最终答复中输出任何 Markdown 表格");
+		expect(prompt).toContain("一律由工具返回");
 	});
 
 

@@ -85,12 +85,28 @@ function collectRawTables(messages: unknown[]): string[] {
 	return tables;
 }
 
+/** 剔除 Markdown 表格:移除代码块外所有以 | 开头的行(模型自造/转述的表格一律不允许出现在答复里)。 */
+export function stripMarkdownTables(text: string): string {
+	const lines = text.split("\n");
+	const out: string[] = [];
+	let inFence = false;
+	for (const line of lines) {
+		if (/^\s*```/.test(line)) {
+			inFence = !inFence;
+			out.push(line);
+			continue;
+		}
+		if (!inFence && line.trim().startsWith("|")) continue;
+		out.push(line);
+	}
+	return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function appendRawTables(answer: string, messages: unknown[]): string {
+	// 模型文本一律不允许出现 Markdown 表格(无论本轮是否有工具表格),避免模型自造/转述导致幻觉
+	let out = stripMarkdownTables(answer);
 	const tables = collectRawTables(messages);
-	if (tables.length === 0) return answer;
-	let out = answer;
-	// 移除模型自行生成的 Markdown 表格(表头+分隔行+数据行),统一由工具原始表格呈现,避免重复与幻觉
-	out = out.replace(/^\|.*\|\s*\n^\|[\s:|-]+\|\s*\n(?:\|.*\|\s*\n)*/gm, "");
+	if (tables.length === 0) return out;
 	// 防重复:即使已包含工具原文,也统一只保留一份
 	for (const table of tables) out = out.replace(table, "");
 	out = out.replace(/\n{3,}/g, "\n\n").trim();

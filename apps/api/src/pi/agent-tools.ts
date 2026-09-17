@@ -55,7 +55,7 @@ export function systemFinalTool(): AgentTool<any, any> {
 		label: "输出最终结论",
 		description: "输出面向用户/销售的最终答复。完成目标后必须调用此工具并立即停止。",
 		parameters: Type.Object({
-			answer: Type.String({ description: "给用户的自然语言答复,可包含分点与 Markdown 表格" }),
+			answer: Type.String({ description: "给用户的自然语言答复,允许分点与列表,但禁止包含任何 Markdown 表格(表格由工具返回,前端原样渲染)" }),
 			summary: Type.Optional(Type.String({ description: "一句话摘要" })),
 			nextSteps: Type.Optional(Type.Array(Type.String())),
 		}),

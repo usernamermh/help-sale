@@ -5,7 +5,7 @@ import { fauxProvider, fauxToolCall, fauxAssistantMessage } from "@earendil-work
 import { openDatabase } from "../db/database.js";
 import { requireTenant } from "../repositories/customers.js";
 import { getAgentPlanByRun } from "../repositories/agent-plans.js";
-import { runPlanPhase, verifyPlan, runSalesAgentWithPlan } from "./agent-runtime.js";
+import { runPlanPhase, runSalesAgent, stripMarkdownTables, verifyPlan, runSalesAgentWithPlan } from "./agent-runtime.js";
 import { openSessionStore, tmpDataDir, cleanupDataDir, type SessionStore } from "./sessions.js";
 
 let db: DatabaseSync;
@@ -22,6 +22,35 @@ afterEach(async () => {
 	await store.close();
 	db.close();
 	cleanupDataDir(dir);
+});
+
+describe("表格防幻觉", () => {
+	it("stripMarkdownTables:剔除模型自造表格,保留代码块内内容", () => {
+		const stripped = stripMarkdownTables("总结如下\n| 姓名 | 电话 |\n| --- | --- |\n| 陈静 | 15835137159 |\n共 1 位。");
+		expect(stripped).not.toContain("| 姓名");
+		expect(stripped).not.toContain("15835137159");
+		expect(stripped).toContain("总结如下");
+		expect(stripped).toContain("共 1 位");
+		const fenced = stripMarkdownTables("```\n| a | b |\n```\n保留");
+		expect(fenced).toContain("| a | b |");
+		expect(fenced).toContain("保留");
+	});
+
+	it("最终答复剔除模型自造表格(无工具表格时也不残留)", async () => {
+		const fa = fauxProvider();
+		fa.setResponses([
+			fauxAssistantMessage([
+				fauxToolCall("emit_final", {
+					answer: "客户清单:\n| 姓名 | 电话 |\n| --- | --- |\n| 陈静 | 15835137159 |\n共 1 位。",
+				}),
+			]),
+		]);
+		const streamFn: StreamFn = async (model, context, options) => fa.provider.stream(model as never, context, options);
+		const result = await runSalesAgent({ db, tenantId: "t1", store, streamFn }, { goal: "查客户清单" });
+		expect(result.final?.answer).not.toContain("| 陈静");
+		expect(result.final?.answer).not.toContain("15835137159");
+		expect(result.final?.answer).toContain("共 1 位");
+	});
 });
 
 describe("规划-执行-验证(P-E-V)", () => {
