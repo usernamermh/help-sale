@@ -1,18 +1,17 @@
 @echo off
-chcp 65001 >nul
-title 销售军师 - 一键启动服务
+title Sales Copilot - Restart Service
 cd /d "%~dp0"
 echo ================================================
-echo    销售军师 - 一键启动服务
-echo    将停止当前正在运行的服务,再重新启动
+echo   Sales Copilot - One-click service restart
+echo   It will stop the running service and restart it
 echo ================================================
 echo.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\restart-service.ps1"
 echo.
 if %errorlevel% neq 0 (
-  echo [失败] 服务启动未通过健康检查,请查看上方日志或 apps/api/log/service.log
+  echo [FAILED] Service did not pass health check. See apps/api/log/service.log
 ) else (
-  echo [成功] 服务已重启完成
+  echo [OK] Service restarted.
 )
 echo.
 pause
