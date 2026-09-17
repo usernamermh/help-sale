@@ -546,7 +546,7 @@ async function streamRun(goal, wait, steps) {
     }
   }
 }
-// ── 规划-执行-验证:展示执行计划与验证结果 ──
+// ── 执行计划展示 ──
 function attachPlanCard(wait, plan) {
   if (!wait || !plan || !Array.isArray(plan.steps) || !plan.steps.length) return;
   let card = wait.div.querySelector(".plan-card");
@@ -557,20 +557,9 @@ function attachPlanCard(wait, plan) {
   const steps = plan.steps.map((s, i) => "<li><b>" + escapeHtml(String(s.step)) + "</b>" + (s.tool ? ' <span class="plan-tool">' + escapeHtml(String(s.tool)) + "</span>" : "") + '<div class="plan-purpose">' + escapeHtml(String(s.purpose || "")) + "</div></li>").join("");
   card.innerHTML = '<div class="plan-head">📋 执行计划' + (plan.summary ? " · " + escapeHtml(String(plan.summary)) : "") + "</div><ol class=\"plan-steps\">" + steps + "</ol>";
 }
-function attachVerification(wait, v) {
-  if (!wait || !v) return;
-  const card = wait.div.querySelector(".plan-card");
-  if (!card) return;
-  let line = card.querySelector(".plan-verify");
-  if (!line) { line = document.createElement("div"); line.className = "plan-verify"; card.appendChild(line); }
-  const status = v.missingTools && v.missingTools.length ? "⚠️ 部分步骤未执行" : "✅ 计划已全部执行";
-  line.innerHTML = "<b>执行验证:</b>" + status + " · " + escapeHtml(String(v.summary || ""));
-}
 function handleStreamEvent(evt, wait, steps) {
   if (evt.type === "plan") {
     attachPlanCard(wait, evt.payload);
-  } else if (evt.type === "verified") {
-    attachVerification(wait, evt.payload);
   } else if (evt.type === "tool_start") {
     const name = evt.label || evt.toolName || "工具";
     steps.push({ eventType: "tool_start", toolName: evt.toolName, label: name });
@@ -619,7 +608,6 @@ function prettyPayload(p) {
   } catch {}
   try { return typeof p === "string" ? p : JSON.stringify(p); } catch { return String(p); }
 }
-
 
 // ── 定时任务管理弹窗 ──
 const JOB_DEFS = [
