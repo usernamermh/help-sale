@@ -99,14 +99,6 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:999px; }
 ::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
-.agent-details { margin-top:8px; border:1px solid var(--line); border-radius:8px; background:#fff; overflow:hidden; }
-.agent-footnote { cursor:pointer; padding:6px 10px; font-size:12px; color:var(--brand); user-select:none; list-style:none; }
-.agent-footnote::-webkit-details-marker { display:none; }
-.agent-footnote .arrow { display:inline-block; transition:transform .15s; }
-.agent-details[open] .arrow { transform:rotate(90deg); }
-.agent-steps { padding:8px 10px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:6px; }
-.agent-step { font-size:12px; }
-.agent-step-head { font-weight:600; color:#334155; }
 .agent-step-body { margin-top:2px; color:#64748b; white-space:pre-wrap; word-break:break-word; max-height:120px; overflow:auto; background:#f8fafc; border-radius:6px; padding:6px 8px; }
 
 .plan-card { margin:0 0 10px; border:1px solid #bfdbfe; background:#eff6ff; border-radius:10px; padding:10px 12px; font-size:12.5px; }
@@ -410,32 +402,6 @@ function appendAgentMsg(role, text) {
   return { div, body, step, meta };
 }
 function extractAgentText(content) { if (!Array.isArray(content)) return ""; return content.map((c) => (c && c.type === "text" ? c.text : "")).join(""); }
-function attachAgentSteps(wait, steps) {
-  if (!steps || !steps.length) return;
-  const details = document.createElement("details"); details.className = "agent-details";
-  const summary = document.createElement("summary"); summary.className = "agent-footnote";
-  const raw = steps.filter((s) => s.eventType === "tool_start").map((s) => s.label || s.toolName);
-  const names = [];
-  for (let i = 0; i < raw.length; i++) {
-    let n = 1;
-    while (i + n < raw.length && raw[i + n] === raw[i]) n++;
-    names.push(n > 1 ? raw[i] + " ×" + n : raw[i]);
-    i += n - 1;
-  }
-  summary.innerHTML = "<span class=\"arrow\">▸</span> 过程 · " + escapeHtml(names.join(" → ") || "无工具调用");
-  details.appendChild(summary);
-  const list = document.createElement("div"); list.className = "agent-steps";
-  for (const s of steps) {
-    const line = document.createElement("div"); line.className = "agent-step";
-    const head = document.createElement("div"); head.className = "agent-step-head";
-    head.textContent = (s.eventType === "tool_start" ? "调用 " : "返回 ") + (s.label || s.toolName || "…");
-    line.appendChild(head);
-
-    list.appendChild(line);
-  }
-  details.appendChild(list);
-  wait.div.appendChild(details);
-}
 function clearChat() { $("chat").innerHTML = ""; }
 async function loadThreads() {
   const box = $("threadList");
@@ -590,7 +556,6 @@ function handleStreamEvent(evt, wait, steps) {
     const answer = evt.final && evt.final.answer ? evt.final.answer : "（未生成答复）";
     wait.body.innerHTML = '<div class="md">' + renderMarkdown(answer) + '</div>'; renderMermaidBlocks(wait.body); if (typeof renderEChartsBlocks === "function") renderEChartsBlocks(wait.body);
     wait.meta.textContent = (evt.final && evt.final.nextSteps && evt.final.nextSteps.length) ? ("下一步：" + evt.final.nextSteps.join(" · ")) : "";
-    attachAgentSteps(wait, steps);
     if (wait.pager) attachPager(wait);
     $("runMeta").textContent = "本轮任务完成 · " + runTaskCount() + " 项";
   } else if (evt.type === "error") {
