@@ -973,6 +973,7 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 			name,
 			scheduleType: request.body?.scheduleType === "weekly" ? "weekly" : request.body?.scheduleType === "interval" ? "interval" : "daily",
 			intervalDays: request.body?.scheduleType === "interval" ? request.body?.intervalDays ?? 1 : null,
+			intervalUnit: request.body?.scheduleType === "interval" ? (request.body?.intervalUnit === "hour" ? "hour" : "day") : "day",
 			weekday: weekday ?? null,
 			scheduleTime: time,
 			description: request.body?.description,
@@ -989,6 +990,7 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 			name: request.body?.name,
 			scheduleType: request.body?.scheduleType === "weekly" ? "weekly" : request.body?.scheduleType === "interval" ? "interval" : request.body?.scheduleType === "daily" ? "daily" : undefined,
 			intervalDays: request.body?.intervalDays,
+			intervalUnit: request.body?.intervalUnit === "hour" ? "hour" : request.body?.intervalUnit === "day" ? "day" : undefined,
 			weekday: request.body?.weekday,
 			scheduleTime: time || undefined,
 			description: request.body?.description,
@@ -1021,11 +1023,11 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 
 	app.post<{ Body: { job?: string } }>("/api/v1/automations/run", async (request, reply) => {
 		const job = String(request.body?.job ?? "");
-		if (!["morning_digest", "weekly_report", "silent_wakeup"].includes(job)) {
+		if (!["morning_digest", "weekly_report", "silent_wakeup", "reflection"].includes(job)) {
 			return reply.code(400).send({ error: "invalid_job", message: "job 可选 morning_digest/weekly_report/silent_wakeup" });
 		}
 		try {
-			const summary = runAutomationJob(deps.db, request.tenantId, job as "morning_digest" | "weekly_report" | "silent_wakeup", {
+			const summary = runAutomationJob(deps.db, request.tenantId, job as "morning_digest" | "weekly_report" | "silent_wakeup" | "reflection", {
 				enabled: config.automationEnabled,
 				morningDigestTime: config.morningDigestTime,
 				weeklyReportWeekday: config.weeklyReportWeekday,

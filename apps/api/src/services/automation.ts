@@ -237,6 +237,7 @@ export function runAutomationJob(db: DatabaseSync, tenantId: string, jobType: Au
 	const run = () => {
 		if (jobType === "morning_digest") return runMorningDigest(db, tenantId, now);
 		if (jobType === "weekly_report") return runWeeklyReport(db, tenantId, now);
+		if (jobType === "reflection") return runReflection(db, tenantId, 7);
 		return runSilentWakeup(db, tenantId, config.silentCustomerDays, now);
 	};
 	try {
