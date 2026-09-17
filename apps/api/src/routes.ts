@@ -44,6 +44,7 @@ import { scheduleDeliveryFollowups, scheduleTestDriveFollowups } from "./service
 import { getSalesWorkbench, getStorePerformance } from "./services/performance.js";
 import { listAutomationRuns } from "./repositories/automation-runs.js";
 import { createAutomationJob, deleteAutomationJob, getAutomationJob, listAutomationJobs, updateAutomationJob } from "./repositories/automation-jobs.js";
+import { getBuiltinJobEnabled, setBuiltinJobEnabled } from "./repositories/builtin-job-settings.js";
 import { runAutomationJob, runCustomJob } from "./services/automation.js";
 import { listSubTasks } from "./services/subagent-queue.js";
 import { createReflectionCase } from "./repositories/reflection-cases.js";
@@ -941,11 +942,25 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 	});
 	// ── 自动任务:执行记录查询与手动触发 ──
 	// ── 自定义定时任务:CRUD(弹窗管理) ──
+	// ── 内置任务启停开关 ──
+	app.get("/api/v1/automations/builtin", async (request) => {
+		const keys = ["morning_digest", "weekly_report", "silent_wakeup", "reflection"];
+		return { settings: Object.fromEntries(keys.map((k) => [k, getBuiltinJobEnabled(deps.db, request.tenantId, k)])) };
+	});
+	app.put<{ Params: { key: string }; Body: { enabled?: boolean } }>("/api/v1/automations/builtin/:key", async (request, reply) => {
+		const key = String(request.params.key ?? "");
+		if (!["morning_digest", "weekly_report", "silent_wakeup", "reflection"].includes(key)) {
+			return reply.code(400).send({ error: "invalid_key", message: "未知内置任务" });
+		}
+		const enabled = request.body?.enabled !== false;
+		const setting = setBuiltinJobEnabled(deps.db, request.tenantId, key, enabled);
+		return { jobKey: key, enabled: setting.enabled };
+	});
 	app.get("/api/v1/automations/jobs", async (request) => {
 		return { jobs: listAutomationJobs(deps.db, request.tenantId) };
 	});
 
-	app.post<{ Body: { name?: string; scheduleType?: string; weekday?: number; scheduleTime?: string; description?: string; action?: unknown; enabled?: boolean } }>("/api/v1/automations/jobs", async (request, reply) => {
+	app.post<{ Body: { name?: string; scheduleType?: string; weekday?: number; intervalDays?: number; scheduleTime?: string; description?: string; action?: unknown; enabled?: boolean } }>("/api/v1/automations/jobs", async (request, reply) => {
 		const name = String(request.body?.name ?? "").trim();
 		const time = String(request.body?.scheduleTime ?? "").trim();
 		if (!name || !/^\d{2}:\d{2}$/.test(time)) {
@@ -956,7 +971,8 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 		const job = createAutomationJob(deps.db, {
 			tenantId: request.tenantId,
 			name,
-			scheduleType: request.body?.scheduleType === "weekly" ? "weekly" : "daily",
+			scheduleType: request.body?.scheduleType === "weekly" ? "weekly" : request.body?.scheduleType === "interval" ? "interval" : "daily",
+			intervalDays: request.body?.scheduleType === "interval" ? request.body?.intervalDays ?? 1 : null,
 			weekday: weekday ?? null,
 			scheduleTime: time,
 			description: request.body?.description,
@@ -966,12 +982,13 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 		return { job };
 	});
 
-	app.put<{ Params: { id: string }; Body: { name?: string; scheduleType?: string; weekday?: number; scheduleTime?: string; description?: string; action?: unknown; enabled?: boolean } }>("/api/v1/automations/jobs/:id", async (request, reply) => {
+	app.put<{ Params: { id: string }; Body: { name?: string; scheduleType?: string; weekday?: number; intervalDays?: number; scheduleTime?: string; description?: string; action?: unknown; enabled?: boolean } }>("/api/v1/automations/jobs/:id", async (request, reply) => {
 		const time = String(request.body?.scheduleTime ?? "").trim();
 		if (time && !/^\d{2}:\d{2}$/.test(time)) return reply.code(400).send({ error: "invalid_time", message: "scheduleTime 需 HH:MM" });
 		const job = updateAutomationJob(deps.db, request.tenantId, request.params.id, {
 			name: request.body?.name,
-			scheduleType: request.body?.scheduleType === "weekly" ? "weekly" : request.body?.scheduleType === "daily" ? "daily" : undefined,
+			scheduleType: request.body?.scheduleType === "weekly" ? "weekly" : request.body?.scheduleType === "interval" ? "interval" : request.body?.scheduleType === "daily" ? "daily" : undefined,
+			intervalDays: request.body?.intervalDays,
 			weekday: request.body?.weekday,
 			scheduleTime: time || undefined,
 			description: request.body?.description,

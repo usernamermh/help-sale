@@ -171,7 +171,7 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 </section>
 <div id="rightResizer" class="right-resizer" title="拖动调整右侧面板宽度"></div>
 <div class="right-col" id="rightCol">
-<aside class="side-block tr-panel" id="runPanel">
+<aside class="side-block tr-panel" id="runPanel" style="display:none">
 <div class="tr-head"><span>本轮任务</span><button class="tr-close" onclick="hideRunPanel()">×</button></div>
 <div class="tr-meta" id="runMeta"></div>
 <div class="tr-list" id="runList"></div>
@@ -628,14 +628,15 @@ const JOB_DEFS = [
   { type: "reflection", name: "反思改进", time: "每周一 09:30", desc: "聚合近 7 天反思案例(评估低分/运行失败),把改进建议写入系统记忆「规则改进」,影响后续 Agent 行为。" },
 ];
 const JOB_WEEK = ["", "一", "二", "三", "四", "五", "六", "日"];
-let jobsState = { selected: null, customs: [], runs: [], editing: null };
+let jobsState = { selected: null, customs: [], runs: [], editing: null, builtin: {} };
 function openJobsModal() { $("jobsModal").style.display = "flex"; loadJobsData(); }
 function closeJobsModal() { $("jobsModal").style.display = "none"; jobsState.editing = null; }
 async function loadJobsData() {
-  let runs = []; let customs = [];
+  let runs = []; let customs = []; let builtin = {};
   try { const r = await api("/api/v1/automations?limit=100"); runs = r.runs || []; } catch {}
   try { const r = await api("/api/v1/automations/jobs"); customs = r.jobs || []; } catch {}
-  jobsState.runs = runs; jobsState.customs = customs;
+  try { const r = await api("/api/v1/automations/builtin"); builtin = r.settings || {}; } catch {}
+  jobsState.runs = runs; jobsState.customs = customs; jobsState.builtin = builtin;
   renderJobsList();
   if (jobsState.selected) renderJobDetail();
   else $("jobsDetail").innerHTML = "请选择左侧任务,或点击上方「＋ 新增任务」创建一个定时任务";
@@ -663,8 +664,8 @@ function renderJobDetail() {
   if (jobsState.editing) { renderJobForm(jobsState.editing); return; }
   if (sel.kind === "builtin") {
     const def = JOB_DEFS.find((d) => d.type === sel.id);
-    const runs = jobsState.runs.filter((r) => r.jobType === def.type).slice(0, 10);
-    box.innerHTML = '<div class="jd-name">' + escapeHtml(def.name) + ' <span style="font-size:12px;color:#64748b">内置任务</span></div><div class="jd-time">⏰ ' + escapeHtml(def.time) + "</div><div class=\"jd-desc\">" + escapeHtml(def.desc) + '</div><div class="jd-actions"><button class="primary" onclick="runBuiltinJob(\'' + def.type + '\')">立即运行</button></div><div class="jd-runs"><b>最近执行记录</b>' + renderRuns(runs) + "</div>";
+    const ben = jobsState.builtin[def.type] !== false;
+    box.innerHTML = '<div class="jd-name">' + escapeHtml(def.name) + ' <span style="font-size:12px;color:' + (ben ? "#16a34a" : "#64748b") + '">' + (ben ? "启用中" : "已停用") + ' · 内置任务</span></div><div class="jd-time">⏰ ' + escapeHtml(def.time) + "</div><div class=\"jd-desc\">" + escapeHtml(def.desc) + '</div><div class="jd-actions"><button class="primary" onclick="runBuiltinJob(\'' + def.type + '\')">立即运行</button><button onclick="toggleBuiltinJob(\'' + def.type + '\',' + (ben ? "false" : "true") + ')">' + (ben ? "停用" : "启用") + '</button></div><div class="jd-runs"><b>最近执行记录</b>' + renderRuns(runs) + "</div>";
   } else {
     const c = jobsState.customs.find((x) => x.id === sel.id);
     if (!c) return;
@@ -677,7 +678,7 @@ function renderRuns(runs) {
   if (!runs.length) return '<div style="margin-top:6px">暂无执行记录</div>';
   return runs.map((r) => '<div class="run-line ' + (r.status === "success" ? "ok" : r.status === "error" ? "err" : "") + '">' + escapeHtml(String(r.runDate)) + " · " + (r.status === "success" ? "成功" : r.status === "error" ? "失败" : "跳过") + (r.summary ? " · " + escapeHtml(String(r.summary)) : "") + "</div>").join("");
 }
-async function runBuiltinJob(type) { try { const r = await api("/api/v1/automations/run", { method: "POST", body: JSON.stringify({ job: type }) }); alert(r.summary || "已执行"); } catch (e) { alert("执行失败:" + e.message); } loadJobsData(); }
+async function toggleBuiltinJob(key, enabled) { try { await api("/api/v1/automations/builtin/" + key, { method: "PUT", body: JSON.stringify({ enabled: enabled }) }); } catch (e) { alert("操作失败:" + e.message); } loadJobsData(); }async function runBuiltinJob(type) { try { const r = await api("/api/v1/automations/run", { method: "POST", body: JSON.stringify({ job: type }) }); alert(r.summary || "已执行"); } catch (e) { alert("执行失败:" + e.message); } loadJobsData(); }
 async function runCustomJobNow(id) { try { const r = await api("/api/v1/automations/jobs/" + id + "/run", { method: "POST" }); alert(r.summary || "已执行"); } catch (e) { alert("执行失败:" + e.message); } loadJobsData(); }
 async function toggleCustomJob(id, enabled) { try { await api("/api/v1/automations/jobs/" + id, { method: "PUT", body: JSON.stringify({ enabled: enabled }) }); } catch (e) { alert("操作失败:" + e.message); } loadJobsData(); }
 function editCustomJob(id) { const c = jobsState.customs.find((x) => x.id === id); if (c) { jobsState.editing = c; renderJobForm(c); } }
@@ -686,23 +687,45 @@ function renderJobForm(job) {
   const box = $("jobsDetail"); const isEdit = job && job.id;
   const j = job || {};
   const action = (job && job.actionJson) ? JSON.parse(job.actionJson) : {};
+  const actKind = action.kind === "agent_goal" ? "agent_goal" : "notify";
   box.innerHTML = '<div class="jd-name">' + (isEdit ? "编辑任务" : "新增任务") + '</div><div class="job-form">' +
     '<label>任务名称</label><input id="jfName" value="' + escapeHtml(j.name || "") + '">' +
-    '<div class="row2"><div><label>类型</label><select id="jfType"><option value="daily"' + ((j.scheduleType || "daily") === "daily" ? " selected" : "") + '>每天</option><option value="weekly"' + (j.scheduleType === "weekly" ? " selected" : "") + '>每周</option></select></div>' +
+    '<div class="row2"><div><label>类型</label><select id="jfType"><option value="daily"' + ((j.scheduleType || "daily") === "daily" ? " selected" : "") + '>每天</option><option value="weekly"' + (j.scheduleType === "weekly" ? " selected" : "") + '>每周</option><option value="interval"' + (j.scheduleType === "interval" ? " selected" : "") + '>每 N 天</option></select></div>' +
     '<div><label>时间(HH:MM)</label><input id="jfTime" value="' + escapeHtml(j.scheduleTime || "09:00") + '"></div></div>' +
     '<div id="jfWeekRow" style="' + (j.scheduleType === "weekly" ? "" : "display:none") + '"><label>星期(1=周一…7=周日)</label><input id="jfWeekday" type="number" min="1" max="7" value="' + (j.weekday || 1) + '"></div>' +
+    '<div id="jfIntervalRow" style="' + (j.scheduleType === "interval" ? "" : "display:none") + '"><label>间隔天数(每 N 天执行一次)</label><input id="jfIntervalDays" type="number" min="1" max="365" value="' + (j.intervalDays || 3) + '"></div>' +
     '<label>任务说明</label><textarea id="jfDesc" rows="2">' + escapeHtml(j.description || "") + '</textarea>' +
-    '<label>通知标题</label><input id="jfTitle" value="' + escapeHtml(action.title || "") + '">' +
-    '<label>通知内容</label><textarea id="jfContent" rows="2">' + escapeHtml(action.content || "") + '</textarea>' +
+    '<div class="row2"><div><label>动作类型</label><select id="jfAction"><option value="notify"' + (actKind === "notify" ? " selected" : "") + '>通知</option><option value="agent_goal"' + (actKind === "agent_goal" ? " selected" : "") + '>Agent 自主执行</option></select></div></div>' +
+    '<div id="jfNotifyBlock"><label>通知标题</label><input id="jfTitle" value="' + escapeHtml(action.title || "") + '"><label>通知内容</label><textarea id="jfContent" rows="2">' + escapeHtml(action.content || "") + '</textarea></div>' +
+    '<div id="jfGoalBlock" style="display:none"><label>Agent 目标(到点由 Agent 自主执行,例如:生成近3天经营报告)</label><textarea id="jfGoal" rows="3">' + escapeHtml(action.goal || "") + '</textarea></div>' +
     '<div style="margin-top:10px;display:flex;gap:8px"><button class="primary" onclick="saveJob()">保存</button><button onclick="cancelJobForm()">取消</button></div></div>';
-  $("jfType").onchange = () => { $("jfWeekRow").style.display = $("jfType").value === "weekly" ? "" : "none"; };
+  const syncForm = () => {
+    const t = $("jfType").value;
+    $("jfWeekRow").style.display = t === "weekly" ? "" : "none";
+    $("jfIntervalRow").style.display = t === "interval" ? "" : "none";
+    const a = $("jfAction").value;
+    $("jfNotifyBlock").style.display = a === "agent_goal" ? "none" : "";
+    $("jfGoalBlock").style.display = a === "agent_goal" ? "" : "none";
+  };
+  $("jfType").onchange = syncForm;
+  $("jfAction").onchange = syncForm;
+  syncForm();
 }
 function cancelJobForm() { jobsState.editing = null; renderJobDetail(); }
 async function saveJob() {
   const name = $("jfName").value.trim(); const time = $("jfTime").value.trim(); const type = $("jfType").value;
   if (!name || !/^\d{2}:\d{2}$/.test(time)) { alert("名称与时间(HH:MM)必填"); return; }
+  const actKind = $("jfAction").value;
+  let action;
+  if (actKind === "agent_goal") {
+    const goal = $("jfGoal").value.trim();
+    if (!goal) { alert("请填写 Agent 目标"); return; }
+    action = { kind: "agent_goal", goal: goal };
+  } else {
+    action = { kind: "notify", title: $("jfTitle").value.trim(), content: $("jfContent").value.trim() };
+  }
   const editing = jobsState.editing || {};
-  const body = { name: name, scheduleType: type, scheduleTime: time, weekday: type === "weekly" ? Number($("jfWeekday").value) || 1 : null, description: $("jfDesc").value.trim(), action: { kind: "notify", title: $("jfTitle").value.trim(), content: $("jfContent").value.trim() }, enabled: true };
+  const body = { name: name, scheduleType: type, scheduleTime: time, intervalDays: type === "interval" ? Number($("jfIntervalDays").value) || 1 : null, weekday: type === "weekly" ? Number($("jfWeekday").value) || 1 : null, description: $("jfDesc").value.trim(), action: action, enabled: true };
   try {
     if (editing.id) { await api("/api/v1/automations/jobs/" + editing.id, { method: "PUT", body: JSON.stringify(body) }); jobsState.selected = { kind: "custom", id: editing.id }; }
     else { const r = await api("/api/v1/automations/jobs", { method: "POST", body: JSON.stringify(body) }); jobsState.selected = { kind: "custom", id: r.job.id }; }

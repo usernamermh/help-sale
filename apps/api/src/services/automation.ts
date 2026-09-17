@@ -1,4 +1,8 @@
 import type { DatabaseSync } from "node:sqlite";
+import type { StreamFn } from "@earendil-works/pi-agent-core";
+import type { ModelRuntime } from "../pi/models.js";
+import type { SessionStore } from "../pi/sessions.js";
+import { runSalesAgent } from "../pi/agent-runtime.js";
 import { collectDigest } from "./digest.js";
 import { collectWeeklyReport } from "./weekly-report.js";
 import { createDigest, getDigestByDate } from "../repositories/digests.js";
@@ -6,6 +10,8 @@ import { listSilentCustomers } from "../repositories/funnel.js";
 import { createTask } from "../repositories/tasks.js";
 import { listAutomationJobs } from "../repositories/automation-jobs.js";
 import { createNotificationLog } from "../repositories/notification-logs.js";
+import { getBuiltinJobEnabled } from "../repositories/builtin-job-settings.js";
+import { updateAutomationRunStatus } from "../repositories/automation-runs.js";
 import { applyReflectionToMemory } from "./reflection.js";
 import { getCustomer } from "../repositories/customers.js";
 import { hasAutomationRunOn, listTenantIds, recordAutomationRun, type AutomationJobType } from "../repositories/automation-runs.js";
@@ -22,9 +28,11 @@ export interface AutomationConfig {
 
 export interface AutomationDeps {
 	db: DatabaseSync;
+	store: SessionStore;
+	runtime?: ModelRuntime;
+	streamFn?: StreamFn;
 	config: AutomationConfig;
 }
-
 const MINUTE_MS = 60 * 1000;
 
 function dateKey(d: Date): string {
@@ -43,6 +51,38 @@ function isDue(db: DatabaseSync, tenantId: string, jobType: AutomationJobType, r
 }
 
 
+
+/** 检查 interval(每 N 天)任务是否到点:距上次执行已满 intervalDays 且今天未执行。 */
+function isIntervalDue(db: DatabaseSync, tenantId: string, jobId: string, runDate: string, intervalDays: number): boolean {
+	if (hasAutomationRunOn(db, tenantId, `custom:${jobId}`, runDate)) return false;
+	const last = db
+		.prepare("SELECT run_date FROM automation_runs WHERE tenant_id = ? AND job_type = ? ORDER BY run_date DESC LIMIT 1")
+		.get(tenantId, `custom:${jobId}`) as { run_date: string } | undefined;
+	if (!last) return true; // 从未执行过:到时间即可首次执行
+	const lastMs = Date.parse(last.run_date + "T00:00:00Z");
+	const dueMs = Date.parse(runDate + "T00:00:00Z");
+	return Number.isFinite(lastMs) && Number.isFinite(dueMs) && dueMs - lastMs >= intervalDays * 86400000;
+}
+
+/** Agent 目标类自定义任务:到点由 Agent 自主执行(异步),结果回填执行记录。 */
+export function runAgentGoalJob(deps: AutomationDeps, tenantId: string, job: { id: string; actionJson: string }, runId: string, now: Date): void {
+	const db = deps.db;
+	const action = JSON.parse(job.actionJson || "{}") as { kind?: string; goal?: string };
+	const goal = String(action.goal ?? "").trim();
+	if (!goal) {
+		updateAutomationRunStatus(db, tenantId, runId, "error", "agent_goal 缺少 goal");
+		return;
+	}
+	updateAutomationRunStatus(db, tenantId, runId, "running", `Agent 执行中:${goal.slice(0, 60)}…`);
+	runSalesAgent({ db, tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn }, { goal })
+		.then((res) => {
+			const answer = res.final?.answer ?? "";
+			updateAutomationRunStatus(db, tenantId, runId, "success", answer ? `Agent 完成:${answer.slice(0, 200)}` : "Agent 完成");
+		})
+		.catch((error) => {
+			updateAutomationRunStatus(db, tenantId, runId, "error", error instanceof Error ? error.message : String(error));
+		});
+}
 /** 反思闭环:聚合近 N 天反思案例,把改进建议写入 memory「规则改进」小节。 */
 function runReflection(db: DatabaseSync, tenantId: string, days: number): string {
 	const summary = applyReflectionToMemory(db, tenantId, days);
@@ -121,12 +161,20 @@ export function runDueAutomations(deps: AutomationDeps, now = new Date()): Array
 	const isWeeklyDay = weekday === config.weeklyReportWeekday;
 
 	for (const tenantId of listTenantIds(db)) {
-		// 自定义定时任务:按 schedule_type(每天/每周)与时间到点执行
+		// 自定义定时任务:按 schedule_type(每天/每周/每N天)与时间到点执行;notify 同步,agent_goal 由 Agent 异步自主执行
 		for (const job of listAutomationJobs(db, tenantId, true)) {
-			const jobDue = job.scheduleType === "daily"
-				? isDue(db, tenantId, `custom:${job.id}`, date, nowMinutes, timeToMinutes(job.scheduleTime))
-				: isWeeklyDay && isDue(db, tenantId, `custom:${job.id}`, date, nowMinutes, timeToMinutes(job.scheduleTime));
+			let jobDue = false;
+			if (job.scheduleType === "interval") jobDue = isIntervalDue(db, tenantId, job.id, date, job.intervalDays ?? 1);
+			else if (job.scheduleType === "daily") jobDue = isDue(db, tenantId, `custom:${job.id}`, date, nowMinutes, timeToMinutes(job.scheduleTime));
+			else jobDue = isWeeklyDay && isDue(db, tenantId, `custom:${job.id}`, date, nowMinutes, timeToMinutes(job.scheduleTime));
 			if (!jobDue) continue;
+			const actionKind = (() => { try { return (JSON.parse(job.actionJson || "{}") as { kind?: string }).kind ?? "notify"; } catch { return "notify"; } })();
+			if (actionKind === "agent_goal") {
+				const run = recordAutomationRun(db, { tenantId, jobType: `custom:${job.id}`, runDate: date, status: "running", summary: "Agent 任务排队执行" });
+				runAgentGoalJob(deps, tenantId, job, run.id, now);
+				out.push({ tenantId, jobType: `custom:${job.id}`, status: "running", summary: "Agent 任务已触发,后台执行中" });
+				continue;
+			}
 			try {
 				const summary = runCustomJob(db, tenantId, job);
 				recordAutomationRun(db, { tenantId, jobType: `custom:${job.id}`, runDate: date, status: "success", summary });
@@ -138,10 +186,10 @@ export function runDueAutomations(deps: AutomationDeps, now = new Date()): Array
 			}
 		}
 		const jobs: Array<{ type: AutomationJobType; due: boolean; run: () => string }> = [
-			{ type: "morning_digest", due: isDue(db, tenantId, "morning_digest", date, nowMinutes, timeToMinutes(config.morningDigestTime)), run: () => runMorningDigest(db, tenantId, now) },
-			{ type: "weekly_report", due: isWeeklyDay && isDue(db, tenantId, "weekly_report", date, nowMinutes, timeToMinutes(config.weeklyReportTime)), run: () => runWeeklyReport(db, tenantId, now) },
-		{ type: "reflection", due: isWeeklyDay && isDue(db, tenantId, "reflection", date, nowMinutes, timeToMinutes(config.weeklyReportTime) + 30), run: () => runReflection(db, tenantId, 7) },
-			{ type: "silent_wakeup", due: config.silentWakeupEnabled && isDue(db, tenantId, "silent_wakeup", date, nowMinutes, timeToMinutes(config.wakeupTaskTime)), run: () => runSilentWakeup(db, tenantId, config.silentCustomerDays, now) },
+			{ type: "morning_digest", due: getBuiltinJobEnabled(db, tenantId, "morning_digest") && isDue(db, tenantId, "morning_digest", date, nowMinutes, timeToMinutes(config.morningDigestTime)), run: () => runMorningDigest(db, tenantId, now) },
+			{ type: "weekly_report", due: getBuiltinJobEnabled(db, tenantId, "weekly_report") && isWeeklyDay && isDue(db, tenantId, "weekly_report", date, nowMinutes, timeToMinutes(config.weeklyReportTime)), run: () => runWeeklyReport(db, tenantId, now) },
+			{ type: "reflection", due: getBuiltinJobEnabled(db, tenantId, "reflection") && isWeeklyDay && isDue(db, tenantId, "reflection", date, nowMinutes, timeToMinutes(config.weeklyReportTime) + 30), run: () => runReflection(db, tenantId, 7) },
+			{ type: "silent_wakeup", due: getBuiltinJobEnabled(db, tenantId, "silent_wakeup") && config.silentWakeupEnabled && isDue(db, tenantId, "silent_wakeup", date, nowMinutes, timeToMinutes(config.wakeupTaskTime)), run: () => runSilentWakeup(db, tenantId, config.silentCustomerDays, now) },
 		];
 		for (const job of jobs) {
 			if (!job.due) continue;

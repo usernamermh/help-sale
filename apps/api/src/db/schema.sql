@@ -390,6 +390,7 @@ CREATE TABLE IF NOT EXISTS automation_jobs (
 	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
 	name TEXT NOT NULL,
 	schedule_type TEXT NOT NULL DEFAULT 'daily',
+	interval_days INTEGER,
 	weekday INTEGER,
 	schedule_time TEXT NOT NULL,
 	description TEXT,
@@ -399,3 +400,13 @@ CREATE TABLE IF NOT EXISTS automation_jobs (
 	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_aj_tenant ON automation_jobs (tenant_id, enabled, schedule_type);
+
+-- v23:内置任务启停开关(tenant + job_key;无记录=默认启用)
+CREATE TABLE IF NOT EXISTS builtin_job_settings (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	job_key TEXT NOT NULL,
+	enabled INTEGER NOT NULL DEFAULT 1,
+	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	UNIQUE (tenant_id, job_key)
+);

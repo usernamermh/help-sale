@@ -127,6 +127,9 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const stopSubagents = options.subagents === true ? startSubagentConsumer({ db }) : () => undefined;
 	const stopAutomation = startAutomationScheduler({
 		db,
+		store,
+		runtime: options.runtime,
+		streamFn: options.streamFn,
 		config: {
 			enabled: options.automation === true && config.automationEnabled,
 			morningDigestTime: config.morningDigestTime,

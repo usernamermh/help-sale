@@ -8,7 +8,7 @@ export interface AutomationRun {
 	tenantId: string;
 	jobType: AutomationJobType;
 	runDate: string;
-	status: "success" | "error" | "skipped";
+	status: "running" | "success" | "error" | "skipped";
 	summary: string | null;
 	detailJson: string | null;
 	createdAt: string;
@@ -68,4 +68,8 @@ function mapRow(row: Record<string, unknown>): AutomationRun {
 		detailJson: row.detail_json ? String(row.detail_json) : null,
 		createdAt: String(row.created_at),
 	};
+}
+/** 更新执行状态(agent 类任务先记 running,完成后回填 success/error)。 */
+export function updateAutomationRunStatus(db: DatabaseSync, tenantId: string, runId: string, status: AutomationRun["status"], summary?: string): void {
+	db.prepare("UPDATE automation_runs SET status = ?, summary = ? WHERE tenant_id = ? AND id = ?").run(status, summary ?? null, tenantId, runId);
 }

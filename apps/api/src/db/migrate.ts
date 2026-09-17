@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 22;
+export const MIGRATION_VERSION = 23;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -116,6 +116,14 @@ export function migrate(db: DatabaseSync): void {
 			ELSE funnel_stage END,
 			funnel_stage_changed_at = COALESCE(funnel_stage_changed_at, updated_at)
 			WHERE funnel_stage IS NULL;`);
+	}
+	// v23:自定义任务间隔周期字段 + 内置任务启停开关表
+	if (current.user_version < 23) {
+		const addCol = (table: string, col: string, ddl: string) => {
+			const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+			if (!cols.some((c) => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl};`);
+		};
+		addCol("automation_jobs", "interval_days", "INTEGER");
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }

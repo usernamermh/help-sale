@@ -8,6 +8,11 @@ import { listTasks } from "../repositories/tasks.js";
 import { runDueAutomations, runAutomationJob, type AutomationConfig } from "./automation.js";
 
 let db: DatabaseSync;
+const stubStore = {
+	createConversation: async () => { throw new Error("not used"); },
+	openConversation: async () => { throw new Error("not used"); },
+	close: async () => undefined,
+} as never;
 const config: AutomationConfig = {
 	enabled: true,
 	morningDigestTime: "08:00",
@@ -27,21 +32,21 @@ afterEach(() => db.close());
 describe("定时与主动任务", () => {
 	it("每日晨报:到点自动生成并落库,同一天不重复执行", () => {
 		const now = new Date("2026-09-14T08:10:00Z");
-		const runs = runDueAutomations({ db, config }, now);
+		const runs = runDueAutomations({ db, store: stubStore, config }, now);
 		const digestRuns = runs.filter((r) => r.jobType === "morning_digest");
 		expect(digestRuns).toHaveLength(1);
 		expect(digestRuns[0].status).toBe("success");
 		const rows = listAutomationRuns(db, "t1");
 		expect(rows.some((r) => r.jobType === "morning_digest")).toBe(true);
 
-		const again = runDueAutomations({ db, config }, new Date("2026-09-14T08:20:00Z"));
+		const again = runDueAutomations({ db, store: stubStore, config }, new Date("2026-09-14T08:20:00Z"));
 		expect(again.filter((r) => r.jobType === "morning_digest")).toHaveLength(0);
 	});
 
 	it("周报:仅周一到点生成,非周一不生成", () => {
-		const monday = runDueAutomations({ db, config }, new Date("2026-09-14T09:05:00Z")); // 周一
+		const monday = runDueAutomations({ db, store: stubStore, config }, new Date("2026-09-14T09:05:00Z")); // 周一
 		expect(monday.some((r) => r.jobType === "weekly_report")).toBe(true);
-		const tuesday = runDueAutomations({ db, config }, new Date("2026-09-15T09:05:00Z")); // 周二
+		const tuesday = runDueAutomations({ db, store: stubStore, config }, new Date("2026-09-15T09:05:00Z")); // 周二
 		expect(tuesday.some((r) => r.jobType === "weekly_report")).toBe(false);
 	});
 
@@ -55,7 +60,7 @@ describe("定时与主动任务", () => {
 
 		expect(listSilentCustomers(db, "t1", 7).map((c) => c.key)).toEqual(["c_silent"]);
 
-		const runs = runDueAutomations({ db, config }, new Date("2026-09-14T08:40:00Z"));
+		const runs = runDueAutomations({ db, store: stubStore, config }, new Date("2026-09-14T08:40:00Z"));
 		const wake = runs.find((r) => r.jobType === "silent_wakeup")!;
 		expect(wake.status).toBe("success");
 		expect(wake.summary).toContain("新建唤醒任务 1 条");
@@ -64,7 +69,7 @@ describe("定时与主动任务", () => {
 		expect(tasks.some((t) => t.action.includes("唤醒回访"))).toBe(true);
 
 		// 再次执行:客户已有待办唤醒任务,不再视为沉默,不重复建
-		const again = runDueAutomations({ db, config }, new Date("2026-09-15T08:40:00Z"));
+		const again = runDueAutomations({ db, store: stubStore, config }, new Date("2026-09-15T08:40:00Z"));
 		const wake2 = again.find((r) => r.jobType === "silent_wakeup")!;
 		expect(wake2.status).toBe("success");
 		expect(wake2.summary).toContain("沉默客户 0 位");
