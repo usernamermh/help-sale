@@ -45,6 +45,8 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .wb-name { font-weight:600; color:#1e293b; font-size:13px; }
 .wb-time { font-size:11px; color:var(--muted); margin-top:2px; }
 .welcome-result { text-align:left; max-width:1120px; margin:0 auto; }
+.welcome-pick { display:flex; justify-content:center; margin-bottom:14px; }
+.welcome-select { min-width:260px; padding:7px 10px; border:1px solid var(--line); border-radius:8px; font-size:13px; background:#fff; color:#334155; }
 .welcome-back { display:inline-block; margin-bottom:10px; cursor:pointer; color:#2563eb; font-size:13px; background:none; border:none; padding:0; }
 .agent-body { white-space:pre-wrap; word-break:break-word; }
 .agent-body .md { white-space:normal; }
@@ -437,9 +439,34 @@ function refreshWelcomeButtons() {
   wrap.innerHTML = welcomeHead() + welcomeButtonsHtml();
   bindWelcomeClicks(wrap);
 }
-function showJobResult(res) {
+async function showJobResult(res) {
   const wrap = $("welcome"); if (!wrap || !res) return;
-  wrap.innerHTML = '<button class="welcome-back" onclick="refreshWelcomeButtons()">‹ 返回任务列表</button><div class="welcome-result md">' + renderMarkdown(renderJobResultMarkdown(res)) + "</div>";
+  let runs = [];
+  try {
+    const r = await api("/api/v1/automations/results?jobType=" + encodeURIComponent(res.jobType) + "&limit=50");
+    runs = r.results || [];
+  } catch { runs = []; }
+  if (!runs.length) {
+    wrap.innerHTML = '<button class="welcome-back" onclick="refreshWelcomeButtons()">‹ 返回任务列表</button><div class="welcome-result md">' + renderMarkdown(renderJobResultMarkdown(res)) + "</div>";
+    return;
+  }
+  wrap.innerHTML = '<button class="welcome-back" onclick="refreshWelcomeButtons()">‹ 返回任务列表</button>' +
+    '<div class="welcome-pick"><label style="font-size:13px;color:var(--muted);margin-right:8px">选择日期/时间</label><select id="welcomePick" class="welcome-select">' +
+    runs.map((x, i) => '<option value="' + i + '">' + escapeHtml(jobResultLabel(x)) + "</option>").join("") +
+    '</select></div><div class="welcome-result md" id="welcomeResult">' + renderMarkdown(renderJobResultMarkdown(runs[0])) + "</div>";
+  $("welcomePick").addEventListener("change", () => {
+    const idx = Number($("welcomePick").value) || 0;
+    $("welcomeResult").innerHTML = renderMarkdown(renderJobResultMarkdown(runs[idx] || runs[0]));
+  });
+}
+function jobResultLabel(x) {
+  let label = String(x.runDate || "—");
+  if (x.createdAt) {
+    const t = new Date(x.createdAt);
+    if (!isNaN(t.getTime())) label += " " + t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  if (x.status) label += " · " + (x.status === "success" ? "已生成" : x.status);
+  return label;
 }
 function statsTable(stats) {
   const kv = [["date", "日期"], ["pendingTasks", "进行中任务"], ["overdueTasks", "已到期"], ["analyses24h", "近24h分析"], ["vehiclePlans7d", "近7天方案"], ["customers", "客户总数"], ["analyses", "会话分析"], ["deals", "成交"], ["dealAmount", "成交额(元)"], ["taskRate", "任务完成率"], ["newCustomers", "新增客户"]];

@@ -167,6 +167,22 @@ function automationScheduleText(job: { scheduleType: string; intervalDays: numbe
 	return `每天 ${job.scheduleTime}`;
 }
 
+/** 根据 jobType 反查任务展示信息(内置或自定义),供历史结果列表使用。 */
+function automationJobMeta(db: DatabaseSync, tenantId: string, jobType: string): { kind: string; name: string; schedule: string } {
+	const builtin = [
+		{ jobType: "morning_digest", name: "每日晨报", schedule: "每天 08:00" },
+		{ jobType: "weekly_report", name: "每周周报", schedule: "每周一 09:00" },
+		{ jobType: "silent_wakeup", name: "沉默客户唤醒", schedule: "每天 08:30" },
+		{ jobType: "reflection", name: "反思改进", schedule: "每周一 09:30" },
+	].find((d) => d.jobType === jobType);
+	if (builtin) return { kind: "builtin", name: builtin.name, schedule: builtin.schedule };
+	if (jobType.startsWith("custom:")) {
+		const job = listAutomationJobs(db, tenantId).find((x) => x.id === jobType.slice("custom:".length));
+		if (job) return { kind: "custom", name: job.name, schedule: automationScheduleText(job) };
+	}
+	return { kind: "custom", name: jobType, schedule: "" };
+}
+
 /** 组装单个任务的最近一次结构化执行结果。 */
 function automationResult(jobType: string, kind: string, name: string, schedule: string, run: AutomationRun | undefined): Record<string, unknown> {
 	let detail: unknown = null;
@@ -183,6 +199,7 @@ function automationResult(jobType: string, kind: string, name: string, schedule:
 		name,
 		schedule,
 		runDate: run?.runDate ?? null,
+		createdAt: run?.createdAt ?? null,
 		status: run?.status ?? null,
 		summary: run?.summary ?? null,
 		detail,
@@ -1063,8 +1080,15 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		return { runs: listAutomationRuns(deps.db, request.tenantId, Number.isFinite(limit) ? limit : 50) };
 	});
 
-	// ── 定时任务结构化结果:内置 + 自定义任务最近一次执行结果(新会话默认按钮展示用) ──
-	app.get("/api/v1/automations/results", async (request) => {
+	// ── 定时任务结构化结果:jobType 过滤返回历史执行记录;缺省返回各任务最近一次结果(新会话默认按钮展示用) ──
+	app.get<{ Querystring: { jobType?: string; limit?: string } }>("/api/v1/automations/results", async (request) => {
+		const jobTypeFilter = request.query.jobType ? String(request.query.jobType).trim() : "";
+		const limit = Math.min(Math.max(Number.parseInt(request.query.limit ?? "50", 10) || 50, 1), 200);
+		if (jobTypeFilter) {
+			const runs = listAutomationRuns(deps.db, request.tenantId, limit).filter((r) => r.jobType === jobTypeFilter);
+			const meta = automationJobMeta(deps.db, request.tenantId, jobTypeFilter);
+			return { results: runs.map((r) => automationResult(r.jobType, meta.kind, meta.name, meta.schedule, r)) };
+		}
 		const runs = listAutomationRuns(deps.db, request.tenantId, 500);
 		const latest = new Map<string, AutomationRun>();
 		for (const r of runs) if (!latest.has(r.jobType)) latest.set(r.jobType, r); // runs 按 created_at 倒序,首个即最新
