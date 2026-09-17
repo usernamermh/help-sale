@@ -33,7 +33,7 @@ import { runCopilotAnalysis } from "./pi/copilot.js";
 import { replaceConversationMessages, listConversationMessages as listConvMessages, type ConversationMessageRow } from "./repositories/conversation-data.js";
 import { createDeal, getSalespersonById, getStore, getStoreManager, getStoreOverview, listDeals, listSales, listStores, upsertSalesperson, upsertStore } from "./repositories/store-ops.js";
 import { analysisRequestHash } from "./services/analysis-cache.js";
-import { runSalesAgent } from "./pi/agent-runtime.js";
+import { runSalesAgent, runSalesAgentWithPlan } from "./pi/agent-runtime.js";
 import { CAPABILITIES, getCapabilityDef } from "./pi/capabilities.js";
 import { createWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled } from "./repositories/agent-capabilities.js";
 import { queryConsoleLogs } from "./services/console-logs.js";
@@ -503,7 +503,7 @@ function resolveSalesperson(db: DatabaseSync, tenantId: string, sales: SalesCont
 		const write = (obj: unknown) => reply.raw.write(JSON.stringify(obj) + "\n");
 
 		try {
-			const result = await runSalesAgent(
+			const result = await runSalesAgentWithPlan(
 				{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
 				{ goal, history, onProgress: (e) => write(e) },
 			);

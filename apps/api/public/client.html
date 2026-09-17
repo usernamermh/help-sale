@@ -109,6 +109,13 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .agent-step-head { font-weight:600; color:#334155; }
 .agent-step-body { margin-top:2px; color:#64748b; white-space:pre-wrap; word-break:break-word; max-height:120px; overflow:auto; background:#f8fafc; border-radius:6px; padding:6px 8px; }
 
+.plan-card { margin:0 0 10px; border:1px solid #bfdbfe; background:#eff6ff; border-radius:10px; padding:10px 12px; font-size:12.5px; }
+.plan-head { font-weight:600; color:#1d4ed8; margin-bottom:6px; }
+.plan-steps { margin:0; padding-left:20px; }
+.plan-steps li { margin:3px 0; }
+.plan-tool { display:inline-block; background:#dbeafe; color:#1d4ed8; border-radius:6px; padding:0 7px; font-size:11px; margin-left:6px; }
+.plan-purpose { color:#64748b; font-size:11.5px; }
+.plan-verify { margin-top:6px; padding-top:6px; border-top:1px dashed #bfdbfe; color:#334155; font-size:12px; }
 .pager-bar { display:flex; align-items:center; gap:10px; justify-content:center; margin:8px 0 2px; font-size:12px; color:var(--muted); }
 .pager-btn { border:1px solid var(--line); background:#fff; color:var(--brand); border-radius:8px; padding:3px 12px; font-size:12px; font-family:inherit; cursor:pointer; transition:background .15s, border-color .15s; }
 .pager-btn:hover:not(:disabled) { background:#eff6ff; border-color:#bfdbfe; }
@@ -496,7 +503,11 @@ async function streamRun(goal, wait, steps) {
   }
 }
 function handleStreamEvent(evt, wait, steps) {
-  if (evt.type === "tool_start") {
+  if (evt.type === "plan") {
+    attachPlanCard(wait, evt.payload);
+  } else if (evt.type === "verified") {
+    attachVerification(wait, evt.payload);
+  } else if (evt.type === "tool_start") {
     const name = evt.label || evt.toolName || "工具";
     steps.push({ eventType: "tool_start", toolName: evt.toolName, label: name });
     if (PAGE_TOOLS.indexOf(evt.toolName) >= 0 && evt.payload && typeof evt.payload === "object") wait.pageArgs = evt.payload;

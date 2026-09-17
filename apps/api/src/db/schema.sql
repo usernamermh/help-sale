@@ -368,3 +368,18 @@ CREATE TABLE IF NOT EXISTS thread_summaries (
 	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	UNIQUE (tenant_id, thread_id)
 );
+
+-- v21:Agent 执行计划(规划-执行-验证循环)
+CREATE TABLE IF NOT EXISTS agent_plans (
+	id TEXT PRIMARY KEY,
+	run_id TEXT NOT NULL,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	goal TEXT NOT NULL,
+	plan_json TEXT NOT NULL,
+	status TEXT NOT NULL DEFAULT 'planned',
+	executed_tools_json TEXT,
+	verification_json TEXT,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_ap_run ON agent_plans (tenant_id, run_id);

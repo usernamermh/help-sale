@@ -16,6 +16,38 @@ export interface SalesAgentToolDeps {
 const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const TOOL_PATHS = TOOL_ROOTS.map((r) => path.join(repoRoot, r));
 
+
+/** 系统收口工具:执行计划(规划阶段输出,前端展示规划结果)。 */
+export function systemPlanTool(): AgentTool<any, any> {
+	return {
+		name: "emit_plan",
+		label: "输出执行计划",
+		description: "在开始执行前,输出本次任务的执行计划(步骤列表:做什么/拟调用工具/预期产出)。规划阶段只能调用本工具,不要执行其他工具;调用后规划阶段结束。",
+		parameters: Type.Object({
+			summary: Type.Optional(Type.String({ description: "规划总览一句话" })),
+			steps: Type.Array(
+				Type.Object({
+					step: Type.String({ description: "步骤说明" }),
+					tool: Type.String({ description: "拟调用工具名(无则填空)" }),
+					purpose: Type.String({ description: "预期产出/目的" }),
+				}),
+				{ minItems: 1 },
+			),
+		}),
+		async execute(_id, params: any) {
+			return {
+				content: [{ type: "text" as const, text: `规划完成:${(params.steps ?? []).length} 步` }],
+				details: { summary: params.summary, steps: params.steps ?? [] },
+				terminate: true,
+			};
+		},
+	};
+}
+
+/** 规划阶段工具集:仅 emit_plan(先规划不执行,避免规划阶段产生副作用)。 */
+export function createPlanTools(): Array<AgentTool<any, any>> {
+	return [systemPlanTool()];
+}
 /** 系统收口工具:最终答复(不随 tools 目录加载)。 */
 export function systemFinalTool(): AgentTool<any, any> {
 	return {

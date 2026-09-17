@@ -91,6 +91,7 @@ function fakeVoiceDigestStreamFn(): StreamFn {
 function fakeAgentNoEmitStreamFn(): StreamFn {
 	const fa = fauxProvider();
 	fa.setResponses([
+		fauxAssistantMessage([fauxToolCall("emit_plan", { steps: [{ step: "执行任务", tool: "", purpose: "完成任务" }] })]),
 		fauxAssistantMessage([fauxToolCall("customer_query", { view: "profile", customerKey: "陈静" })]),
 		fauxAssistantMessage([{ type: "text", text: "陈静的档案里暂时没有电话,建议先补录联系方式。" }]),
 	]);
@@ -100,6 +101,7 @@ function fakeAgentNoEmitStreamFn(): StreamFn {
 function fakeAgentTableRewriteStreamFn(): StreamFn {
 	const fa = fauxProvider();
 	fa.setResponses([
+		fauxAssistantMessage([fauxToolCall("emit_plan", { steps: [{ step: "执行任务", tool: "", purpose: "完成任务" }] })]),
 		fauxAssistantMessage([fauxToolCall("customer_query", { view: "list", limit: 50 })]),
 		fauxAssistantMessage([fauxToolCall("emit_final", { answer: "共 2 位客户,名单如下:\n\n| 客户标识姓名电话阶段 |\n| --- |\n| c_a 王五 13800000001 |", nextSteps: [] })]),
 	]);
@@ -109,6 +111,7 @@ function fakeAgentTableRewriteStreamFn(): StreamFn {
 function fakeAgentStreamFn(): StreamFn {
 	const fa = fauxProvider();
 	fa.setResponses([
+		fauxAssistantMessage([fauxToolCall("emit_plan", { steps: [{ step: "执行任务", tool: "", purpose: "完成任务" }] })]),
 		fauxAssistantMessage([
 			fauxToolCall("emit_final", {
 				answer: "参考方案:\n\n| 品牌 | 价格 |\n| --- | --- |\n| 汉EV | 25万 |\n| Model Y | 28万 |",

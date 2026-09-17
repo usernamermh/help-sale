@@ -3,10 +3,11 @@ import type { DatabaseSync } from "node:sqlite";
 import { Agent, type AgentMessage, type StreamFn } from "@earendil-works/pi-agent-core";
 import { createModelRegistry, type ModelRuntime } from "./models.js";
 import { getSalesAgentSystemPrompt } from "../prompts/sales-agent.js";
-import { createSalesAgentTools } from "./agent-tools.js";
+import { createPlanTools, createSalesAgentTools } from "./agent-tools.js";
 import { config } from "../env.js";
 import { createTimelineRecorder } from "../services/timeline.js";
 import { listCapabilityStates } from "../repositories/agent-capabilities.js";
+import { recordAgentPlan, updateAgentPlan } from "../repositories/agent-plans.js";
 import { toClientEvents } from "./events-adapter.js";
 import { toolLabel } from "./capabilities.js";
 import type { SessionStore } from "./sessions.js";
@@ -20,7 +21,7 @@ export interface SalesAgentDeps {
 }
 
 export interface AgentProgressEvent {
-	type: "tool_start" | "tool_end" | "tool_update";
+	type: "tool_start" | "tool_end" | "tool_update" | "plan" | "verified";
 	toolCallId?: string;
 	toolName?: string;
 	label?: string;
@@ -33,6 +34,27 @@ export interface SalesAgentInput {
 	conversationId?: string;
 	history?: AgentMessage[];
 	onProgress?: (event: AgentProgressEvent) => void;
+	plan?: PlanDetails; // 执行计划(注入【执行计划】上下文)
+	collectExecutedTools?: boolean; // 收集本轮实际调用工具(用于验证)
+}
+
+export interface PlanStep {
+	step: string;
+	tool: string;
+	purpose: string;
+}
+
+export interface PlanDetails {
+	summary?: string;
+	steps: PlanStep[];
+}
+
+export interface PlanVerification {
+	planned: number;
+	executed: string[];
+	coveredTools: string[];
+	missingTools: string[];
+	summary: string;
 }
 
 export interface AgentFinal {
@@ -92,6 +114,9 @@ export interface SalesAgentResult {
 	runId: string;
 	final?: AgentFinal;
 	messages: unknown[];
+	plan?: PlanDetails;
+	verification?: PlanVerification;
+	executedTools?: string[];
 }
 
 export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput): Promise<SalesAgentResult> {
@@ -104,10 +129,13 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 	const model = runtime.models.getModel(config.modelProvider, config.modelId);
 	if (!model) throw new Error(`model not found: ${config.modelProvider}/${config.modelId}`);
 
-	const systemPrompt = getSalesAgentSystemPrompt({
+	const basePrompt = getSalesAgentSystemPrompt({
 		companyName: config.companyName,
 		teamName: config.teamName,
 	});
+	const systemPrompt = input.plan && input.plan.steps?.length
+		? `${basePrompt}\n\n【执行计划】按以下计划执行,可依据实际结果灵活调整顺序,但不要遗漏关键步骤:\n${input.plan.steps.map((s, i) => `${i + 1}. ${s.step}${s.tool ? ` (工具:${s.tool})` : ""} - ${s.purpose}`).join("\n")}`
+		: basePrompt;
 	const capabilityStates = listCapabilityStates(db, tenantId);
 	const disabled = new Set(capabilityStates.filter((c) => !c.enabled).map((c) => c.name));
 	const tools = (await createSalesAgentTools({ db, tenantId, store })).filter(
@@ -127,9 +155,15 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 		initialState: { systemPrompt, tools: tools as never, model, messages: stateMessages },
 	});
 
+	const executedTools: string[] = [];
 	const recorder = createTimelineRecorder(db, { tenantId, conversationId: runId });
 	agent.subscribe((event) => {
 		recorder.listen(event);
+		if (input.collectExecutedTools) {
+			for (const ce of toClientEvents(event)) {
+				if (ce.type === "tool_start" && ce.toolName && !executedTools.includes(ce.toolName)) executedTools.push(ce.toolName);
+			}
+		}
 		if (input.onProgress) {
 			for (const ce of toClientEvents(event)) {
 				if (ce.type === "tool_start" || ce.type === "tool_end" || ce.type === "tool_update") {
@@ -176,5 +210,64 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 
 	// 表格保真:模型若未原样呈现工具表格(转述/重排),在最终答复末尾追加原始表格
 	if (final?.answer) final.answer = appendRawTables(final.answer, messages);
-	return { runId, final, messages };
+	return { runId, final, messages, executedTools };
+}
+
+/** 规划阶段:只用 emit_plan,输出执行计划(不执行任何工具)。 */
+export async function runPlanPhase(deps: SalesAgentDeps, input: { goal: string }): Promise<PlanDetails> {
+	const runtime = deps.runtime ?? createModelRegistry();
+	const streamFn = deps.streamFn ?? runtime.streamFn;
+	const model = runtime.models.getModel(config.modelProvider, config.modelId);
+	if (!model) throw new Error(`model not found: ${config.modelProvider}/${config.modelId}`);
+
+	const systemPrompt = `你是「销售军师」的执行规划器。请为下面的任务输出一份执行计划。
+规则:
+- 只调用 emit_plan 输出计划,不要执行任何其他工具;
+- 步骤控制在 2-8 步,每步说明:做什么(step)、拟调用工具(tool,无则填空)、预期产出(purpose);
+- 复杂查询/多数据源任务要拆步骤,单步简单查询可只列 1-2 步。
+任务:${input.goal}`.trim();
+
+	const agent = new Agent({
+		sessionId: `plan-${randomUUID()}`,
+		streamFn,
+		initialState: { systemPrompt, tools: createPlanTools() as never, model, messages: [] },
+	});
+	await agent.prompt(input.goal);
+
+	for (const message of agent.state.messages as Array<{ role?: string; toolName?: string; details?: unknown }>) {
+		if (message.role === "toolResult" && message.toolName === "emit_plan" && message.details) {
+			const d = message.details as PlanDetails;
+			if (Array.isArray(d.steps) && d.steps.length) return { summary: d.summary, steps: d.steps };
+		}
+	}
+	throw new Error("规划阶段未产出计划");
+}
+
+/** 验证:对照规划步骤拟用工具与实际调用工具,输出覆盖/缺失摘要。 */
+export function verifyPlan(plan: PlanDetails, executedTools: string[]): PlanVerification {
+	const planned = (plan.steps ?? []).map((s) => s.tool).filter(Boolean);
+	const covered = planned.filter((t) => executedTools.includes(t));
+	const missing = planned.filter((t) => !executedTools.includes(t));
+	const summary =
+		missing.length === 0
+			? `计划 ${planned.length} 个工具步骤全部执行,验证通过。`
+			: `计划 ${planned.length} 个工具步骤,已执行 ${covered.length} 个,未执行 ${missing.join("、")}(可能因实际数据无需调用)。`;
+	return { planned: planned.length, executed: [...new Set(executedTools)], coveredTools: covered, missingTools: missing, summary };
+}
+
+/** 规划-执行-验证(P-E-V):先规划(落库+plan 事件),再按计划执行,最后验证并回填。 */
+export async function runSalesAgentWithPlan(deps: SalesAgentDeps, input: SalesAgentInput): Promise<SalesAgentResult> {
+	const runId = randomUUID();
+	const plan = await runPlanPhase(deps, { goal: input.goal });
+	recordAgentPlan(deps.db, { runId, tenantId: deps.tenantId, goal: input.goal, plan });
+	if (input.onProgress) input.onProgress({ type: "plan", toolName: "emit_plan", label: "执行计划", payload: plan });
+
+	const result = await runSalesAgent(deps, { ...input, plan, collectExecutedTools: true });
+	updateAgentPlan(deps.db, deps.tenantId, runId, { status: "executed", executedTools: result.executedTools });
+
+	const verification = verifyPlan(plan, result.executedTools ?? []);
+	updateAgentPlan(deps.db, deps.tenantId, runId, { status: "verified", verification });
+	if (input.onProgress) input.onProgress({ type: "verified", toolName: "verify", label: "执行验证", payload: verification });
+
+	return { ...result, runId, plan, verification };
 }
