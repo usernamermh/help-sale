@@ -256,14 +256,21 @@ function showTrPanel() { $("trPanel").style.display = "flex"; $("headerTrBtn").c
   } catch {}
   return escapeHtml(text);
 }
+function loadScript(srcs, onLoaded) {
+  if (!srcs.length) { if (onLoaded) onLoaded(); return; }
+  const s = document.createElement("script");
+  s.src = srcs[0];
+  s.onload = () => { if (onLoaded) onLoaded(); };
+  s.onerror = () => loadScript(srcs.slice(1), onLoaded);
+  document.head.appendChild(s);
+}
 function ensureMermaid() {
   if (window.mermaid) return Promise.resolve();
   return new Promise((resolve) => {
-    const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js";
-    s.onload = () => { try { window.mermaid.initialize({ startOnLoad: false, theme: "base", securityLevel: "strict" }); } catch {} resolve(); };
-    s.onerror = () => resolve();
-    document.head.appendChild(s);
+    loadScript(["/vendor/mermaid.min.js", "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"], () => {
+      try { if (window.mermaid) window.mermaid.initialize({ startOnLoad: false, theme: "base", securityLevel: "strict" }); } catch {}
+      resolve();
+    });
   });
 }
 async function renderMermaidBlocks(root) {
@@ -287,11 +294,7 @@ async function renderMermaidBlocks(root) {
 function ensureECharts() {
   if (window.echarts) return Promise.resolve();
   return new Promise((resolve) => {
-    const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js";
-    s.onload = () => resolve();
-    s.onerror = () => resolve();
-    document.head.appendChild(s);
+    loadScript(["/vendor/echarts.min.js", "https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"], () => resolve());
   });
 }
 async function renderEChartsBlocks(root) {
