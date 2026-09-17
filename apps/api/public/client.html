@@ -297,6 +297,33 @@ function ensureECharts() {
     loadScript(["/vendor/echarts.min.js", "https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"], () => resolve());
   });
 }
+function renderChartInto(wrap, json) {
+  let opt = null;
+  try { opt = JSON.parse(json); } catch {}
+  if (window.echarts && opt) {
+    try { const chart = window.echarts.init(wrap); chart.setOption(opt); return; } catch {}
+  }
+  if (opt) { renderFallbackChart(wrap, opt); return; }
+  wrap.innerHTML = '<pre style="margin:0;font-size:12px;color:#64748b;white-space:pre-wrap;word-break:break-all">' + escapeHtml(json) + "</pre>";
+}
+function renderAssistantContent(text, body) {
+  body.innerHTML = "";
+  const segments = String(text || "").split(/(```echarts\s*\n?[\s\S]*?```)/g);
+  for (const seg of segments) {
+    if (!seg) continue;
+    const m = seg.match(/^```echarts\s*\n?([\s\S]*?)```$/);
+    if (m) {
+      const wrap = document.createElement("div"); wrap.className = "echarts-render";
+      body.appendChild(wrap);
+      renderChartInto(wrap, m[1]);
+    } else {
+      const md = document.createElement("div"); md.className = "md";
+      md.innerHTML = renderMarkdown(seg);
+      body.appendChild(md);
+    }
+  }
+  renderMermaidBlocks(body);
+}
 function renderFallbackChart(wrap, opt) {
   const series = (opt.series || [])[0] || {};
   const cats = (opt.xAxis && Array.isArray(opt.xAxis.data)) ? opt.xAxis.data : [];
@@ -521,7 +548,7 @@ function appendAgentMsg(role, text) {
   const wel = $("welcome"); if (wel) wel.remove();
   const div = document.createElement("div");
   div.className = "agent-msg " + (role === "user" ? "agent-user" : "agent-assist");
-  const body = document.createElement("div"); body.className = "agent-body"; if (role === "assistant") { body.innerHTML = '<div class="md">' + renderMarkdown(text) + '</div>'; renderMermaidBlocks(body); if (typeof renderEChartsBlocks === "function") renderEChartsBlocks(body); } else { body.textContent = text; }
+  const body = document.createElement("div"); body.className = "agent-body"; if (role === "assistant") { renderAssistantContent(text, body); } else { body.textContent = text; }
   div.appendChild(body);
   const step = document.createElement("div"); step.style.display = "none";
   const meta = document.createElement("div"); meta.className = "agent-meta";
@@ -682,7 +709,7 @@ function handleStreamEvent(evt, wait, steps) {
   } else if (evt.type === "final") {
     deltaBuf = "";
     const answer = evt.final && evt.final.answer ? evt.final.answer : "（未生成答复）";
-    wait.body.innerHTML = '<div class="md">' + renderMarkdown(answer) + '</div>'; renderMermaidBlocks(wait.body); if (typeof renderEChartsBlocks === "function") renderEChartsBlocks(wait.body);
+    renderAssistantContent(answer, wait.body);
     wait.meta.textContent = (evt.final && evt.final.nextSteps && evt.final.nextSteps.length) ? ("下一步：" + evt.final.nextSteps.join(" · ")) : "";
     if (wait.pager) attachPager(wait);
     $("runMeta").textContent = "本轮任务完成 · " + runTaskCount() + " 项";
