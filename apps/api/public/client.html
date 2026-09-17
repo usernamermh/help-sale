@@ -297,11 +297,24 @@ function ensureECharts() {
     loadScript(["/vendor/echarts.min.js", "https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"], () => resolve());
   });
 }
+function renderFallbackChart(wrap, opt) {
+  const series = (opt.series || [])[0] || {};
+  const cats = (opt.xAxis && Array.isArray(opt.xAxis.data)) ? opt.xAxis.data : [];
+  const data = Array.isArray(series.data) ? series.data.map(Number) : [];
+  const title = opt.title && opt.title.text ? String(opt.title.text) : "";
+  const max = Math.max(1, ...data);
+  const rows = cats.map((cat, i) => {
+    const v = data[i] || 0;
+    const pct = Math.round((v / max) * 100);
+    return '<div style="display:flex;align-items:center;gap:8px;margin:4px 0"><div style="width:96px;text-align:right;font-size:12px;color:#334155;flex-shrink:0">' + escapeHtml(String(cat)) + '</div><div style="background:#2563eb;height:18px;border-radius:4px;width:' + pct + '%"></div><div style="font-size:12px;color:#64748b;flex-shrink:0">' + v + '</div></div>';
+  }).join("");
+  wrap.innerHTML = '<div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:6px">' + escapeHtml(title) + '</div><div>' + rows + '</div>';
+}
+
 async function renderEChartsBlocks(root) {
   const codes = Array.from(root.querySelectorAll("code.language-echarts"));
   if (!codes.length) return;
   await ensureECharts();
-  if (!window.echarts) return;
   for (const code of codes) {
     try {
       const opt = JSON.parse(code.textContent || "{}");
@@ -309,8 +322,12 @@ async function renderEChartsBlocks(root) {
       const wrap = document.createElement("div"); wrap.className = "echarts-render";
       const pre = code.closest("pre");
       if (pre) pre.replaceWith(wrap); else code.replaceWith(wrap);
-      const chart = window.echarts.init(wrap);
-      chart.setOption(opt);
+      if (window.echarts) {
+        const chart = window.echarts.init(wrap);
+        chart.setOption(opt);
+      } else {
+        renderFallbackChart(wrap, opt);
+      }
     } catch {}
   }
 }}async function api(path, opt) {
