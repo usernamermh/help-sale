@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
   根据 help-sale.config.yaml 配置,停止监听 server.port 的老服务进程树,并后台重启 npm run dev。
 
@@ -32,11 +32,15 @@ $apiRoot = Join-Path $repoRoot 'apps\api'
 function Read-Config {
     if (-not (Test-Path $configPath)) { throw "配置文件不存在: $configPath" }
     Push-Location $repoRoot
+    $tmpJson = Join-Path $env:TEMP ("hs-config-" + [guid]::NewGuid().ToString('N') + '.json')
     try {
-        $json = & node -e "const fs=require('fs');const y=require('yaml');console.log(JSON.stringify(y.parse(fs.readFileSync(process.argv[1],'utf8'))))" $configPath
+        # node 把 YAML 转 JSON 写入临时文件(UTF-8),PowerShell 显式按 UTF-8 读取,避免管道编码导致中文乱码/JSON 截断
+        & node -e "const fs=require('fs');const y=require('yaml');fs.writeFileSync(process.argv[2], JSON.stringify(y.parse(fs.readFileSync(process.argv[1],'utf8'))),'utf8')" $configPath $tmpJson
         if ($LASTEXITCODE -ne 0) { throw '无法解析 help-sale.config.yaml(yaml 依赖缺失?)' }
+        $json = [System.IO.File]::ReadAllText($tmpJson, [System.Text.Encoding]::UTF8)
         return $json | ConvertFrom-Json
     } finally {
+        if (Test-Path $tmpJson) { [System.IO.File]::Delete($tmpJson) }
         Pop-Location
     }
 }
