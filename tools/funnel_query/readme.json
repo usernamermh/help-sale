@@ -1,9 +1,34 @@
 {
   "name": "funnel_query",
   "label": "销售漏斗",
-  "description": "查看销售漏斗:view=overview 返回各阶段客户数量/占比/平均停留、关键转化率与战败原因分布;view=silent 返回近 N 天未跟进客户名单。",
+  "description": "销售漏斗分析:查看各阶段客户数量、占比、平均停留天数与关键转化率,以及战败原因分布,快速定位客户在哪个环节流失;也可查看近 N 天未跟进的沉默客户名单,方便安排回访。",
   "category": "销售流程",
-  "parameters": { "type": "object", "properties": { "view": { "type": "string", "enum": ["overview", "silent"], "default": "overview", "description": "查询类型" }, "storeId": { "type": "string", "description": "门店 ID,缺省全门店" }, "days": { "type": "number", "default": 7, "maximum": 90, "description": "沉默客户窗口天数(silent 用)" } } },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "view": {
+        "type": "string",
+        "enum": [
+          "overview",
+          "silent"
+        ],
+        "default": "overview",
+        "description": "查询类型"
+      },
+      "storeId": {
+        "type": "string",
+        "description": "门店 ID,缺省全门店"
+      },
+      "days": {
+        "type": "number",
+        "default": 7,
+        "maximum": 90,
+        "description": "沉默客户窗口天数(silent 用)"
+      }
+    }
+  },
   "entry": "main.ts",
-  "function_list": ["main.execute"]
+  "function_list": [
+    "main.execute"
+  ]
 }
