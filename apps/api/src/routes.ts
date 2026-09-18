@@ -33,7 +33,7 @@ import { runCopilotAnalysis } from "./pi/copilot.js";
 import { replaceConversationMessages, listConversationMessages as listConvMessages, type ConversationMessageRow } from "./repositories/conversation-data.js";
 import { createDeal, getSalespersonById, getStore, getStoreManager, getStoreOverview, listDeals, listSales, listStores, upsertSalesperson, upsertStore } from "./repositories/store-ops.js";
 import { analysisRequestHash } from "./services/analysis-cache.js";
-import { runSalesAgent, runSalesAgentWithPlan } from "./pi/agent-runtime.js";
+import { runSalesAgent, runSalesAgentWithPlan, stripChartsForHistory } from "./pi/agent-runtime.js";
 import { CAPABILITIES, getCapabilityDef } from "./pi/capabilities.js";
 import { createWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled } from "./repositories/agent-capabilities.js";
 import { queryConsoleLogs } from "./services/console-logs.js";
@@ -497,7 +497,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		const goal = request.body?.goal;
 		if (!goal || !goal.trim()) return reply.code(400).send({ error: "goal is required" });
 		const prior = listThreadMessages(deps.db, request.tenantId, thread.id);
-		let history = prior.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role, content: m.content })) as AgentMessage[];
+		let history = prior.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role, content: stripChartsForHistory(m.content) })) as AgentMessage[];
 		// 上下文压缩:history 超过 30 条时,早期对话压缩为【历史摘要】注入,保留最近 30 条原文(中期记忆)
 		if (history.length > 30) {
 			const compressed = compressHistory(history as Array<{ role: string; content: unknown }>, { maxMessages: 30 });
@@ -539,7 +539,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		const goal = request.body?.goal;
 		if (!goal || !goal.trim()) return reply.code(400).send({ error: "goal is required" });
 		const prior = listThreadMessages(deps.db, request.tenantId, thread.id);
-		let history = prior.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role, content: m.content })) as AgentMessage[];
+		let history = prior.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role, content: stripChartsForHistory(m.content) })) as AgentMessage[];
 		// 上下文压缩:history 超过 30 条时,早期对话压缩为【历史摘要】注入,保留最近 30 条原文(中期记忆)
 		if (history.length > 30) {
 			const compressed = compressHistory(history as Array<{ role: string; content: unknown }>, { maxMessages: 30 });

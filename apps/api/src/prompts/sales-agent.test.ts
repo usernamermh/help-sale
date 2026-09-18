@@ -13,6 +13,12 @@ describe("sales-agent prompt", () => {
 		expect(prompt).toContain("## 工具经验");
 	});
 
+	it("话术命中类任务引导使用 playbook_check", () => {
+		const prompt = getSalesAgentSystemPrompt();
+		expect(prompt).toContain("playbook_check(话术命中检测)");
+		expect(prompt).toContain("knowledge_candidate");
+	});
+
 	it("包含图表美观规范", () => {
 		const prompt = getSalesAgentSystemPrompt();
 		expect(prompt).toContain("图表规范");

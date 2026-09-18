@@ -5,7 +5,7 @@ import { fauxProvider, fauxToolCall, fauxAssistantMessage } from "@earendil-work
 import { openDatabase } from "../db/database.js";
 import { requireTenant } from "../repositories/customers.js";
 import { getAgentPlanByRun } from "../repositories/agent-plans.js";
-import { runPlanPhase, runSalesAgent, stripMarkdownTables, verifyPlan, runSalesAgentWithPlan } from "./agent-runtime.js";
+import { runPlanPhase, runSalesAgent, stripChartsForHistory, stripMarkdownTables, verifyPlan, runSalesAgentWithPlan } from "./agent-runtime.js";
 import { openSessionStore, tmpDataDir, cleanupDataDir, type SessionStore } from "./sessions.js";
 
 let db: DatabaseSync;
@@ -34,6 +34,15 @@ describe("表格防幻觉", () => {
 		const fenced = stripMarkdownTables("```\n| a | b |\n```\n保留");
 		expect(fenced).toContain("| a | b |");
 		expect(fenced).toContain("保留");
+	});
+
+	it("stripChartsForHistory:历史中的 echarts 块替换为占位,模型不再看到图表 JSON", () => {
+		const out = stripChartsForHistory("结论\n```echarts\n{\"a\":1}\n```\n结尾");
+		expect(out).toContain("[图表]");
+		expect(out).not.toContain("echarts");
+		const arr = stripChartsForHistory([{ type: "text", text: "x\n```echarts\n{1}\n```\n" }]);
+		expect(JSON.stringify(arr)).toContain("[图表]");
+		expect(JSON.stringify(arr)).not.toContain("echarts");
 	});
 
 	it("最终答复剔除模型自造表格(无工具表格时也不残留)", async () => {

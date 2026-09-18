@@ -86,6 +86,19 @@ function collectRawTables(messages: unknown[]): string[] {
 }
 
 /** 剔除 Markdown 表格:移除代码块外所有以 | 开头的行(模型自造/转述的表格一律不允许出现在答复里)。 */
+/** 给模型构造历史时清理图表代码块:把 ```echarts ... ``` 替换为 [图表] 占位,避免模型复述/转义历史图表 JSON。 */
+export function stripChartsForHistory(content: unknown): unknown {
+	const strip = (t: string) => t.replace(/```echarts\s*\n?[\s\S]*?```/g, "[图表]");
+	if (typeof content === "string") return strip(content);
+	if (Array.isArray(content)) {
+		return content.map((item) => {
+			const c0 = item as { type?: string; text?: string };
+			return c0 && typeof c0.text === "string" ? { ...c0, text: strip(c0.text) } : item;
+		});
+	}
+	return content;
+}
+
 export function stripMarkdownTables(text: string): string {
 	const lines = text.split("\n");
 	const out: string[] = [];
@@ -261,10 +274,13 @@ export async function runPlanPhase(deps: SalesAgentDeps, input: { goal: string }
 	const model = runtime.models.getModel(config.modelProvider, config.modelId);
 	if (!model) throw new Error(`model not found: ${config.modelProvider}/${config.modelId}`);
 
+	const toolNames = (await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store })).map((t) => t.name);
 	const systemPrompt = `你是「销售军师」的执行规划器。请为下面的任务输出一份执行计划。
+可用工具(规划时只能从这些真实工具名中选取):${toolNames.join("、")}
 规则:
-- 只调用 emit_plan 输出计划,不要执行任何其他工具;
-- 步骤控制在 2-8 步,每步说明:做什么(step)、拟调用工具(tool,无则填空)、预期产出(purpose);
+- 只调用 emit_plan 输出计划,规划阶段不执行其他工具;
+- 步骤控制在 2-8 步,每步说明:做什么(step)、拟调用工具(tool)、预期产出(purpose);
+- 每个步骤的 tool 请从「可用工具」中选取真实存在的工具名;若没有合适工具,该步骤的 tool 留空;
 - 复杂查询/多数据源任务要拆步骤,单步简单查询可只列 1-2 步。
 任务:${input.goal}`.trim();
 

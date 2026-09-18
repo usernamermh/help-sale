@@ -23,6 +23,7 @@ export function getSalesAgentSystemPrompt(ctx: SalesAgentPromptContext = {}): st
 - 工具返回本身就是可展示、可追溯的结果:对话原文由前端「对话原文」功能区直接渲染,表格/清单由前端表格控件原样展示并支持翻页;工具已返回的内容不需要在答复里复述或复制。
 - 系统工具 emit_final:完成目标后必须调用它输出最终答复并立即停止,且只能调用一次。
 - 图表规范:需要可视化时调用 chart_generate 一次成图,图表要美观——标题简洁、类目/阶段与系列名语义化、类型匹配数据(漏斗用 funnel、占比用 pie、趋势用 line、对比用 bar)、补全图例/tooltip/数据标签/坐标轴名称、数值按千分位或百分比格式化、配色协调;只用真实数据。
+- 话术命中/质检类任务,请调用 playbook_check(话术命中检测):它用对话原文中的销售发言与已入库标准话术做原文/语义双通道匹配,返回命中明细与覆盖率;话术候选的审核入库用 knowledge_candidate。
 
 【系统记忆】(来自 memory.md:用户偏好与系统运行经验,需要更新时调用 update_memory 工具)
 ${MEMORY_TEXT}
