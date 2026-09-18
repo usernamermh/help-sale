@@ -22,6 +22,8 @@ export interface ExternalToolInfo {
 	label?: string;
 	/** 可选:readme.json 声明的参数 JSON Schema(缺省时从 main.ts 的 schema 导出取) */
 	parameters?: Record<string, unknown>;
+	/** 可选:readme.json 声明 hidden=true 时不在能力清单展示(agent 仍可调用) */
+	hidden?: boolean;
 	/** 实现入口:优先 readme.json entry,否则 main.ts */
 	entry?: string;
 }
@@ -44,7 +46,7 @@ export function scanExternalTools(roots: string[]): ExternalToolInfo[] {
 			const dirPath = path.join(root, entry.name);
 			const readmePath = path.join(dirPath, "readme.json");
 			if (!existsSync(readmePath)) continue;
-			let meta: { name?: string; description?: string; function_list?: string[]; category?: string; label?: string; parameters?: unknown; entry?: string };
+			let meta: { name?: string; description?: string; function_list?: string[]; category?: string; label?: string; parameters?: unknown; entry?: string; hidden?: boolean };
 			try {
 				meta = JSON.parse(readFileSync(readmePath, "utf8")) as typeof meta;
 			} catch {
@@ -64,6 +66,7 @@ export function scanExternalTools(roots: string[]): ExternalToolInfo[] {
 				label: typeof meta.label === "string" ? meta.label : undefined,
 				parameters: meta.parameters && typeof meta.parameters === "object" ? (meta.parameters as Record<string, unknown>) : undefined,
 				entry: typeof meta.entry === "string" ? meta.entry : undefined,
+				hidden: meta.hidden === true,
 			});
 		}
 	}

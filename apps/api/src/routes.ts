@@ -380,7 +380,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	app.get("/api/v1/agent/capabilities", async (request) => {
 		const states = new Map(listCapabilityStates(deps.db, request.tenantId).map((s) => [s.name, s.enabled]));
 		return {
-			capabilities: CAPABILITIES.map((c) => ({
+			capabilities: CAPABILITIES.filter((c) => !c.hidden).map((c) => ({
 				name: c.name,
 				label: c.label,
 				description: c.description,

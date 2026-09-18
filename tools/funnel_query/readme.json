@@ -30,5 +30,6 @@
   "entry": "main.ts",
   "function_list": [
     "main.execute"
-  ]
+  ],
+  "hidden": true
 }
