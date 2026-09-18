@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { Agent, type StreamFn } from "@earendil-works/pi-agent-core";
 import type { Model } from "@earendil-works/pi-ai";
-import { createModelRegistry, type ModelRuntime } from "./models.js";
+import { createModelRegistry, requiredModel, type ModelRuntime } from "./models.js";
 import { getCopilotSystemPrompt } from "../prompts/sales-copilot.js";
 import { createCopilotTools, type AnalysisDetails } from "./tools.js";
 import { config } from "../env.js";
@@ -49,8 +49,7 @@ export async function runCopilotAnalysis(deps: CopilotDeps, input: RunAnalysisIn
 	await appendUserMessage(session, text);
 
 
-	const model = runtime.models.getModel(config.modelProvider, config.modelId);
-	if (!model) throw new Error(`model not found: ${config.modelProvider}/${config.modelId}`);
+	const model = requiredModel(runtime);
 
 	const tools = await createCopilotTools({ db, tenantId });
 	const systemPrompt = getCopilotSystemPrompt({ companyName: config.companyName, teamName: config.teamName });

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { Agent, type AgentMessage, type StreamFn } from "@earendil-works/pi-agent-core";
-import { createModelRegistry, type ModelRuntime } from "./models.js";
+import { createModelRegistry, requiredModel, type ModelRuntime } from "./models.js";
 import { getSalesAgentSystemPrompt } from "../prompts/sales-agent.js";
 import { createPlanTools, createSalesAgentTools } from "./agent-tools.js";
 import { config } from "../env.js";
@@ -178,8 +178,7 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 	const runtime = deps.runtime ?? createModelRegistry();
 	const streamFn = deps.streamFn ?? runtime.streamFn;
 
-	const model = runtime.models.getModel(config.modelProvider, config.modelId);
-	if (!model) throw new Error(`model not found: ${config.modelProvider}/${config.modelId}`);
+	const model = requiredModel(runtime);
 
 	const basePrompt = getSalesAgentSystemPrompt({
 		companyName: config.companyName,
@@ -271,8 +270,7 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 export async function runPlanPhase(deps: SalesAgentDeps, input: { goal: string }): Promise<PlanDetails> {
 	const runtime = deps.runtime ?? createModelRegistry();
 	const streamFn = deps.streamFn ?? runtime.streamFn;
-	const model = runtime.models.getModel(config.modelProvider, config.modelId);
-	if (!model) throw new Error(`model not found: ${config.modelProvider}/${config.modelId}`);
+	const model = requiredModel(runtime);
 
 	const toolNames = (await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store })).map((t) => t.name);
 	const systemPrompt = `你是「销售军师」的执行规划器。请为下面的任务输出一份执行计划。

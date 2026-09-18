@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import { config } from "../env.js";
-import { createModelRegistry, type ModelRuntime } from "./models.js";
+import { createModelRegistry, requiredModel, type ModelRuntime } from "./models.js";
 import { getVehicleAdvisorPrompt } from "../prompts/vehicle-advisor.js";
 import { createVehicleTools, type VehiclePlanDetails } from "./vehicle-tools.js";
 import { appendUserMessage, type SessionStore } from "./sessions.js";
@@ -32,8 +32,7 @@ export async function runVehicleMatch(deps: VehicleAdvisorDeps, input: VehicleMa
 	const runtime = deps.runtime ?? createModelRegistry();
 	const streamFn = deps.streamFn ?? runtime.streamFn;
 
-	const model = runtime.models.getModel(config.modelProvider, config.modelId);
-	if (!model) throw new Error(`model not found: ${config.modelProvider}/${config.modelId}`);
+	const model = requiredModel(runtime);
 
 	const { session, conversationId } = await store.createConversation();
 	await appendUserMessage(session, input.requirementsText);

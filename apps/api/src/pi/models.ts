@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createModels } from "@earendil-works/pi-ai";
-import type { Provider } from "@earendil-works/pi-ai";
+import type { Model, Provider } from "@earendil-works/pi-ai";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai";
 import { deepseekProvider } from "@earendil-works/pi-ai/providers/deepseek";
@@ -18,6 +18,13 @@ export interface ModelRuntime {
 }
 
 /** 模型运行时:配置统一来自全局 config 实例,不经过入参传递。 */
+/** 获取配置对应的模型实例;配置缺失/不存在时在源头抛错(fail-fast),避免 undefined 下沉到运行时。 */
+export function requiredModel(runtime: ModelRuntime): Model<any> {
+	const model = runtime.models.getModel(appConfig.modelProvider, appConfig.modelId);
+	if (!model) throw new Error(`model not found: ${appConfig.modelProvider}/${appConfig.modelId}`);
+	return model;
+}
+
 export function createModelRegistry(): ModelRuntime {
 	const providers: Record<string, Provider> = {
 		deepseek: deepseekProvider(),
