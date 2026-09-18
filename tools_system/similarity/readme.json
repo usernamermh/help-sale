@@ -1,0 +1,43 @@
+{
+  "name": "similarity",
+  "label": "语义相似度匹配",
+  "description": "计算文本之间的语义相似度:对每条 queries 在 targets 中取 top-k 最相似结果并给出余弦得分(字符 n-gram 向量,无外部依赖),用于判断发言是否提到了某类标准话术/要点。",
+  "category": "文本算法",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "queries",
+      "targets"
+    ],
+    "properties": {
+      "queries": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "待匹配的查询文本(如销售说的每句话)"
+      },
+      "targets": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "候选目标文本(如标准话术库)"
+      },
+      "topK": {
+        "type": "number",
+        "default": 3,
+        "description": "每条查询返回最相似的条数"
+      },
+      "threshold": {
+        "type": "number",
+        "default": 0,
+        "description": "相似度阈值(0-1),低于阈值不返回"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ]
+}

@@ -4,6 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { loadExternalAgentTools, buildExternalToolsText, scanExternalTools } from "./external-tools.js";
 import { repoRoot } from "../../../../tools_system/_shared/file-utils.js";
+import { openDatabase } from "../db/database.js";
+import { requireTenant } from "../repositories/customers.js";
 
 let root: string;
 const dirs: string[] = [];
@@ -177,6 +179,44 @@ describe("tools_system 基础工具", () => {
 			delete process.env.SUBAGENTS_DIR;
 		}
 	});
+
+describe("相似度与话术命中质检", () => {
+	it("similarity:对每条查询返回 top-k 余弦相似度命中", async () => {
+		const tools = await loadAll();
+		const tool = tools.find((t) => t.name === "similarity")!;
+		const r = (await tool.execute("s1", { queries: ["推荐汉EV冠军版"], targets: ["汉EV 冠军版性价比高,适合家用", "Model Y 空间大", "推荐一下汉EV"], topK: 2, threshold: 0 })) as { details: { matches: Array<{ hits: Array<{ score: number; text: string }> }> } };
+		expect(r.details.matches.length).toBe(1);
+		expect(r.details.matches[0].hits.length).toBeGreaterThanOrEqual(1);
+		expect(r.details.matches[0].hits[0].score).toBeGreaterThan(0);
+		expect(r.details.matches[0].hits[0].text).toContain("汉EV");
+	});
+
+	it("playbook_check:对话销售发言命中话术库(原文命中 + 统计/表格)", async () => {
+		const db = openDatabase(":memory:");
+		requireTenant(db, "t1", "演示租户");
+		try {
+			db.prepare("INSERT INTO knowledge_documents (id, tenant_id, title, source_type, content, category) VALUES (?,?,?,?,?,?)").run("doc1", "t1", "汉EV话术", "text", "汉EV 冠军版性价比很高,适合家用代步。", "话术");
+			db.prepare("INSERT INTO knowledge_chunks (id, tenant_id, document_id, chunk_index, content) VALUES (?,?,?,?,?)").run("chunk1", "t1", "doc1", 0, "汉EV 冠军版性价比很高,适合家用代步。");
+			const cust = db.prepare("INSERT INTO customers (id, tenant_id, key, name) VALUES (?,?,?,?)").run("cu1", "t1", "c1", "客户甲");
+			const custId = "cu1";
+			db.prepare("INSERT INTO conversations (id, tenant_id, customer_id, sales_name, message_count, updated_at) VALUES (?,?,?,?,?,?)").run("cv1", "t1", custId, "李销售", 2, new Date().toISOString());
+			db.prepare("INSERT INTO conversation_messages (id, tenant_id, conversation_id, seq, speaker_role, speaker_name, content, spoken_at) VALUES (?,?,?,?,?,?,?,?)").run("m1", "t1", "cv1", 1, "sales", "李销售", "汉EV 冠军版性价比很高,适合家用代步。", new Date().toISOString());
+			db.prepare("INSERT INTO conversation_messages (id, tenant_id, conversation_id, seq, speaker_role, speaker_name, content, spoken_at) VALUES (?,?,?,?,?,?,?,?)").run("m2", "t1", "cv1", 2, "customer", "客户甲", "好的我考虑一下", new Date().toISOString());
+
+			const tools = await loadExternalAgentTools([path.join(repoRoot(), "tools")], { db, tenantId: "t1" } as never);
+			const tool = tools.find((t) => t.name === "playbook_check")!;
+			const r = (await tool.execute("p1", { salesName: "李销售", days: 30, limit: 10 })) as { content: Array<{ text: string }>; details: { stats: { hitSentences: number; exactHits: number; phrasesUsed: number }; hits: Array<{ matchType: string }>; rawTable: string } };
+			expect(r.details.stats.hitSentences).toBe(1);
+			expect(r.details.stats.exactHits).toBe(1);
+			expect(r.details.stats.phrasesUsed).toBe(1);
+			expect(r.details.hits[0].matchType).toBe("exact");
+			expect(r.details.rawTable).toContain("汉EV");
+			expect(r.content.map((x) => x.text).join("")).toContain("命中 1 句");
+		} finally {
+			db.close();
+		}
+	});
+});
 
 describe("文件读取工具(txt/excel/ppt)", () => {
 	const SYS = [path.join(repoRoot(), "tools_system")];
