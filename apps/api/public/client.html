@@ -61,7 +61,8 @@ header .nav a { color:#fff; opacity:.9; text-decoration:none; }
 .agent-body .md ul, .agent-body .md ol { margin:6px 0; padding-left:20px; }
 .agent-body .md a { color:var(--brand); }
 .mermaid-render { margin:8px 0; overflow:auto; text-align:center; }
-.echarts-render { margin:8px 0; width:100%; height:320px; }
+.echarts-render { margin:8px 0; width:100%; max-width:100%; height:320px; overflow:hidden; }
+.echarts-render.funnel { height:auto; overflow:visible; }
 .mermaid-render svg { max-width:100%; height:auto; }
 .agent-meta { font-size:11px; color:var(--muted); margin-top:6px; }
 .agent-input { display:flex; gap:8px; margin-top:12px; }
@@ -299,6 +300,7 @@ function ensureECharts() {
   });
 }
 function renderFunnelSVG(wrap, opt) {
+  wrap.className = "echarts-render funnel";
   const series = ((opt.series || []).find((s) => s && s.type === "funnel")) || (opt.series || [])[0] || {};
   const items = (Array.isArray(series.data) ? series.data : []).map((d) => ({ name: d && d.name != null ? String(d.name) : "", value: Number((d && d.value) || 0) }));
   if (!items.length) return false;
@@ -323,7 +325,7 @@ function renderFunnelSVG(wrap, opt) {
     svg += '<text x="' + (cx - wTop / 2 - 10) + '" y="' + (yTop + stageH / 2 + 5) + '" text-anchor="end" font-size="13" fill="#334155">' + escapeHtml(items[i].name) + "</text>";
     svg += '<text x="' + (cx + wTop / 2 + 10) + '" y="' + (yTop + stageH / 2 + 5) + '" text-anchor="start" font-size="13" fill="#334155">' + items[i].value + " · " + pct + "%</text>";
   }
-  wrap.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img">' + svg + "</svg>";
+  wrap.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;max-width:640px;height:auto;display:block;margin:0 auto" role="img">' + svg + "</svg>";
   return true;
 }
 
