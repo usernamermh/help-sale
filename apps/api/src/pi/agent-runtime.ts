@@ -142,11 +142,13 @@ function appendRawTables(answer: string, messages: unknown[]): string {
 	const tables = collectRawTables(messages);
 	// 仅当本轮有工具返回表格时,剔除模型重复输出的表格并追加工具原文;无工具表格时,保留模型自己输出的表格
 	if (tables.length === 0) return answer;
+	// 多次查表时只保留最后一次工具返回的表格
+	const table = tables[tables.length - 1];
 	let out = stripMarkdownTables(answer);
 	// 防重复:即使已包含工具原文,也统一只保留一份
-	for (const table of tables) out = out.replace(table, "");
+	out = out.replace(table, "");
 	out = out.replace(/\n{3,}/g, "\n\n").trim();
-	return out ? `${out}\n\n${tables.join("\n\n")}` : tables.join("\n\n");
+	return out ? `${out}\n\n${table}` : table;
 }
 /** 从 assistant 消息 content(TextContent[] 或字符串)提取纯文本。 */
 function assistantText(content: unknown): string {
@@ -195,6 +197,8 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 
 	const runId = randomUUID();
 	const annotations: string[] = [];
+	// 把“目标客户/目标会话”附加到用户目标上
+	// 如果调用方带了 customerKey（这次任务针对哪个客户）或 conversationId（针对哪段会话），就把它们拼到用户目标后面再发给模型
 	if (input.customerKey) annotations.push(`目标客户标识: ${input.customerKey}`);
 	if (input.conversationId) annotations.push(`目标会话 ID: ${input.conversationId}`);
 	const goalText = annotations.length ? `${input.goal}\n\n${annotations.join("\n")}` : input.goal;
@@ -205,11 +209,12 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 		streamFn,
 		initialState: { systemPrompt, tools: tools as never, model, messages: stateMessages },
 	});
-
+	
+	// 订阅事件：落库 + 收集工具 + 转发前端
 	const executedTools: string[] = [];
 	const recorder = createTimelineRecorder(db, { tenantId, conversationId: runId });
 	agent.subscribe((event) => {
-		recorder.listen(event);
+		recorder.listen(event);  // 把事件写进 agent_events 表(可回放)
 		if (input.collectExecutedTools) {
 			for (const ce of toClientEvents(event)) {
 				if (ce.type === "tool_start" && ce.toolName && !executedTools.includes(ce.toolName)) executedTools.push(ce.toolName);

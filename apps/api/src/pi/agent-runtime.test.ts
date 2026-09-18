@@ -45,6 +45,27 @@ describe("表格防幻觉", () => {
 		expect(JSON.stringify(arr)).not.toContain("echarts");
 	});
 
+	it("多次查表时只保留最后一次工具返回的表格", async () => {
+		const fa = fauxProvider();
+		fa.setResponses([
+			fauxAssistantMessage([
+				fauxToolCall("table_generate", { title: "A", rows: [{ name: "汉EV", price: "25万" }], chartType: "table" }),
+			]),
+			fauxAssistantMessage([
+				fauxToolCall("table_generate", { title: "B", rows: [{ brand: "Model Y", price: "28万" }], chartType: "table" }),
+			]),
+			fauxAssistantMessage([
+				fauxToolCall("emit_final", { answer: "汇总:\n| A | B |\n| --- | --- |\n| 1 | 2 |\n" }),
+			]),
+		]);
+		const streamFn: StreamFn = async (model, context, options) => fa.provider.stream(model as never, context, options);
+		const result = await runSalesAgent({ db, tenantId: "t1", store, streamFn }, { goal: "两次生成车型表" });
+		expect(result.final?.answer).toContain("| brand | price |");
+		expect(result.final?.answer).toContain("Model Y");
+		expect(result.final?.answer).not.toContain("| name | price |");
+		expect(result.final?.answer).not.toContain("汉EV");
+	});
+
 	it("无工具表格时,保留模型自己输出的表格", async () => {
 		const fa = fauxProvider();
 		fa.setResponses([
