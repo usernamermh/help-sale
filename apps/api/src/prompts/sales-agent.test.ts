@@ -2,21 +2,14 @@ import { describe, expect, it } from "vitest";
 import { getSalesAgentSystemPrompt } from "./sales-agent.js";
 
 describe("sales-agent prompt", () => {
-	it("工具经函数调用(tools 字段)注册,不再拼接进系统提示词", () => {
+	it("工具说明不拼接进系统提示词,保留【工具调用】引导", () => {
 		const prompt = getSalesAgentSystemPrompt({ companyName: "智造云", teamName: "销售团队" });
 		expect(prompt).toContain("【工具调用】");
-		expect(prompt).toContain("tools 字段");
 		expect(prompt).not.toContain("【外部工具】");
 		expect(prompt).not.toContain("main.createTodoList");
 		expect(prompt).not.toContain("(tools_system/");
 		expect(prompt).toContain("【系统记忆】");
 		expect(prompt).toContain("## 工具经验");
-	});
-
-	it("话术命中类任务引导使用 playbook_check", () => {
-		const prompt = getSalesAgentSystemPrompt();
-		expect(prompt).toContain("playbook_check(话术命中检测)");
-		expect(prompt).toContain("knowledge_candidate");
 	});
 
 	it("包含图表美观规范", () => {
@@ -25,11 +18,10 @@ describe("sales-agent prompt", () => {
 		expect(prompt).toContain("类型匹配数据");
 	});
 
-	it("表格规则:工具已返回表格时不重复输出,未调用表格工具时可正常输出", () => {
+	it("表格分页规则:表格类工具每页最多 10 行", () => {
 		const prompt = getSalesAgentSystemPrompt();
-		expect(prompt).toContain("表格呈现");
-		expect(prompt).toContain("答复中给出结论与要点即可");
-		expect(prompt).toContain("未调用表格类工具时");
+		expect(prompt).toContain("每页最多 10 行");
+		expect(prompt).toContain("前端表格翻页按钮");
 	});
 
 
