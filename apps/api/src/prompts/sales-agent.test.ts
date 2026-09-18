@@ -13,6 +13,12 @@ describe("sales-agent prompt", () => {
 		expect(prompt).toContain("## 工具经验");
 	});
 
+	it("包含图表美观规范", () => {
+		const prompt = getSalesAgentSystemPrompt();
+		expect(prompt).toContain("图表规范");
+		expect(prompt).toContain("类型匹配数据");
+	});
+
 	it("明确禁止模型输出 Markdown 表格", () => {
 		const prompt = getSalesAgentSystemPrompt();
 		expect(prompt).toContain("禁止在最终答复中输出任何 Markdown 表格");

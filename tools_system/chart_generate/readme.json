@@ -1,14 +1,14 @@
 {
   "name": "chart_generate",
   "label": "生成统计图",
-  "description": "生成任意 ECharts 图表,前端用统一组件原样渲染:推荐直接传 option(完整 ECharts 配置,支持柱状/折线/饼图/漏斗/散点/雷达/桑基等任何类型);也可传 type/title/categories/series 由工具按常见形态组装。",
+  "description": "生成美观的 ECharts 图表(任意类型),前端统一渲染。要求:标题简洁明确;类目/阶段名与系列名语义化;类型匹配数据(漏斗 funnel/占比 pie/趋势 line/对比 bar);补全图例、tooltip、数据标签与坐标轴名称;数值按千分位或百分比格式化;配色协调;只用真实数据、不生成空系列。推荐直接传 option 精细控制,或传 type/title/categories/series 自动组装。",
   "category": "呈现",
   "parameters": {
     "type": "object",
     "properties": {
       "option": {
         "type": "object",
-        "description": "完整 ECharts 配置(任意图表类型),前端原样渲染;与 type/categories/series 二选一"
+        "description": "完整 ECharts 配置(任意图表类型):建议包含 title/tooltip/legend/series,配色用 color 数组,数值用 formatter 格式化;与 type/categories/series 二选一"
       },
       "type": {
         "type": "string",
