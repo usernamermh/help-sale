@@ -139,10 +139,10 @@ function appendRawCharts(answer: string, messages: unknown[]): string {
 }
 
 function appendRawTables(answer: string, messages: unknown[]): string {
-	// 模型文本一律不允许出现 Markdown 表格(无论本轮是否有工具表格),避免模型自造/转述导致幻觉
-	let out = stripMarkdownTables(answer);
 	const tables = collectRawTables(messages);
-	if (tables.length === 0) return out;
+	// 仅当本轮有工具返回表格时,剔除模型重复输出的表格并追加工具原文;无工具表格时,保留模型自己输出的表格
+	if (tables.length === 0) return answer;
+	let out = stripMarkdownTables(answer);
 	// 防重复:即使已包含工具原文,也统一只保留一份
 	for (const table of tables) out = out.replace(table, "");
 	out = out.replace(/\n{3,}/g, "\n\n").trim();

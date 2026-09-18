@@ -25,10 +25,11 @@ describe("sales-agent prompt", () => {
 		expect(prompt).toContain("类型匹配数据");
 	});
 
-	it("明确禁止模型输出 Markdown 表格", () => {
+	it("表格规则:工具已返回表格时不重复输出,未调用表格工具时可正常输出", () => {
 		const prompt = getSalesAgentSystemPrompt();
-		expect(prompt).toContain("禁止在最终答复中输出任何 Markdown 表格");
-		expect(prompt).toContain("一律由工具返回");
+		expect(prompt).toContain("表格呈现");
+		expect(prompt).toContain("答复中给出结论与要点即可");
+		expect(prompt).toContain("未调用表格类工具时");
 	});
 
 

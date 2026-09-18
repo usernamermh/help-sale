@@ -45,7 +45,7 @@ describe("表格防幻觉", () => {
 		expect(JSON.stringify(arr)).not.toContain("echarts");
 	});
 
-	it("最终答复剔除模型自造表格(无工具表格时也不残留)", async () => {
+	it("无工具表格时,保留模型自己输出的表格", async () => {
 		const fa = fauxProvider();
 		fa.setResponses([
 			fauxAssistantMessage([
@@ -56,9 +56,31 @@ describe("表格防幻觉", () => {
 		]);
 		const streamFn: StreamFn = async (model, context, options) => fa.provider.stream(model as never, context, options);
 		const result = await runSalesAgent({ db, tenantId: "t1", store, streamFn }, { goal: "查客户清单" });
-		expect(result.final?.answer).not.toContain("| 陈静");
-		expect(result.final?.answer).not.toContain("15835137159");
-		expect(result.final?.answer).toContain("共 1 位");
+		expect(result.final?.answer).toContain("| 陈静");
+		expect(result.final?.answer).toContain("15835137159");
+	});
+
+	it("工具已返回表格时,剔除模型重复表格并追加工具原文", async () => {
+		const fa = fauxProvider();
+		fa.setResponses([
+			fauxAssistantMessage([
+				fauxToolCall("table_generate", {
+					title: "车型",
+					rows: [{ name: "汉EV", price: "25万" }, { name: "Model Y", price: "28万" }],
+					chartType: "table",
+				}),
+			]),
+			fauxAssistantMessage([
+				fauxToolCall("emit_final", {
+					answer: "汇总:\n| A | B |\n| --- | --- |\n| 1 | 2 |\n",
+				}),
+			]),
+		]);
+		const streamFn: StreamFn = async (model, context, options) => fa.provider.stream(model as never, context, options);
+		const result = await runSalesAgent({ db, tenantId: "t1", store, streamFn }, { goal: "生成车型表" });
+		expect(result.final?.answer).not.toContain("| A | B |");
+		expect(result.final?.answer).toContain("| name | price |");
+		expect(result.final?.answer).toContain("汉EV");
 	});
 });
 
