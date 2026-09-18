@@ -652,21 +652,6 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		return { query, hits: searchKnowledge(deps.db, request.tenantId, query, limit) };
 	});
 
-		app.post<{ Body: { transcript?: string; messages?: Array<{ role?: string; content: string; spokenAt?: string; speakerName?: string }>; customerKey?: string; customerName?: string; customerPhone?: string; salesName?: string; salesId?: string; salesPhone?: string; storeId?: string } }>("/api/v1/copilot/analyze", async (request, reply) => {
-		const body = request.body ?? {};
-		const messages = normalizeAnalyzeMessages({ transcript: body.transcript, messages: body.messages });
-		if (messages.length === 0) return reply.code(400).send({ error: "conversation is required", message: "transcript 或 messages 至少提供一个" });
-		const out = await runAndPersistAnalysis(request, {
-			messages,
-			customerKey: body.customerKey,
-			customerName: body.customerName,
-			customerPhone: body.customerPhone,
-			sales: salesContextFrom(body as unknown as Record<string, unknown>, request.headers),
-		});
-		if (out.status) return reply.code(out.status).send(out.body);
-		return out.body;
-	});
-
 	app.get<{ Params: { key: string } }>("/api/v1/customers/:key/analyses", async (request) => {
 		const customer = upsertCustomer(deps.db, { tenantId: request.tenantId, key: request.params.key });
 		return { analyses: listAnalysesByCustomer(deps.db, request.tenantId, customer.id) };

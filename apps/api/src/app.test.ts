@@ -6,7 +6,7 @@ import type { StreamFn } from "@earendil-works/pi-agent-core";
 import { fauxProvider, fauxToolCall, fauxAssistantMessage } from "@earendil-works/pi-ai/providers/faux";
 import { buildApp } from "./app.js";
 import { openDatabase } from "./db/database.js";
-import { requireTenant } from "./repositories/customers.js";
+import { requireTenant, upsertCustomer } from "./repositories/customers.js";
 import { cleanupDataDir, tmpDataDir } from "./pi/sessions.js";
 import type { MysqlSink } from "./integrations/mysql-sink.js";
 import { createMemoryReminderQueue } from "./integrations/reminder-queue.js";
@@ -55,6 +55,23 @@ function fakeStreamFn(): StreamFn {
 	return async (model, context, options) => fa.provider.stream(model as never, context, options);
 }
 
+function seedConversation(dataDir: string, messages: Array<{ role: string; content: string; spokenAt?: string }>, opts: { customerKey: string; customerName?: string; customerPhone?: string; salesName?: string }): string {
+	const db = openDatabase(path.join(dataDir, "business.db"));
+	try {
+		requireTenant(db, "t1", "演示租户");
+		const customer = upsertCustomer(db, { tenantId: "t1", key: opts.customerKey, name: opts.customerName, phone: opts.customerPhone });
+		const convId = "conv-" + Math.random().toString(36).slice(2, 10);
+		db.prepare("INSERT INTO conversations (id, tenant_id, customer_id, sales_name, message_count, updated_at) VALUES (?,?,?,?,?,?)").run(convId, "t1", customer.id, opts.salesName ?? "默认销售", messages.length, new Date().toISOString());
+		messages.forEach((m, i) => {
+			const role = m.role === "sales" ? "sales" : m.role === "other" ? "other" : "customer";
+			db.prepare("INSERT INTO conversation_messages (id, tenant_id, conversation_id, seq, speaker_role, speaker_name, content, spoken_at) VALUES (?,?,?,?,?,?,?,?)").run("msg-" + convId + "-" + i, "t1", convId, i + 1, role, role === "sales" ? (opts.salesName ?? "默认销售") : null, m.content, m.spokenAt ?? null);
+		});
+		return convId;
+	} finally {
+		db.close();
+	}
+}
+
 function fakeEvaluatorStreamFn(): StreamFn {
 	const fa = fauxProvider();
 	fa.setResponses([
@@ -86,7 +103,6 @@ function fakeVoiceDigestStreamFn(): StreamFn {
 	]);
 	return async (model, context, options) => fa.provider.stream(model as never, context, options);
 }
-
 
 function fakeAgentNoEmitStreamFn(): StreamFn {
 	const fa = fauxProvider();
@@ -209,12 +225,8 @@ describe("api", () => {
 		dir = tmpDataDir("api-tasks");
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const headers = { "x-tenant-id": "t1" };
-		const res = await app.inject({
-			method: "POST",
-			url: "/api/v1/copilot/analyze",
-			payload: { transcript: "客户:价格多少?", customerKey: "c_task" },
-			headers,
-		});
+		const convId = seedConversation(dir, [{ role: "customer", content: "价格多少?" }], { customerKey: "c_task" });
+		const res = await app.inject({ method: "POST", url: "/api/v1/conversations/" + convId + "/analyze", headers });
 		expect(res.statusCode).toBe(200);
 
 		const list = await app.inject({ method: "GET", url: "/api/v1/tasks?status=pending", headers });
@@ -259,55 +271,14 @@ describe("api", () => {
 		dir = tmpDataDir("api-mysql");
 		const tracker = { analysis: 0, vehicle: 0 };
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: trackingMysqlSink(tracker), reminders: createMemoryReminderQueue() });
-		const res = await app.inject({
-			method: "POST",
-			url: "/api/v1/copilot/analyze",
-			payload: { transcript: "客户:价格多少?", customerKey: "c_mysql" },
-			headers: { "x-tenant-id": "t1" },
-		});
+		const convId = seedConversation(dir, [{ role: "customer", content: "价格多少?" }], { customerKey: "c_mysql" });
+		const res = await app.inject({ method: "POST", url: "/api/v1/conversations/" + convId + "/analyze", headers: { "x-tenant-id": "t1" } });
 		expect(res.statusCode).toBe(200);
 		expect(tracker.analysis).toBe(1);
 	});
 
-	it("多轮 transcript:自动识别发言人完成分析", async () => {
-		dir = tmpDataDir("api-multiturn");
-		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
-		const headers = { "x-tenant-id": "t1" };
-		const res1 = await app.inject({
-			method: "POST",
-			url: "/api/v1/copilot/analyze",
-			payload: { transcript: "客户:旗舰版多少钱?\n销售:您好,聊聊预算?\n客户:预算1500", customerKey: "c_turn" },
-			headers,
-		});
-		expect(res1.statusCode).toBe(200);
-		expect(res1.json().analysis.intent).toBe("价格异议");
-	});
-
-	it("messages 数组入参与空会话 400", async () => {
-		dir = tmpDataDir("api-msgs");
-		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
-		const headers = { "x-tenant-id": "t1" };
-
-		const bad = await app.inject({
-			method: "POST",
-			url: "/api/v1/copilot/analyze",
-			payload: { transcript: "   ", customerKey: "c_bad" },
-			headers,
-		});
-		expect(bad.statusCode).toBe(400);
-
-		const res2 = await app.inject({
-			method: "POST",
-			url: "/api/v1/copilot/analyze",
-			payload: { messages: [{ role: "sales", content: "您好" }, { role: "customer", content: "有没有现车" }], customerKey: "c_turn2" },
-			headers,
-		});
-		expect(res2.statusCode).toBe(200);
-	});
-	
-
-	it("经营洞察:聚合分析/任务/车型数据", async () => {
-		dir = tmpDataDir("api-insights");
+		it("经营洞察:聚合分析/任务/车型数据", async () => {
+	dir = tmpDataDir("api-insights");
 		app = buildApp({ dataDir: dir, mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const headers = { "x-tenant-id": "t1" };
 		const res = await app.inject({ method: "GET", url: "/api/v1/assistant/insights?days=7", headers });
@@ -339,20 +310,18 @@ describe("api", () => {
 		expect(bad2.statusCode).toBe(400);
 	});
 
-
 	it("客户画像标签:分析后自动聚合,可查询", async () => {
 		dir = tmpDataDir("api-tags");
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const headers = { "x-tenant-id": "t1" };
-		await app.inject({ method: "POST", url: "/api/v1/copilot/analyze", payload: { transcript: "客户:价格多少?", customerKey: "c_tag" }, headers });
+		const convId = seedConversation(dir, [{ role: "customer", content: "价格多少?" }], { customerKey: "c_tag" });
+		await app.inject({ method: "POST", url: "/api/v1/conversations/" + convId + "/analyze", headers });
 		const tags = await app.inject({ method: "GET", url: "/api/v1/customers/c_tag/tags", headers });
 		expect(tags.statusCode).toBe(200);
 		const list = tags.json().tags;
 		expect(list.some((x: { tag: string }) => x.tag === "价格敏感")).toBe(true);
 		expect(list.some((x: { tag: string }) => x.tag === "高意向")).toBe(true);
 	});
-
-
 
 	it("规则改进:聚合风险场景与候选流失,输出建议", async () => {
 		dir = tmpDataDir("api-improve");
@@ -384,17 +353,12 @@ describe("api", () => {
 		expect(bad.statusCode).toBe(400);
 	});
 
-
-
-
 	it("会话列表与从库内会话分析:不依赖手动粘贴", async () => {
 		dir = tmpDataDir("api-conv-flow");
 		try {
 			app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 			const headers = { "x-tenant-id": "t1" };
-			const res = await app.inject({ method: "POST", url: "/api/v1/copilot/analyze", payload: { transcript: "客户:价格多少?", customerKey: "c_convf" }, headers });
-			expect(res.statusCode).toBe(200);
-			const convId = res.json().conversationId;
+			const convId = seedConversation(dir, [{ role: "customer", content: "价格多少?" }], { customerKey: "c_convf" });
 			const list = await app.inject({ method: "GET", url: "/api/v1/conversations", headers });
 			expect(list.statusCode).toBe(200);
 			expect(list.json().conversations).toHaveLength(1);
@@ -418,13 +382,13 @@ describe("api", () => {
 		}
 	});
 
-
 	it("通知推送:到期任务触发记录,重复触发去重", async () => {
 		dir = tmpDataDir("api-notify");
 		const queue = createMemoryReminderQueue();
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: queue });
 		const headers = { "x-tenant-id": "t1" };
-		await app.inject({ method: "POST", url: "/api/v1/copilot/analyze", payload: { transcript: "客户:价格多少?", customerKey: "c_notify" }, headers });
+		const convId = seedConversation(dir, [{ role: "customer", content: "价格多少?" }], { customerKey: "c_notify" });
+		await app.inject({ method: "POST", url: "/api/v1/conversations/" + convId + "/analyze", headers });
 		const first = await app.inject({ method: "POST", url: "/api/v1/notifications/trigger", headers });
 		expect(first.statusCode).toBe(200);
 		expect(first.json().newlyNotified.length).toBe(1);
@@ -436,17 +400,12 @@ describe("api", () => {
 		expect(second.json().newlyNotified).toEqual([]);
 	});
 
-
 	it("时间线:分析后的事件序列可回放", async () => {
 		dir = tmpDataDir("api-timeline");
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const headers = { "x-tenant-id": "t1" };
-		const res = await app.inject({
-			method: "POST",
-			url: "/api/v1/copilot/analyze",
-			payload: { transcript: "客户:价格多少?", customerKey: "c_tl" },
-			headers,
-		});
+		const convId = seedConversation(dir, [{ role: "customer", content: "价格多少?" }], { customerKey: "c_tl" });
+		const res = await app.inject({ method: "POST", url: "/api/v1/conversations/" + convId + "/analyze", headers });
 		expect(res.statusCode).toBe(200);
 		const conversationId = res.json().conversationId;
 
@@ -487,17 +446,12 @@ describe("api", () => {
 		expect(again.json().results.every((r: { skipped: boolean }) => r.skipped)).toBe(true);
 	});
 
-
 	it("知识沉淀:分析后生成话术候选,确认入库后可检索", async () => {
 		dir = tmpDataDir("api-candidates");
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const headers = { "x-tenant-id": "t1" };
-		const res = await app.inject({
-			method: "POST",
-			url: "/api/v1/copilot/analyze",
-			payload: { transcript: "客户:价格多少?", customerKey: "c_mem" },
-			headers,
-		});
+		const convId = seedConversation(dir, [{ role: "customer", content: "价格多少?" }], { customerKey: "c_mem" });
+		const res = await app.inject({ method: "POST", url: "/api/v1/conversations/" + convId + "/analyze", headers });
 		expect(res.statusCode).toBe(200);
 
 		const list = await app.inject({ method: "GET", url: "/api/v1/knowledge/candidates?status=pending", headers });
@@ -542,12 +496,8 @@ describe("api", () => {
 		const queue = createMemoryReminderQueue();
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: queue });
 		const headers = { "x-tenant-id": "t1" };
-		const res = await app.inject({
-			method: "POST",
-			url: "/api/v1/copilot/analyze",
-			payload: { transcript: "客户:价格多少?", customerKey: "c_remind" },
-			headers,
-		});
+		const convId = seedConversation(dir, [{ role: "customer", content: "价格多少?" }], { customerKey: "c_remind" });
+		const res = await app.inject({ method: "POST", url: "/api/v1/conversations/" + convId + "/analyze", headers });
 		expect(res.statusCode).toBe(200);
 
 		const overdue = await app.inject({ method: "GET", url: "/api/v1/reminders/overdue", headers });
@@ -564,12 +514,8 @@ describe("api", () => {
 		it("analyze 全链路:分析落库并可查", async () => {
 		dir = tmpDataDir("api-analyze");
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
-		const res = await app.inject({
-			method: "POST",
-			url: "/api/v1/copilot/analyze",
-			payload: { transcript: "客户:价格多少?有点贵", customerKey: "c_tsla" },
-			headers: { "x-tenant-id": "t1" },
-		});
+		const convId = seedConversation(dir, [{ role: "customer", content: "价格多少?有点贵" }], { customerKey: "c_tsla" });
+		const res = await app.inject({ method: "POST", url: "/api/v1/conversations/" + convId + "/analyze", headers: { "x-tenant-id": "t1" } });
 		expect(res.statusCode).toBe(200);
 		const body = res.json();
 		expect(body.analysisId).toBeTruthy();
@@ -631,21 +577,11 @@ describe("api", () => {
 		dir = tmpDataDir("api-transcript");
 		app = buildApp({ dataDir: dir, streamFn: fakeStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const headers = { "x-tenant-id": "t1" };
-		const res = await app.inject({
-			method: "POST",
-			url: "/api/v1/copilot/analyze",
-			payload: {
-				messages: [
-					{ role: "customer", content: "汉EV 多少钱?", spokenAt: "2026-09-01T08:00:00Z" },
-					{ role: "sales", content: "20 万左右,看配置", spokenAt: "2026-09-01T08:01:00Z" },
-				],
-				customerKey: "c_tr",
-				customerName: "王总",
-				customerPhone: "13700000000",
-				salesName: "李销售",
-			},
-			headers,
-		});
+		const convId = seedConversation(dir, [
+			{ role: "customer", content: "汉EV 多少钱?", spokenAt: "2026-09-01T08:00:00Z" },
+			{ role: "sales", content: "20 万左右,看配置", spokenAt: "2026-09-01T08:01:00Z" },
+		], { customerKey: "c_tr", customerName: "王总", customerPhone: "13700000000", salesName: "李销售" });
+		const res = await app.inject({ method: "POST", url: "/api/v1/conversations/" + convId + "/analyze", headers });
 		expect(res.statusCode).toBe(200);
 		const body = res.json();
 		expect(body.cached).toBe(false);
@@ -674,12 +610,13 @@ describe("api", () => {
 		};
 		app = buildApp({ dataDir: dir, streamFn: counted, mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const headers = { "x-tenant-id": "t1" };
-		const payload = { transcript: "客户:价格多少?", customerKey: "c_hit" };
-		const first = await app.inject({ method: "POST", url: "/api/v1/copilot/analyze", payload, headers });
+		const convId = seedConversation(dir, [{ role: "customer", content: "价格多少?" }], { customerKey: "c_hit" });
+		const analyzeUrl = "/api/v1/conversations/" + convId + "/analyze";
+		const first = await app.inject({ method: "POST", url: analyzeUrl, headers });
 		expect(first.statusCode).toBe(200);
 		expect(first.json().cached).toBe(false);
 		const callsAfterFirst = calls;
-		const second = await app.inject({ method: "POST", url: "/api/v1/copilot/analyze", payload, headers });
+		const second = await app.inject({ method: "POST", url: analyzeUrl, headers });
 		expect(second.statusCode).toBe(200);
 		expect(second.json().cached).toBe(true);
 		expect(second.json().analysisId).toBe(first.json().analysisId);

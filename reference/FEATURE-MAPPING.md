@@ -8,7 +8,7 @@
 
 | # | 参考模块(config 文件) | 参考功能 | 本项目对应实现 | 状态 |
 |---|----------------------|----------|----------------|------|
-| 1 | uni-dialog-analysis | 通用质检:对话分析(店员/客户角色、合并对话、think) | /copilot/analyze(对话分析,意图/信号/话术/下一步)+ 多轮发言人识别 | ✅ 已实现(等价) |
+| 1 | uni-dialog-analysis | 通用质检:对话分析(店员/客户角色、合并对话、think) | /conversations/:id/analyze(库内会话分析,意图/信号/话术/下一步) | ✅ 已实现(等价) |
 | 2 | rolecheck-agent | 角色识别:判断店员/客户并打语义标签 | T27 conversation.ts(客户/销售识别:前缀标注 + 交替启发式) | ✅ 已实现(简化版) |
 | 3 | general-keywords-extract | 关键词/语义标签抽取 | analyze 的 signals(带 kind/quote/note)+ intent | ✅ 已实现(弱化版) |
 | 4 | auto-eval-voice-digest | 试驾场景录音自动总结 | /copilot/voice-digest(通话/试驾文字稿版:画像/关注点/阶段/建议动作/摘要,复用 agent 栈) | ✅ 已实现(文字稿版;ASR 可后接) |

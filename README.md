@@ -19,7 +19,7 @@
 
 ### 1. 会话分析
 
-- **入口**:`POST /api/v1/copilot/analyze`,支持直接提交对话文本(transcript/messages),或从数据库选取已有会话分析。
+- **入口**:从数据库选取已有会话分析(`POST /api/v1/conversations/:id/analyze`),已移除手动粘贴对话文本的入口。
 - **Agent 编排**:会话文本解析为结构化消息后,交给 copilot Agent(基于 pi agent 运行时)执行——自动调用 `knowledge_search` 检索团队话术库、`customer_query` 查询客户档案,最终由 `emit_analysis` 收口输出五要素:**意图(intent)、摘要(summary)、关键信号(signals,含客户原话引用)、应对话术(suggestedReply)、下一步(nextSteps)**。
 - **落库**:一次分析同时写入
   - `analyses`(意图/摘要/信号/话术/下一步)
@@ -129,7 +129,6 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 |------|------|------|
 | GET | /api/v1/health | 健康检查 |
 | POST | /api/v1/knowledge | 上传知识文档 { title, content }(同名幂等跳过) |
-| POST | /api/v1/copilot/analyze | 提交对话分析 { transcript, customerKey? },返回 analysisId |
 | POST | /api/v1/copilot/vehicle-match | 车型优选 { customerKey?, requirements } ,返回 planId + plan |
 | POST | /api/v1/copilot/evaluate-response | 话术评估 { conversation, reply },返回评分/维度/改进建议 |
 | POST | /api/v1/copilot/voice-digest | 通话/试驾文字稿总结 { transcript } |
