@@ -1,4 +1,5 @@
-import { textVector, kmeans } from "../_shared/text-vec.js";
+import { kmeans } from "../_shared/text-vec.js";
+import { embedTextsSafe } from "../_shared/bge-embed.js";
 
 interface ToolContext { db: any; tenantId: string; }
 
@@ -9,7 +10,7 @@ export async function execute(_ctx: ToolContext, params: any) {
 		.filter((s: string) => s.trim().length > 0);
 	if (texts.length === 0) return { content: [{ type: "text", text: "需要 texts(字符串数组)。" }] };
 	const k = Math.max(1, Math.min(Number(params?.k ?? 3) || 3, 10));
-	const points = texts.map((t) => textVector(t));
+	const points = await embedTextsSafe(texts);
 	const { assignments, sizes } = kmeans(points, k);
 	const clusters = Array.from({ length: k }, (_, i) => ({
 		id: i + 1,

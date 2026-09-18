@@ -19,3 +19,5 @@ llm-agent-workflow-master
 help-sale.config.yaml
 /docs/plans/
 /data/
+
+data/models/

@@ -1,4 +1,5 @@
-import { cleanText, textVector, cosineSim } from "../../tools_system/_shared/text-vec.js";
+import { cleanText, cosineSim } from "../../tools_system/_shared/text-vec.js";
+import { embedTextsSafe } from "../../tools_system/_shared/bge-embed.js";
 
 interface ToolContext { db: any; tenantId: string; }
 
@@ -10,7 +11,7 @@ interface HitRow { conversationId: string; salesName: string | null; date: strin
  * 双通道:①原文命中(归一化后句子包含话术原文);②语义命中(字符 n-gram 向量余弦相似度≥阈值)。
  * 输出:命中明细 + 话术覆盖统计 + 可展示的 Markdown 表格。
  */
-export function execute(ctx: ToolContext, params: any) {
+export async function execute(ctx: ToolContext, params: any) {
 	const db = ctx.db;
 	const tenantId = ctx.tenantId;
 	const days = Math.max(1, Math.min(Number(params?.days ?? 30) || 30, 365));
@@ -69,7 +70,7 @@ export function execute(ctx: ToolContext, params: any) {
 
 	// 4) 双通道匹配
 	const phraseCleans = phrases.map((p) => cleanText(p.content));
-	const phraseVecs = phrases.map((p) => textVector(p.content));
+	const phraseVecs = await embedTextsSafe(phrases.map((ph) => ph.content));
 	const hits: HitRow[] = [];
 	for (const conv of conversations) {
 		for (const sentence of conv.sentences) {
@@ -85,7 +86,7 @@ export function execute(ctx: ToolContext, params: any) {
 			}
 			// 通道 B:语义命中(余弦 top-1 ≥ 阈值)
 			if (!matched) {
-				const sv = textVector(sentence);
+				const sv = (await embedTextsSafe([sentence]))[0];
 				let best = -1;
 				let bestScore = 0;
 				for (let i = 0; i < phraseVecs.length; i++) {

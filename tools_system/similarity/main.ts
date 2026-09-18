@@ -1,9 +1,10 @@
-import { textVector, cosineSim } from "../_shared/text-vec.js";
+import { cosineSim } from "../_shared/text-vec.js";
+import { embedTextsSafe } from "../_shared/bge-embed.js";
 
 interface ToolContext { db: any; tenantId: string; }
 
 /** 语义相似度匹配:对每条 query 在 targets 中取 top-k 余弦相似度结果(字符 n-gram 向量,无外部依赖)。 */
-export function execute(_ctx: ToolContext, params: any) {
+export async function execute(_ctx: ToolContext, params: any) {
 	const queries = (Array.isArray(params?.queries) ? params.queries : typeof params?.queries === "string" ? [params.queries] : [])
 		.map((s: unknown) => String(s ?? ""))
 		.filter((s: string) => s.trim().length > 0);
@@ -15,8 +16,8 @@ export function execute(_ctx: ToolContext, params: any) {
 	}
 	const topK = Math.max(1, Math.min(Number(params?.topK ?? 3) || 3, targets.length));
 	const threshold = Number(params?.threshold ?? 0) || 0;
-	const qVecs = queries.map((q) => textVector(q));
-	const tVecs = targets.map((t) => textVector(t));
+	const qVecs = await embedTextsSafe(queries);
+	const tVecs = await embedTextsSafe(targets);
 	const matches = queries.map((q, qi) => {
 		const scores = tVecs.map((tv, ti) => ({ index: ti, text: targets[ti], score: cosineSim(qVecs[qi], tv) }));
 		scores.sort((a, b) => b.score - a.score);

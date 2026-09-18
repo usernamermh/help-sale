@@ -1,7 +1,7 @@
 {
   "name": "similarity",
   "label": "语义相似度匹配",
-  "description": "计算文本之间的语义相似度:对每条 queries 在 targets 中取 top-k 最相似结果并给出余弦得分(字符 n-gram 向量,无外部依赖),用于判断发言是否提到了某类标准话术/要点。",
+  "description": "计算文本之间的语义相似度(本地轻量 BGE 中文向量):对每条 queries 在 targets 中取 top-k 最相似结果并给出余弦得分;模型缺失时自动回退字符 n-gram 向量。",
   "category": "文本算法",
   "parameters": {
     "type": "object",
