@@ -129,6 +129,31 @@ describe("tools_system 基础工具", () => {
 		}
 	});
 
+	it("chart_generate 支持直接透传完整 ECharts option(任意图表类型)", async () => {
+		const tools = await loadAll();
+		const tool = tools.find((t) => t.name === "chart_generate")!;
+		const option = {
+			title: { text: "竞品雷达图" },
+			radar: { indicator: [{ name: "价格", max: 10 }, { name: "性能", max: 10 }] },
+			series: [{ type: "radar", data: [{ value: [8, 6] }] }],
+		};
+		const r = (await tool.execute("c2", { option })) as { details: { chartOption: unknown; type: string }; content: Array<{ text: string }> };
+		expect(r.details.chartOption).toEqual(option);
+		expect(r.details.type).toBe("radar");
+		expect(r.content.map((x) => x.text).join("")).toContain("echarts");
+	});
+
+	it("chart_generate funnel 输出 ECharts 漏斗系列", async () => {
+		const tools = await loadAll();
+		const tool = tools.find((t) => t.name === "chart_generate")!;
+		const r = (await tool.execute("c1", { type: "funnel", title: "销售漏斗", categories: ["访问", "线索", "成交"], series: [{ name: "客户", data: [1000, 400, 96] }] })) as { content: Array<{ text: string }>; details: { chartOption: { series: Array<{ type: string; data: Array<{ name: string; value: number }> }> } } };
+		const opt = r.details.chartOption;
+		expect(opt.series[0].type).toBe("funnel");
+		expect(opt.series[0].data.map((d) => d.name)).toEqual(["访问", "线索", "成交"]);
+		expect(opt.series[0].data[0].value).toBe(1000);
+		expect(r.content.map((x) => x.text).join("")).toContain("echarts");
+	});
+
 	it("table_generate 生成 Markdown 表格与 mermaid", async () => {
 		const tools = await loadAll();
 		const tool = tools.find((t) => t.name === "table_generate")!;

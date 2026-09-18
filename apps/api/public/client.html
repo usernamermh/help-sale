@@ -327,8 +327,16 @@ function renderAssistantContent(text, body) {
 }
 function renderFallbackChart(wrap, opt) {
   const series = (opt.series || [])[0] || {};
-  const cats = (opt.xAxis && Array.isArray(opt.xAxis.data)) ? opt.xAxis.data : [];
-  const data = Array.isArray(series.data) ? series.data.map(Number) : [];
+  const items = Array.isArray(series.data) ? series.data : [];
+  let cats = [];
+  let data = [];
+  if (items.length && typeof items[0] === "object" && items[0] && "name" in items[0]) {
+    cats = items.map((d) => String(d.name != null ? d.name : ""));
+    data = items.map((d) => Number((d && d.value) || 0));
+  } else {
+    cats = (opt.xAxis && Array.isArray(opt.xAxis.data)) ? opt.xAxis.data.map(String) : items.map((_, i) => "项" + (i + 1));
+    data = items.map((v) => Number(v || 0));
+  }
   const title = opt.title && opt.title.text ? String(opt.title.text) : "";
   const max = Math.max(1, ...data);
   const rows = cats.map((cat, i) => {
