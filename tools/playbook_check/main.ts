@@ -17,25 +17,37 @@ export async function execute(ctx: ToolContext, params: any) {
 	const days = Math.max(1, Math.min(Number(params?.days ?? 30) || 30, 365));
 	const limit = Math.max(1, Math.min(Number(params?.limit ?? 20) || 20, 100));
 	const threshold = Number(params?.threshold ?? 0.72);
-	const category = params?.category ? String(params.category).trim() : "话术";
+	const category = params?.category ? String(params.category).trim() : ""; // 空=匹配全部类别,显式传分类才过滤
 	const salesName = params?.salesName ? String(params.salesName).trim() : "";
 	const salesId = params?.salesId ? String(params.salesId).trim() : "";
 
 	// 1) 话术库:knowledge_documents(category 含关键词)+ chunks
-	const phraseRows = db
-		.prepare(
-			`SELECT kc.id, kc.document_id, kc.content, kd.title
-			 FROM knowledge_chunks kc
-			 JOIN knowledge_documents kd ON kd.id = kc.document_id
-			 WHERE kc.tenant_id = ? AND kd.category LIKE ?
-			 ORDER BY kd.created_at, kc.chunk_index`,
-		)
-		.all(tenantId, `%${category}%`) as Array<{ id: string; document_id: string; content: string; title: string }>;
+	const phraseRows = (
+		category
+			? db
+					.prepare(
+						`SELECT kc.id, kc.document_id, kc.content, kd.title
+						 FROM knowledge_chunks kc
+						 JOIN knowledge_documents kd ON kd.id = kc.document_id
+						 WHERE kc.tenant_id = ? AND kd.category LIKE ?
+						 ORDER BY kd.created_at, kc.chunk_index`,
+					)
+					.all(tenantId, `%${category}%`)
+			: db
+					.prepare(
+						`SELECT kc.id, kc.document_id, kc.content, kd.title
+						 FROM knowledge_chunks kc
+						 JOIN knowledge_documents kd ON kd.id = kc.document_id
+						 WHERE kc.tenant_id = ?
+						 ORDER BY kd.created_at, kc.chunk_index`,
+					)
+					.all(tenantId)
+	) as Array<{ id: string; document_id: string; content: string; title: string }>;
 	const phrases: Phrase[] = phraseRows
 		.map((r) => ({ id: String(r.id), docId: String(r.document_id), docTitle: String(r.title), content: String(r.content ?? "").trim() }))
 		.filter((p) => p.content.length > 0);
 	if (phrases.length === 0) {
-		return { content: [{ type: "text", text: `话术库暂无数据(category 含「${category}」的知识点为空),请先用 knowledge_ingest 沉淀标准话术。` }], details: { phrases: 0, conversations: 0, hits: [], stats: null } };
+		return { content: [{ type: "text", text: category ? `话术库暂无数据(category 含「${category}」的知识点为空),请先用 knowledge_ingest 沉淀标准话术。` : "话术库暂无数据(知识库没有可用知识点),请先用 knowledge_ingest 沉淀标准话术。" }], details: { phrases: 0, conversations: 0, hits: [], stats: null } };
 	}
 
 	// 2) 会话:按销售(姓名或 ID)与时间范围取最近 N 条

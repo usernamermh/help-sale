@@ -1,7 +1,7 @@
 {
   "name": "playbook_check",
   "label": "话术命中检测",
-  "description": "话术命中检测:用对话原文中销售角色的发言,与话术库中已入库的标准话术做原文/语义双通道匹配(话术候选不参与),返回命中明细、命中方式与话术覆盖率。",
+  "description": "话术命中检测:用对话原文中销售角色的发言,与话术库中的标准话术做原文/语义双通道匹配(默认匹配知识库全部类别,传 category 可按分类过滤),返回命中明细、命中方式与话术覆盖率。",
   "category": "话术",
   "parameters": {
     "type": "object",
@@ -26,8 +26,7 @@
       },
       "category": {
         "type": "string",
-        "default": "话术",
-        "description": "话术库分类关键词"
+        "description": "话术库分类关键词(留空=匹配全部类别)"
       },
       "threshold": {
         "type": "number",
