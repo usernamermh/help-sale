@@ -37,6 +37,8 @@ button.primary:hover { background:var(--brand2); }
 button.primary:disabled { opacity:.55; cursor:wait; }
 button.secondary { background:#fff; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; }
 button.secondary:hover { background:#f1f5f9; }
+button.danger { background:#fff; color:var(--danger); border:1px solid #fecaca; border-radius:8px; padding:9px 18px; font-size:13px; cursor:pointer; }
+button.danger:hover { background:#fef2f2; }
 .row { display:flex; gap:10px; } .row > * { flex:1; }
 .badge { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; background:#eef2ff; color:var(--brand); margin-right:4px; }
 .badge.warn { background:#fffbeb; color:var(--warn); } .badge.danger { background:#fef2f2; color:var(--danger); }
@@ -128,6 +130,7 @@ button.secondary:hover { background:#f1f5f9; }
 <div class="agent-input">
 <textarea id="agentGoal" placeholder="下达目标，例如：列出当前待办并告诉我最该先跟进哪一条"></textarea>
 <button id="agentSendBtn" class="btn primary">发送</button>
+<button id="agentStopBtn" class="btn danger" style="display:none;margin-left:8px">停止</button>
 </div>
 </div>
 <aside class="tr-panel" id="agentTranscript" style="display:none">
@@ -997,6 +1000,7 @@ checkHealth(); loadConversations(); loadCandidates(); loadTasks(); loadNotificat
 
 
 let agentRunning = false;
+let agentAbort = null; // 当前运行中的 AbortController,用于停止
 let currentThreadId = null;
 let agentDeltaBuf = "";
 function appendAgentMsg(role, text) {
@@ -1082,36 +1086,46 @@ async function selectThread(id) {
   } catch (e) { chat.innerHTML = "加载失败:" + escapeHtml(e.message); }
 }
 $("agentSendBtn").addEventListener("click", sendAgent);
+$("agentStopBtn").addEventListener("click", () => { if (agentAbort) agentAbort.abort(); });
 $("agentGoal").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAgent(); } });
 $("agentNewBtn").addEventListener("click", newThread);
 async function sendAgent() {
   const goal = $("agentGoal").value.trim();
   if (!goal || agentRunning) return;
   agentRunning = true;
+  agentAbort = new AbortController();
   $("agentSendBtn").disabled = true;
+  $("agentStopBtn").style.display = "inline-block";
   $("agentGoal").value = "";
   appendAgentMsg("user", goal);
   const wait = appendAgentMsg("assist", "正在规划任务…");
   const steps = [];
   try {
     if (!currentThreadId) { const t = await api("/api/v1/agent/threads", { method: "POST" }); currentThreadId = t.id; }
-    await streamAgentRun(goal, wait, steps);
+    await streamAgentRun(goal, wait, steps, agentAbort.signal);
     loadAgentThreads();
   } catch (e) {
-    wait.body.innerHTML = '<div class="md">' + escapeHtml("出错了：" + e.message) + '</div>';
+    if (e && e.name === "AbortError") {
+      wait.body.innerHTML = '<div class="md">已停止本轮任务。</div>';
+    } else {
+      wait.body.innerHTML = '<div class="md">' + escapeHtml("出错了：" + e.message) + '</div>';
+    }
   } finally {
     agentRunning = false;
+    agentAbort = null;
+    $("agentStopBtn").style.display = "none";
     $("agentSendBtn").disabled = false;
     $("agentGoal").focus();
   }
 }
 // 流式执行:NDJSON 事件逐步展示工具过程,最终答复按 Markdown 渲染(表格可用)
-async function streamAgentRun(goal, wait, steps) {
+async function streamAgentRun(goal, wait, steps, signal) {
   agentDeltaBuf = "";
   const res = await fetch("/api/v1/agent/threads/" + currentThreadId + "/run-stream", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-tenant-id": "t_demo" },
     body: JSON.stringify({ goal }),
+    signal,
   });
   if (!res.ok) { let msg = "HTTP " + res.status; try { msg = (await res.json()).message || msg; } catch {} throw new Error(msg); }
   const reader = res.body.getReader();

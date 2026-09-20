@@ -376,9 +376,35 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 			},
 		};
 	}
+	
+
+	// 返回当前租户可用的能力（capabilities）列表，并附带每个能力的启用状态
+	// 	async (request)：处理函数，只接收 request（没有 reply 参数）。
+	// 这是 Fastify 的一个便利特性：直接 return 一个对象，Fastify 会自动把它序列化成 JSON 并发送。所以这里不需要手动调用 reply.send()。
+	// request.tenantId：从请求对象上取租户 ID。这通常是多租户系统里的关键字段，说明数据按租户隔离。它一般由某个认证/上下文钩子（hook）提前注入到 request 上，而不是 Fastify 原生字段。
+	// listCapabilityStates(deps.db, request.tenantId)：调用一个函数，从数据库查出该租户的能力状态记录。
+	// deps.db：依赖注入的数据库连接。deps 是"dependencies"的缩写，这种写法便于测试时替换 mock。
+	// 返回的应该是一个数组，元素形如 { name: "xxx", enabled: true/false }。
+	// .map((s) => [s.name, s.enabled])：把每条记录转成 [name, enabled] 的二元数组。
+	// s 是 state 的缩写，即单条状态记录。
+	// new Map(...)：把上一步的数组转成 Map，键是能力名，值是启用状态。
+	// 结果形如 Map { "search" => true, "code" => false }。
+	// 用 Map 的目的是后面能 O(1) 快速查找，避免每次都遍历数组。
+	// .filter((c) => !c.hidden)：过滤掉 hidden === true 的能力。
+	// c 是 capability 的缩写。
+	// 隐藏的能力可能是内部实验功能、未发布功能，不对外暴露。
+	// .map((c) => ({ ... }))：把每个能力映射成一个新的响应对象（见下）。
+	// states.has(c.name)：判断数据库里是否有这个能力的记录。
+	// 如果有 → states.get(c.name)!：取数据库里的值。
+	// 末尾的 ! 是 TypeScript 非空断言，告诉编译器"这里一定不是 undefined"（因为前面已经 has 判断过了，但 TS 的 Map.get 类型仍返回 T | undefined）。
+	// 如果没有 → true：默认启用。
+	// 语义：数据库里没存过这个能力的开关，就默认认为是开启的（opt-out 模式，而不是 opt-in）。
 
 	app.get("/api/v1/agent/capabilities", async (request) => {
-		const states = new Map(listCapabilityStates(deps.db, request.tenantId).map((s) => [s.name, s.enabled]));
+		const rows = listCapabilityStates(deps.db, request.tenantId); // 查库
+		// 明确告诉 TS：我返回的是 [string, boolean] 二元组
+		const pairs = rows.map((s): [string, boolean] => [s.name, s.enabled]);
+		const states = new Map(pairs); // 转 Map
 		return {
 			capabilities: CAPABILITIES.filter((c) => !c.hidden).map((c) => ({
 				name: c.name,
@@ -552,12 +578,20 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		reply.raw.setHeader("X-Accel-Buffering", "no");
 		const write = (obj: unknown) => reply.raw.write(JSON.stringify(obj) + "\n");
 
+
+		// 客户端中断:连接关闭(关页面/断网/用户取消)时触发 agent 取消,不再继续执行/落库
+		const abortController = new AbortController();
+		let clientGone = false;
+		const onClientClose = () => { clientGone = true; abortController.abort(); };
+		request.raw.once("close", onClientClose);
 		try {
 			const result = await runSalesAgentWithPlan(
 				{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
-				{ goal, history, onProgress: (e) => write(e) },
+				{ goal, history, signal: abortController.signal, onProgress: (e) => write(e) },
 			);
 			appendThreadMessage(deps.db, request.tenantId, thread.id, "user", [{ type: "text", text: goal }]);
+			// 运行期间客户端已断开:不落库、不写流,直接收尾
+			if (clientGone) { reply.raw.destroy(); return reply; }
 			if (result.final?.answer) {
 				appendThreadMessage(deps.db, request.tenantId, thread.id, "assistant", [{ type: "text", text: result.final.answer }]);
 			}
@@ -581,10 +615,17 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 				console.warn(`[context] 摘要落库失败: ${error instanceof Error ? error.message : String(error)}`);
 			}
 			write({ type: "final", threadId: thread.id, runId: result.runId, final: result.final });
+			request.raw.removeListener("close", onClientClose);
 			reply.raw.end();
 		} catch (error) {
-			write({ type: "error", error: error instanceof Error ? error.message : String(error) });
-			reply.raw.end();
+			request.raw.removeListener("close", onClientClose);
+			if (abortController.signal.aborted) {
+				// 客户端已中断:尝试通知前端(连接可能已断,写失败忽略)
+				try { write({ type: "cancelled", reason: "client_disconnected" }); reply.raw.end(); } catch { reply.raw.destroy(); }
+			} else {
+				write({ type: "error", error: error instanceof Error ? error.message : String(error) });
+				reply.raw.end();
+			}
 		}
 		return reply;
 	});

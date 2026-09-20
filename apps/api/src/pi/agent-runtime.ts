@@ -36,6 +36,14 @@ export interface SalesAgentInput {
 	onProgress?: (event: AgentProgressEvent) => void;
 	plan?: PlanDetails; // 执行计划(注入【执行计划】上下文)
 	collectExecutedTools?: boolean; // 收集本轮实际调用工具(用于验证)
+	signal?: AbortSignal; // 客户端中断信号:触发后终止 agent 循环(取消在途模型请求/工具执行)
+}
+
+export class AgentCancelledError extends Error {
+	constructor(message = "agent run cancelled") {
+		super(message);
+		this.name = "AgentCancelledError";
+	}
 }
 
 export interface PlanStep {
@@ -209,6 +217,12 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 		streamFn,
 		initialState: { systemPrompt, tools: tools as never, model, messages: stateMessages },
 	});
+
+	const onAbort = () => agent.abort();
+	if (input.signal) {
+		if (input.signal.aborted) onAbort();
+		else input.signal.addEventListener("abort", onAbort, { once: true });
+	}
 	
 	// 订阅事件：落库 + 收集工具 + 转发前端
 	const executedTools: string[] = [];
@@ -235,7 +249,11 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 	} catch (error) {
 		await recorder.flush().catch(() => undefined);
 		throw error;
+	} finally {
+		if (input.signal) input.signal.removeEventListener("abort", onAbort);
 	}
+	// 客户端中断:prompt 正常返回(消息 stopReason=aborted),但按取消处理,不产出最终答复
+	if (input.signal?.aborted) throw new AgentCancelledError("agent run cancelled by client");
 
 	const messages = agent.state.messages;
 	let final: AgentFinal | undefined;
@@ -272,7 +290,7 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 }
 
 /** 规划阶段:只用 emit_plan,输出执行计划(不执行任何工具)。 */
-export async function runPlanPhase(deps: SalesAgentDeps, input: { goal: string }): Promise<PlanDetails> {
+export async function runPlanPhase(deps: SalesAgentDeps, input: { goal: string; signal?: AbortSignal }): Promise<PlanDetails> {
 	const runtime = deps.runtime ?? createModelRegistry();
 	const streamFn = deps.streamFn ?? runtime.streamFn;
 	const model = requiredModel(runtime);
@@ -292,7 +310,17 @@ export async function runPlanPhase(deps: SalesAgentDeps, input: { goal: string }
 		streamFn,
 		initialState: { systemPrompt, tools: createPlanTools() as never, model, messages: [] },
 	});
-	await agent.prompt(input.goal);
+	const onAbort = () => agent.abort();
+	if (input.signal) {
+		if (input.signal.aborted) onAbort();
+		else input.signal.addEventListener("abort", onAbort, { once: true });
+	}
+	try {
+		await agent.prompt(input.goal);
+	} finally {
+		if (input.signal) input.signal.removeEventListener("abort", onAbort);
+	}
+	if (input.signal?.aborted) throw new AgentCancelledError("plan cancelled by client");
 
 	for (const message of agent.state.messages as Array<{ role?: string; toolName?: string; details?: unknown }>) {
 		if (message.role === "toolResult" && message.toolName === "emit_plan" && message.details) {
@@ -311,14 +339,14 @@ export function verifyPlan(plan: PlanDetails, executedTools: string[]): PlanVeri
 	const summary =
 		missing.length === 0
 			? `计划 ${planned.length} 个工具步骤全部执行,验证通过。`
-			: `计划 ${planned.length} 个工具步骤,已执行 ${covered.length} 个,未执行 ${missing.join("、")}(可能因实际数据无需调用)。`;
+			: `计划 ${planned.length} 个工具步骤,已执行 ${covered.length} 个,未执行 ${missing.join("、")}。`;
 	return { planned: planned.length, executed: [...new Set(executedTools)], coveredTools: covered, missingTools: missing, summary };
 }
 
 /** 规划-执行-验证(P-E-V):先规划(落库+plan 事件),再按计划执行,最后验证并回填。 */
 export async function runSalesAgentWithPlan(deps: SalesAgentDeps, input: SalesAgentInput): Promise<SalesAgentResult> {
 	const runId = randomUUID();
-	const plan = await runPlanPhase(deps, { goal: input.goal });
+	const plan = await runPlanPhase(deps, { goal: input.goal, signal: input.signal });
 	recordAgentPlan(deps.db, { runId, tenantId: deps.tenantId, goal: input.goal, plan });
 	if (input.onProgress) input.onProgress({ type: "plan", toolName: "emit_plan", label: "执行计划", payload: plan });
 

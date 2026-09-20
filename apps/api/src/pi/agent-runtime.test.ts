@@ -5,7 +5,7 @@ import { fauxProvider, fauxToolCall, fauxAssistantMessage } from "@earendil-work
 import { openDatabase } from "../db/database.js";
 import { requireTenant } from "../repositories/customers.js";
 import { getAgentPlanByRun } from "../repositories/agent-plans.js";
-import { runPlanPhase, runSalesAgent, stripChartsForHistory, stripMarkdownTables, verifyPlan, runSalesAgentWithPlan } from "./agent-runtime.js";
+import { AgentCancelledError, runPlanPhase, runSalesAgent, stripChartsForHistory, stripMarkdownTables, verifyPlan, runSalesAgentWithPlan } from "./agent-runtime.js";
 import { openSessionStore, tmpDataDir, cleanupDataDir, type SessionStore } from "./sessions.js";
 
 let db: DatabaseSync;
@@ -189,5 +189,43 @@ describe("规划-执行-验证(P-E-V)", () => {
 		const record = getAgentPlanByRun(db, "t1", result.runId)!;
 		expect(record.status).toBe("verified");
 		expect(JSON.parse(record.planJson).steps).toHaveLength(1);
+	});
+});
+
+describe("客户端中断", () => {
+	it("signal 已中止:runSalesAgent 直接抛 AgentCancelledError,不产出答复", async () => {
+		const fa = fauxProvider();
+		fa.setResponses([fauxAssistantMessage([fauxToolCall("emit_final", { answer: "不应出现的答复" })])]);
+		const streamFn: StreamFn = async (model, context, options) => fa.provider.stream(model as never, context, options);
+		const controller = new AbortController();
+		controller.abort();
+		await expect(
+			runSalesAgent({ db, tenantId: "t1", store, streamFn }, { goal: "中断测试", signal: controller.signal }),
+		).rejects.toBeInstanceOf(AgentCancelledError);
+	});
+
+	it("运行中触发 signal:runSalesAgent 抛 AgentCancelledError", async () => {
+		const fa = fauxProvider();
+		fa.setResponses([fauxAssistantMessage([fauxToolCall("emit_final", { answer: "正常答复" })])]);
+		const streamFn: StreamFn = async (model, context, options) => fa.provider.stream(model as never, context, options);
+		const controller = new AbortController();
+		const pending = runSalesAgent({ db, tenantId: "t1", store, streamFn }, { goal: "运行中中断", signal: controller.signal });
+		// 给 agent 一个 tick 的机会进入运行态后再中止
+		await new Promise((r) => setTimeout(r, 20));
+		controller.abort();
+		await expect(pending).rejects.toBeInstanceOf(AgentCancelledError);
+	});
+
+	it("runSalesAgentWithPlan:规划阶段中止抛 AgentCancelledError", async () => {
+		const fa = fauxProvider();
+		fa.setResponses([
+			fauxAssistantMessage([fauxToolCall("emit_plan", { summary: "计划", steps: [{ step: "查客户", tool: "query_customer", purpose: "取数" }] })]),
+		]);
+		const streamFn: StreamFn = async (model, context, options) => fa.provider.stream(model as never, context, options);
+		const controller = new AbortController();
+		const pending = runSalesAgentWithPlan({ db, tenantId: "t1", store, streamFn }, { goal: "规划中中断", signal: controller.signal });
+		await new Promise((r) => setTimeout(r, 20));
+		controller.abort();
+		await expect(pending).rejects.toBeInstanceOf(AgentCancelledError);
 	});
 });
