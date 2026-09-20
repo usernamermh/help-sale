@@ -303,7 +303,7 @@ export async function runPlanPhase(deps: SalesAgentDeps, input: { goal: string; 
 	const systemPrompt = `你是「销售军师」的执行规划器。请为下面的任务输出一份执行计划。
 可用工具(规划时只能从这些真实工具名中选取):${toolNames.join("、")}
 规则:
-- 先选择执行模式(mode):任务可并行拆分(如多客户/多车型/多数据源独立取数)、数据量大、需要多路并行时选 multi;简单查询/单链路任务选 single。
+- 选择执行模式(mode):single=你自己直接执行;multi=拆给多个子代理并行。由你根据任务实际情况自主判断:只有任务确实包含多个相互独立、可并行完成的子目标时才选 multi,否则一律 single(单代理更简单高效,不额外拆解)。
 - mode=multi 时,用 subtasks 给出 2-6 个可独立并行执行的子任务(title/goal/tools),每个子任务由独立子代理执行,不要写 steps;mode=single 时用 steps 给执行步骤。
 - 只调用 emit_plan 输出计划,规划阶段不执行其他工具;
 - 步骤控制在 2-8 步,每步说明:做什么(step)、拟调用工具(tool)、预期产出(purpose);

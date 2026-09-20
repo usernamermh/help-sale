@@ -782,6 +782,19 @@
       padding: 6px 8px;
     }
 
+    .kb-group { margin-bottom: 12px; }
+    .kb-group-head { font-weight: 600; font-size: 12.5px; color: #475569; margin-bottom: 6px; }
+    .kb-card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; background: #fff; font-size: 12.5px; }
+    .kb-card.kb-pending { border-left: 3px solid #f59e0b; }
+    .kb-card.kb-inprogress { border-left: 3px solid #3b82f6; }
+    .kb-card.kb-done { border-left: 3px solid #16a34a; }
+    .kb-card.kb-error { border-left: 3px solid #dc2626; }
+    .kb-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .kb-goal { color: #475569; margin: 4px 0; line-height: 1.5; }
+    .kb-tools { color: #94a3b8; font-size: 11.5px; margin: 2px 0; }
+    .kb-result { color: #166534; background: #f0fdf4; border-radius: 6px; padding: 6px 8px; margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
+    .kb-error { color: #991b1b; background: #fef2f2; border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
+    .plan-card {
     .plan-card {
       margin: 0 0 10px;
       border: 1px solid #bfdbfe;
@@ -1152,7 +1165,9 @@
           <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
         </svg>本轮任务</button><button id="headerTrBtn" class="hdr-btn" title="显示/隐藏对话原文"><svg viewBox="0 0 24 24">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>对话原文</button><button id="headerJobsBtn" class="hdr-btn" title="查看定时任务"><svg viewBox="0 0 24 24">
+        </svg>对话原文</button><button id="headerKanbanBtn" class="hdr-btn" title="显示/隐藏协作看板"><svg viewBox="0 0 24 24">
+          <path d="M4 4h6v16H4zM14 4h6v10h-6z" />
+        </svg>协作看板</button><button id="headerJobsBtn" class="hdr-btn" title="查看定时任务"><svg viewBox="0 0 24 24">
           <path d="M12 8v4l3 3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
         </svg>定时任务</button><a href="/console">进入编排端</a></span>
   </header>
@@ -1184,6 +1199,11 @@
         <div class="tr-head"><span>对话原文</span><button class="tr-close" onclick="hideTrPanel()">×</button></div>
         <div class="tr-meta" id="trMeta"></div>
         <div class="tr-list" id="trList"></div>
+      </aside>
+      <aside class="side-block tr-panel" id="kanbanPanel" style="display:none">
+        <div class="tr-head"><span>协作看板</span><button class="tr-close" onclick="hideKanbanPanel()">×</button></div>
+        <div class="tr-meta" id="kanbanMeta"></div>
+        <div class="tr-list" id="kanbanList"></div>
       </aside>
     </div>
   </div>
@@ -1246,6 +1266,38 @@
       }
     }
     function hideTrPanel() { $("trPanel").style.display = "none"; $("headerTrBtn").classList.remove("active"); syncRightCol(); }
+    function hideKanbanPanel() { $("kanbanPanel").style.display = "none"; $("headerKanbanBtn").classList.remove("active"); syncRightCol(); }
+    function showKanbanPanel() { $("kanbanPanel").style.display = "flex"; $("headerKanbanBtn").classList.add("active"); loadKanban(); syncRightCol(); }
+    async function loadKanban() {
+      const box = $("kanbanList");
+      try {
+        const r = await api("/api/v1/kanban");
+        const cards = r.cards || [];
+        $("kanbanMeta").textContent = "共 " + cards.length + " 张卡片";
+        if (!cards.length) { box.innerHTML = "<div class=\"mini\">看板为空</div>"; return; }
+        const statusOrder = ["pending", "inprogress", "done", "error"];
+        const groups = {};
+        for (const s of statusOrder) groups[s] = cards.filter((c) => c.status === s);
+        const labels = { pending: "待执行", inprogress: "执行中", done: "已完成", error: "出错" };
+        box.innerHTML = "";
+        for (const s of statusOrder) {
+          if (!groups[s].length) continue;
+          const g = document.createElement("div");
+          g.className = "kb-group";
+          g.innerHTML = '<div class="kb-group-head">' + labels[s] + ' (' + groups[s].length + ')' + '</div>';
+          for (const card of groups[s]) {
+            const d = document.createElement("div"); d.className = "kb-card kb-" + card.status;
+            d.innerHTML = '<div class="kb-card-head"><b>' + escapeHtml(card.id) + " " + escapeHtml(card.title || "") + '</b><span class="badge">' + (labels[card.status] || card.status) + '</span></div>'
+              + (card.goal ? '<div class="kb-goal">' + escapeHtml(card.goal) + '</div>' : "")
+              + (card.tools && card.tools.length ? '<div class="kb-tools">工具: ' + escapeHtml(card.tools.join(", ")) + '</div>' : "")
+              + (card.result ? '<div class="kb-result">结果: ' + escapeHtml(card.result) + '</div>' : "")
+              + (card.error ? '<div class="kb-error">错误: ' + escapeHtml(card.error) + '</div>' : "");
+            g.appendChild(d);
+          }
+          box.appendChild(g);
+        }
+      } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
+    }
     function showTrPanel() { $("trPanel").style.display = "flex"; $("headerTrBtn").classList.add("active"); syncRightCol(); } function renderMarkdown(text) {
       try {
         if (typeof marked !== "undefined" && marked.parse) {
@@ -1640,7 +1692,7 @@
       $("runPanel").style.display = "flex";
     }
     function syncRightCol() {
-      const visible = $("runPanel").style.display !== "none" || $("trPanel").style.display !== "none";
+      const visible = $("runPanel").style.display !== "none" || $("trPanel").style.display !== "none" || $("kanbanPanel").style.display !== "none";
       $("rightCol").style.display = visible ? "flex" : "none";
       $("rightResizer").style.display = visible ? "block" : "none";
     }
@@ -1855,6 +1907,7 @@
     $("headerThreadsBtn").addEventListener("click", function () { toggleLeftBlock("threadsBlock", this); });
     $("headerRunBtn").addEventListener("click", () => { if ($("runPanel").style.display === "none") showRunPanel(); else hideRunPanel(); });
     $("headerTrBtn").addEventListener("click", () => { if ($("trPanel").style.display === "none") showTrPanel(); else hideTrPanel(); });
+    $("headerKanbanBtn").addEventListener("click", () => { if ($("kanbanPanel").style.display === "none") showKanbanPanel(); else hideKanbanPanel(); });
     // 右侧面板拖拽调宽
     let rightResizing = false;
     $("rightResizer").addEventListener("mousedown", (e) => { rightResizing = true; document.body.style.userSelect = "none"; e.preventDefault(); });

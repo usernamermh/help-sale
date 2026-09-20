@@ -1142,9 +1142,13 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		}
 	});
 	// ── 子代理任务:队列状态与手动消费 ──
+	// ── 子代理任务与协作看板 ──
+	app.get("/api/v1/kanban", async (request) => {
+		return { cards: listKanbanCards(request.tenantId) };
+	});
+
 	app.get<{ Querystring: { status?: string } }>("/api/v1/subagents", async (request) => {
-		const status = request.query.status === "queued" || request.query.status === "running" || request.query.status === "done" || request.query.status === "error" ? request.query.status : undefined;
-		return { tasks: listKanbanCards(request.tenantId, status) };
+		const status = request.query.status === "pending" || request.query.status === "inprogress" || request.query.status === "done" || request.query.status === "error" ? request.query.status : undefined;
 	});
 
 	app.post("/api/v1/subagents/run", async (request) => {
