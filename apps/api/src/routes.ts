@@ -599,16 +599,6 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 				const t = goal.replace(/\s+/g, " ").trim();
 				setThreadTitle(deps.db, request.tenantId, thread.id, t.length > 24 ? t.slice(0, 24) + "…" : t);
 			}
-			// 打字机流式:最终答复按 6 字符/步逐步下发(delta),节奏可感知,总时长不超过 12s;最终仍发 final 全量事件
-			const answer = result.final?.answer ?? "";
-			const CHUNK = 6;
-			const blocks = Math.max(Math.ceil(answer.length / CHUNK), 1);
-			const stepMs = Math.min(48, Math.floor(12000 / blocks));
-			for (let i = 0; i < answer.length; i += CHUNK) {
-				write({ type: "delta", text: answer.slice(i, i + CHUNK) });
-				if (i + CHUNK < answer.length) await new Promise((r) => setTimeout(r, stepMs));
-			}
-			// 执行后生成并落库会话摘要(中期记忆)
 			try {
 				ensureThreadSummary(deps.db, request.tenantId, thread.id);
 			} catch (error) {

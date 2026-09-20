@@ -21,7 +21,7 @@ export interface SalesAgentDeps {
 }
 
 export interface AgentProgressEvent {
-	type: "tool_start" | "tool_end" | "tool_update" | "plan" | "verified";
+	type: "tool_start" | "tool_end" | "tool_update" | "plan" | "verified" | "text_delta";
 	toolCallId?: string;
 	toolName?: string;
 	label?: string;
@@ -236,7 +236,7 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 		}
 		if (input.onProgress) {
 			for (const ce of toClientEvents(event)) {
-				if (ce.type === "tool_start" || ce.type === "tool_end" || ce.type === "tool_update") {
+				if (ce.type === "tool_start" || ce.type === "tool_end" || ce.type === "tool_update" || ce.type === "text_delta") {
 					input.onProgress({ type: ce.type, toolCallId: ce.toolCallId, toolName: ce.toolName, label: toolLabel(ce.toolName), payload: ce.payload });
 				}
 			}

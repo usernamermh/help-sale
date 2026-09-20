@@ -1147,7 +1147,10 @@ async function streamAgentRun(goal, wait, steps, signal) {
   }
 }
 function handleAgentEvent(evt, wait, steps) {
-  if (evt.type === "tool_start") {
+  if (evt.type === "plan") {
+    agentDeltaBuf = "";
+    wait.body.innerHTML = '<div class="md">' + renderMarkdown("正在执行任务…") + '</div>';
+  } else if (evt.type === "tool_start") {
     const name = evt.label || evt.toolName || "工具";
     steps.push({ eventType: "tool_start", toolName: evt.toolName, label: name, summary: prettyPayload(evt.payload) });
     wait.step.textContent = "正在调用 " + name + "…";
@@ -1160,6 +1163,11 @@ function handleAgentEvent(evt, wait, steps) {
       renderTranscript($("agentTrMeta"), $("agentTrList"), "会话 " + String(det.conversationId || "").slice(0, 10) + "…", det.messages);
       $("agentTranscript").style.display = "flex";
     }
+  } else if (evt.type === "text_delta") {
+    const text = evt.payload && evt.payload.text ? evt.payload.text : "";
+    if (!text) return;
+    agentDeltaBuf += text;
+    wait.body.innerHTML = '<div class="md">' + renderMarkdown(agentDeltaBuf) + '</div>';
   } else if (evt.type === "delta") {
     agentDeltaBuf += evt.text || "";
     wait.body.innerHTML = '<div class="md">' + renderMarkdown(agentDeltaBuf) + '</div>';

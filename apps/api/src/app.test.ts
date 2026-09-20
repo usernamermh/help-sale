@@ -623,7 +623,7 @@ describe("api", () => {
 		expect(calls).toBe(callsAfterFirst);
 	})
 
-	it("AI 助销流式:run-stream 逐块 delta,合并等于最终答复", async () => {
+	it("AI 助销流式:run-stream 输出工具事件与 final 全量答复,模型文本流经 text_delta 转发", async () => {
 		dir = tmpDataDir("api-stream");
 		app = buildApp({ dataDir: dir, streamFn: fakeAgentStreamFn(), mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const headers = { "x-tenant-id": "t1" };
@@ -632,12 +632,13 @@ describe("api", () => {
 		const res = await app.inject({ method: "POST", url: `/api/v1/agent/threads/${threadId}/run-stream`, payload: { goal: "用表格列出两款车型" }, headers });
 		expect(res.statusCode).toBe(200);
 		const events = res.body.split("\n").filter(Boolean).map((l) => JSON.parse(l));
-		const deltas = events.filter((e: { type: string }) => e.type === "delta").map((e: { text: string }) => e.text).join("");
 		const finals = events.filter((e: { type: string }) => e.type === "final");
-		expect(deltas.length).toBeGreaterThan(0);
 		expect(finals).toHaveLength(1);
-		expect(deltas).toBe(finals[0].final.answer);
+		expect(finals[0].final.answer).toContain("汉EV");
+		expect(finals[0].final.answer).toContain("Model Y");
 		expect(events.some((e: { type: string }) => e.type === "tool_start" || e.type === "tool_end")).toBe(true);
+		// 假模型本轮只发工具调用(无文本流),因此不应有模拟 delta;真实模型文本流通过 text_delta 实时转发
+		expect(events.filter((e: { type: string }) => e.type === "delta").length).toBe(0);
 	});
 
 	it("模型未调用 emit_final 时,兜底把最后一条 assistant 文本作为答复", async () => {

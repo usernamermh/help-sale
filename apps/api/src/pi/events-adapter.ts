@@ -15,8 +15,13 @@ export function toClientEvents(event: AgentEvent): ClientEvent[] {
 			return [{ type: "agent_end", payload: { messageCount: event.messages.length } }];
 		case "message_start":
 			return [{ type: "message", payload: event.message }];
-		case "message_update":
+		case "message_update": {
+			const streamEvent = (event as { assistantMessageEvent?: { type?: string; delta?: string } }).assistantMessageEvent;
+			if (streamEvent?.type === "text_delta" && typeof streamEvent.delta === "string") {
+				return [{ type: "text_delta", payload: { text: streamEvent.delta } }];
+			}
 			return [{ type: "message_update", payload: event.message }];
+		}
 		case "message_end":
 			return [{ type: "message_end" }];
 		case "tool_execution_start":
