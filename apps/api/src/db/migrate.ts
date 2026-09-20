@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 25;
+export const MIGRATION_VERSION = 26;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -138,6 +138,31 @@ export function migrate(db: DatabaseSync): void {
 		if (!cols.some((c) => c.name === "once_date")) {
 			db.exec("ALTER TABLE automation_jobs ADD COLUMN once_date TEXT;");
 		}
+	}
+	// v26:真实数据导入扩展字段(话术点/对话/消息)
+	if (current.user_version < 26) {
+		const addCol = (table: string, col: string, ddl: string) => {
+			const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+			if (!cols.some((c) => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl};`);
+		};
+		addCol("knowledge_documents", "source_id", "TEXT");
+		addCol("knowledge_documents", "key_content", "TEXT");
+		addCol("knowledge_documents", "kind_code", "TEXT");
+		addCol("knowledge_documents", "necessity", "INTEGER");
+		addCol("knowledge_documents", "score", "INTEGER");
+		addCol("knowledge_documents", "status", "INTEGER");
+		addCol("knowledge_documents", "tag_ids", "TEXT");
+		addCol("knowledge_documents", "kind_path_json", "TEXT");
+		addCol("knowledge_documents", "cust_id", "TEXT");
+		addCol("conversations", "source_id", "TEXT");
+		addCol("conversations", "audio_date", "TEXT");
+		addCol("conversations", "complex_url", "TEXT");
+		addCol("conversations", "info_json", "TEXT");
+		addCol("conversations", "raw_json", "TEXT");
+		addCol("conversation_messages", "start_ms", "INTEGER");
+		addCol("conversation_messages", "end_ms", "INTEGER");
+		addCol("conversation_messages", "speaker", "TEXT");
+		addCol("conversation_messages", "file_start_time", "TEXT");
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }

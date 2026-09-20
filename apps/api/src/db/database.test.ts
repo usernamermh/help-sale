@@ -15,7 +15,7 @@ afterEach(() => {
 describe("database migrations", () => {
 	it("user_version 达到 v1", () => {
 		const row = db.prepare("PRAGMA user_version").get() as { user_version: number };
-		expect(row.user_version).toBe(25);
+		expect(row.user_version).toBe(26);
 	});
 
 	it("v1 核心表齐全", () => {
