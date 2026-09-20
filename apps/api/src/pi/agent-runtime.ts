@@ -6,7 +6,7 @@ import { getSalesAgentSystemPrompt } from "../prompts/sales-agent.js";
 import { createPlanTools, createSalesAgentTools } from "./agent-tools.js";
 import { config } from "../env.js";
 import { createTimelineRecorder } from "../services/timeline.js";
-import { createKanbanTask } from "../services/kanban-store.js";
+import { createKanbanTask, listKanbanCards } from "../services/kanban-store.js";
 import { consumeKanbanSubagents } from "../services/subagent-runner.js";
 import { listCapabilityStates } from "../repositories/agent-capabilities.js";
 import { recordAgentPlan, updateAgentPlan } from "../repositories/agent-plans.js";
@@ -358,16 +358,26 @@ export async function runMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentI
 	if (subtasks.length === 0) throw new Error("multi 模式缺少子任务清单(subtasks)");
 
 	// 1) 主代理把子任务写上看板(agent 间通信总线)
+	const createdCardIds: string[] = [];
 	for (const st of subtasks) {
 		const card = createKanbanTask({ tenantId: deps.tenantId, title: st.title, goal: st.goal, tools: st.tools });
+		createdCardIds.push(card.id);
 		if (input.onProgress) input.onProgress({ type: "tool_start", toolName: "kanban", label: "看板建卡", payload: { id: card.id, title: card.title } });
 		if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "kanban", label: "看板建卡", payload: { id: card.id, title: card.title } });
 	}
 
-	// 2) 子代理并行执行(消费者,并发上限 2;子代理不可再派生/不可改看板)
 	if (input.onProgress) input.onProgress({ type: "tool_start", toolName: "subagents", label: "子代理并行执行", payload: { count: subtasks.length } });
-	const executed = await consumeKanbanSubagents({ db: deps.db, runtime, streamFn }, deps.tenantId, { limit: Math.min(2, subtasks.length) });
-	if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "subagents", label: "子代理并行执行", payload: { count: executed.length } });
+	const deadline = Date.now() + 300_000;
+	while (true) {
+		await consumeKanbanSubagents({ db: deps.db, runtime, streamFn }, deps.tenantId, { limit: 2 });
+		const pending = listKanbanCards(deps.tenantId, "pending").length;
+		if (pending === 0 || Date.now() > deadline) break;
+		await new Promise((r) => setTimeout(r, 2000));
+	}
+	// 全部子任务就绪后,从看板读取最终结果(后台消费者可能已代为执行部分卡片)
+	const allCards = listKanbanCards(deps.tenantId).filter((c) => createdCardIds.includes(c.id));
+	const executed = allCards.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result, error: c.error }));
+	if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "subagents", label: "子代理并行执行", payload: { count: executed.length, results: executed.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result ? c.result.slice(0, 120) : null, error: c.error ?? null })) } });
 
 	// 3) 协调者(主代理)读看板检查结果并汇总:只挂 kanban/subagents + emit_final,不注册业务工具
 	const coordinatorTools = (await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store })).filter(

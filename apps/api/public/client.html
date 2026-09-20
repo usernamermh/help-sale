@@ -626,6 +626,14 @@
       font-size: 11px;
     }
 
+    .run-detail {
+      margin: 5px 2px 2px;
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
     .run-item .run-sum {
       margin-top: 3px;
       color: #64748b;
@@ -1625,9 +1633,9 @@
     }
     // ── 本轮任务栏 ──
     function resetRunPanel() { $("runList").innerHTML = ""; $("runMeta").textContent = ""; $("runPanel").style.display = "flex"; $("headerRunBtn").classList.add("active"); syncRightCol(); }
-    function addRunTask(label, status) {
+    function addRunTask(label, status, detail) {
       const d = document.createElement("div"); d.className = "run-item run-" + status;
-      d.innerHTML = '<div class="run-head"><span>' + escapeHtml(label) + '</span><span class="run-time">' + new Date().toLocaleTimeString() + '</span></div>';
+      d.innerHTML = '<div class="run-head"><span>' + escapeHtml(label) + '</span><span class="run-time">' + new Date().toLocaleTimeString() + '</span></div>' + (detail ? '<div class="run-detail">' + escapeHtml(detail) + '</div>' : "");
       $("runList").appendChild(d); $("runList").scrollTop = $("runList").scrollHeight;
       $("runPanel").style.display = "flex";
     }
@@ -1919,14 +1927,21 @@
     }
     // ── 执行计划展示 ──
     function attachPlanCard(wait, plan) {
-      if (!wait || !plan || !Array.isArray(plan.steps) || !plan.steps.length) return;
+      if (!wait || !plan) return;
+      const isMulti = plan.mode === "multi";
+      if (!isMulti && (!Array.isArray(plan.steps) || !plan.steps.length)) return;
       let card = wait.div.querySelector(".plan-card");
       if (!card) {
         card = document.createElement("div"); card.className = "plan-card";
         wait.div.insertBefore(card, wait.body);
       }
-      const steps = plan.steps.map((s, i) => "<li><b>" + escapeHtml(String(s.step)) + "</b>" + (s.tool ? ' <span class="plan-tool">' + escapeHtml(String(s.tool)) + "</span>" : "") + '<div class="plan-purpose">' + escapeHtml(String(s.purpose || "")) + "</div></li>").join("");
-      card.innerHTML = '<div class="plan-head">📋 执行计划' + (plan.summary ? " · " + escapeHtml(String(plan.summary)) : "") + "</div><ol class=\"plan-steps\">" + steps + "</ol>";
+      const head = isMulti
+        ? '<div class="plan-head">🤖 多代理并行' + (plan.summary ? " · " + escapeHtml(String(plan.summary)) : "") + '</div>'
+        : '<div class="plan-head">📋 执行计划' + (plan.summary ? " · " + escapeHtml(String(plan.summary)) : "") + '</div>';
+      const body = isMulti
+        ? '<ol class="plan-steps">' + (plan.subtasks || []).map((s, i) => "<li><b>子任务" + (i + 1) + ": " + escapeHtml(String(s.title)) + "</b>" + (s.tools && s.tools.length ? ' <span class="plan-tool">' + escapeHtml(s.tools.join(",")) + "</span>" : "") + '<div class="plan-purpose">' + escapeHtml(String(s.goal || "")) + "</div></li>").join("") + "</ol>"
+        : '<ol class="plan-steps">' + plan.steps.map((s, i) => "<li><b>" + escapeHtml(String(s.step)) + "</b>" + (s.tool ? ' <span class="plan-tool">' + escapeHtml(String(s.tool)) + "</span>" : "") + '<div class="plan-purpose">' + escapeHtml(String(s.purpose || "")) + "</div></li>").join("") + "</ol>";
+      card.innerHTML = head + body;
     }
     function handleStreamEvent(evt, wait, steps) {
       if (evt.type === "plan") {
@@ -1941,6 +1956,11 @@
         const name = evt.label || evt.toolName || "工具";
         steps.push({ eventType: "tool_end", toolName: evt.toolName, label: name });
         addRunTask(name, "done");
+        if (evt.toolName === "subagents" && evt.payload && Array.isArray(evt.payload.results)) {
+          for (const r of evt.payload.results) {
+            addRunTask("子任务 · " + (r.title || r.id), r.status === "done" ? "done" : "error", r.status === "done" ? (r.result || "完成") : ("失败: " + (r.error || "")));
+          }
+        }
         wait.body.textContent = name + " 完成，正在整理结果…";
         const det = evt.payload && evt.payload.details;
         if (det && Array.isArray(det.messages) && det.messages.length) {
