@@ -1,9 +1,29 @@
 {
   "name": "kanban",
-  "label": "协作看板",
-  "description": "本地看板(JSON 文件):add/list/move/get/remove 任务卡片,供 subagent 模式及多任务之间共享状态。",
+  "label": "看板协作",
+  "description": "多代理协作看板(按租户隔离):主代理创建任务卡片(可含目标/工具白名单),子代理认领执行并把结果写回卡片;支持 add/list/get/move/finish/remove,作为 agent 之间的通信总线。",
   "category": "协作",
-  "parameters": { "type": "object", "required": ["op"], "properties": { "op": { "type": "string", "enum": ["add", "list", "move", "get", "remove"] }, "title": { "type": "string", "description": "add 时任务标题" }, "description": { "type": "string" }, "status": { "type": "string", "enum": ["backlog", "todo", "inprogress", "done"], "default": "todo" }, "id": { "type": "string", "description": "move/get/remove 时卡片ID" }, "statusFilter": { "type": "string" } } },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "op": {
+        "type": "string",
+        "enum": ["add", "list", "get", "move", "finish", "remove"],
+        "default": "list",
+        "description": "操作类型:add 创建卡片;list 查看;get 详情;move 改状态;finish 回填结果(ok=false 标记错误);remove 删除"
+      },
+      "title": { "type": "string", "description": "卡片标题(add 用)" },
+      "description": { "type": "string", "description": "卡片说明" },
+      "goal": { "type": "string", "description": "子代理任务目标(multi-agent 模式)" },
+      "tools": { "type": "array", "items": { "type": "string" }, "description": "子代理可用工具白名单" },
+      "id": { "type": "string", "description": "卡片 ID(get/move/finish/remove 用)" },
+      "status": { "type": "string", "enum": ["pending", "inprogress", "done", "error"], "description": "卡片状态" },
+      "statusFilter": { "type": "string", "description": "按状态过滤(list 用)" },
+      "result": { "type": "string", "description": "执行结果(finish 用)" },
+      "error": { "type": "string", "description": "错误信息(finish 用)" },
+      "ok": { "type": "boolean", "default": true, "description": "finish 是否成功,false 标记 error" }
+    }
+  },
   "entry": "main.ts",
   "function_list": ["main.execute"]
 }

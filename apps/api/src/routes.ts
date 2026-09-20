@@ -46,12 +46,12 @@ import { listAutomationRuns, type AutomationRun } from "./repositories/automatio
 import { createAutomationJob, deleteAutomationJob, getAutomationJob, listAutomationJobs, updateAutomationJob } from "./repositories/automation-jobs.js";
 import { getBuiltinJobEnabled, setBuiltinJobEnabled } from "./repositories/builtin-job-settings.js";
 import { runAutomationJob, runCustomJob } from "./services/automation.js";
-import { listSubTasks } from "./services/subagent-queue.js";
+import { listKanbanCards } from "./services/kanban-store.js";
 import { createReflectionCase } from "./repositories/reflection-cases.js";
 import { applyReflectionToMemory, collectReflectionSuggestions } from "./services/reflection.js";
 import { compressHistory, ensureThreadSummary } from "./services/context-compress.js";
 import { getThreadSummary } from "./repositories/thread-summaries.js";
-import { consumeSubagentQueue } from "./services/subagent-runner.js";
+import { consumeKanbanSubagents } from "./services/subagent-runner.js";
 import { appendThreadMessage, createThread, deleteAllThreads, deleteThread, getThread, listThreadMessages, listThreads, setThreadTitle } from "./repositories/agent-threads.js";
 import type { SessionStore } from "./pi/sessions.js";
 
@@ -1144,11 +1144,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	// ── 子代理任务:队列状态与手动消费 ──
 	app.get<{ Querystring: { status?: string } }>("/api/v1/subagents", async (request) => {
 		const status = request.query.status === "queued" || request.query.status === "running" || request.query.status === "done" || request.query.status === "error" ? request.query.status : undefined;
-		return { tasks: listSubTasks(status) };
+		return { tasks: listKanbanCards(request.tenantId, status) };
 	});
 
 	app.post("/api/v1/subagents/run", async (request) => {
-		const executed = await consumeSubagentQueue({ db: deps.db }, { limit: 2 });
+		const executed = await consumeKanbanSubagents({ db: deps.db }, request.tenantId, { limit: 2 });
 		return { executed };
 	});
 	// ── 反思与自我改进:案例摘要与应用到记忆 ──

@@ -124,7 +124,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		}
 	});
 
-	const stopSubagents = options.subagents === true ? startSubagentConsumer({ db }) : () => undefined;
+	const stopSubagents = options.subagents === true ? startSubagentConsumer({ db }, [config.tenantId]) : () => undefined;
 	const stopAutomation = startAutomationScheduler({
 		db,
 		store,

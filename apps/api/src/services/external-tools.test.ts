@@ -165,9 +165,9 @@ describe("tools_system 基础工具", () => {
 		expect(text).toContain("```mermaid");
 	});
 
-	it("subagents 队列 create/list", async () => {
-		const dir = path.join(root, "subagents-test");
-		process.env.SUBAGENTS_DIR = dir;
+	it("subagents 队列 create/list(看板存储)", async () => {
+		const boardFile = path.join(root, "subagents-kanban.json");
+		process.env.KANBAN_FILE = boardFile;
 		try {
 			const tools = await loadAll();
 			const tool = tools.find((t) => t.name === "subagents")!;
@@ -176,11 +176,10 @@ describe("tools_system 基础工具", () => {
 			const listed = (await tool.execute("s2", { op: "list" })) as { details: { tasks: unknown[] } };
 			expect(listed.details.tasks).toHaveLength(1);
 		} finally {
-			delete process.env.SUBAGENTS_DIR;
+			delete process.env.KANBAN_FILE;
 		}
 	});
 
-describe("相似度与话术命中质检", () => {
 	it("similarity:对每条查询返回 top-k 余弦相似度命中", async () => {
 		const tools = await loadAll();
 		const tool = tools.find((t) => t.name === "similarity")!;
@@ -280,7 +279,6 @@ describe("文件读取工具(txt/excel/ppt)", () => {
 			fs.rmSync(file, { force: true });
 		}
 	});
-});
 
 	it("excel 每页 10 行,支持翻页", async () => {
 		const XLSX = (await import("xlsx")) as typeof import("xlsx");

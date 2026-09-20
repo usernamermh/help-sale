@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
+import path from "node:path";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import { fauxProvider, fauxToolCall, fauxAssistantMessage } from "@earendil-works/pi-ai/providers/faux";
 import { openDatabase } from "../db/database.js";
 import { requireTenant } from "../repositories/customers.js";
 import { getAgentPlanByRun } from "../repositories/agent-plans.js";
-import { AgentCancelledError, runPlanPhase, runSalesAgent, stripChartsForHistory, stripMarkdownTables, verifyPlan, runSalesAgentWithPlan } from "./agent-runtime.js";
+import { listKanbanCards } from "../services/kanban-store.js";
+import { AgentCancelledError, runMultiAgentFlow, runPlanPhase, runSalesAgent, stripChartsForHistory, stripMarkdownTables, verifyPlan, runSalesAgentWithPlan } from "./agent-runtime.js";
 import { openSessionStore, tmpDataDir, cleanupDataDir, type SessionStore } from "./sessions.js";
 
 let db: DatabaseSync;
@@ -227,5 +229,38 @@ describe("客户端中断", () => {
 		await new Promise((r) => setTimeout(r, 20));
 		controller.abort();
 		await expect(pending).rejects.toBeInstanceOf(AgentCancelledError);
+	});
+});
+
+describe("多代理模式", () => {
+	it("runMultiAgentFlow:主代理建卡->子代理并行执行->协调者汇总输出", async () => {
+		const boardFile = path.join(dir, "kanban.json");
+		process.env.KANBAN_FILE = boardFile;
+		try {
+			// 子代理/协调者都输出文本;计划直接传入 multi 模式
+			const fa = fauxProvider();
+			fa.setResponses([
+				fauxAssistantMessage([{ type: "text", text: "子任务A结果" }]),
+				fauxAssistantMessage([{ type: "text", text: "子任务B结果" }]),
+				fauxAssistantMessage([fauxToolCall("emit_final", { answer: "汇总:两个子任务完成。" })]),
+			]);
+			const streamFn: StreamFn = async (model, context, options) => fa.provider.stream(model as never, context, options);
+			const plan = {
+				mode: "multi" as const,
+				summary: "并行分析",
+				steps: [],
+				subtasks: [
+					{ title: "分析A", goal: "分析客户A" },
+					{ title: "分析B", goal: "分析客户B" },
+				],
+			};
+			const result = await runMultiAgentFlow({ db, tenantId: "t1", store, streamFn }, { goal: "并行分析客户" }, plan);
+			expect(result.final?.answer).toContain("汇总");
+			const cards = listKanbanCards("t1", "done");
+			expect(cards).toHaveLength(2);
+			expect(cards.every((c) => c.result)).toBe(true);
+		} finally {
+			delete process.env.KANBAN_FILE;
+		}
 	});
 });

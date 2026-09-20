@@ -22,9 +22,10 @@ export function systemPlanTool(): AgentTool<any, any> {
 	return {
 		name: "emit_plan",
 		label: "输出执行计划",
-		description: "在开始执行前,输出本次任务的执行计划(步骤列表:做什么/拟调用工具/预期产出)。规划阶段只能调用本工具,不要执行其他工具;调用后规划阶段结束。",
+		description: "在开始执行前,输出本次任务的执行计划:选择执行模式(mode=single 单代理自己执行 / mode=multi 多代理并行),列出步骤或多代理子任务清单。规划阶段只能调用本工具,不要执行其他工具;调用后规划阶段结束。",
 		parameters: Type.Object({
 			summary: Type.Optional(Type.String({ description: "规划总览一句话" })),
+			mode: Type.Optional(Type.Union([Type.Literal("single"), Type.Literal("multi")], { description: "执行模式:single=单代理直接执行;multi=多代理并行(任务可并行拆分/数据量大/需多路独立取数时用 multi)" })),
 			steps: Type.Array(
 				Type.Object({
 					step: Type.String({ description: "步骤说明" }),
@@ -33,11 +34,22 @@ export function systemPlanTool(): AgentTool<any, any> {
 				}),
 				{ minItems: 1 },
 			),
+			subtasks: Type.Optional(
+				Type.Array(
+					Type.Object({
+						title: Type.String({ description: "子任务标题" }),
+						goal: Type.String({ description: "子代理要完成的目标(独立可并行)" }),
+						tools: Type.Optional(Type.Array(Type.String(), { description: "子代理可用工具白名单(缺省只读工具)" })),
+					}),
+					{ description: "multi 模式下的子任务清单" },
+				),
+			),
 		}),
 		async execute(_id, params: any) {
+			const mode = params.mode === "multi" ? "multi" : "single";
 			return {
-				content: [{ type: "text" as const, text: `规划完成:${(params.steps ?? []).length} 步` }],
-				details: { summary: params.summary, steps: params.steps ?? [] },
+				content: [{ type: "text" as const, text: `规划完成:${mode === "multi" ? `多代理 ${(params.subtasks ?? []).length} 个子任务` : `${(params.steps ?? []).length} 步`}` }],
+				details: { summary: params.summary, mode, steps: params.steps ?? [], subtasks: params.subtasks ?? [] },
 				terminate: true,
 			};
 		},
