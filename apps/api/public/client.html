@@ -1163,7 +1163,7 @@
     <section class="chat">
       <div class="agent-chat" id="chat"></div>
       <div class="agent-input"><textarea id="goal" placeholder="下达目标"></textarea><button
-          id="sendBtn">发送</button></div>
+          id="sendBtn">发送</button><button id="stopBtn" style="display:none;background:linear-gradient(135deg,#dc2626,#b91c1c);box-shadow:0 4px 12px rgba(220,38,38,.25)">停止</button></div>
     </section>
     <div id="rightResizer" class="right-resizer" title="拖动调整右侧面板宽度"></div>
     <div class="right-col" id="rightCol">
@@ -1685,7 +1685,7 @@
         if (currentThreadId === id) { currentThreadId = null; clearChat(); hideTrPanel(); }
         loadThreads();
       } catch (e) { alert("删除失败:" + e.message); }
-    } let running = false; let currentThreadId = null; let deltaBuf = "";
+    } let running = false; let currentThreadId = null; let deltaBuf = ""; let abortCtrl = null;
     const PAGE_TOOLS = ["customer_query", "vehicle_query", "excel", "table_generate", "playbook_check"];
     // ── 新会话欢迎区:默认定时任务结果按钮,点击展示结构化结果 ──
     let welcomeResults = null;
@@ -1828,6 +1828,8 @@
       } catch (e) { chat.innerHTML = "加载失败:" + escapeHtml(e.message); }
     }
     $("sendBtn").addEventListener("click", send);
+    $("stopBtn").addEventListener("click", () => { if (abortCtrl) abortCtrl.abort(); });
+    $("stopBtn").addEventListener("click", () => { if (abortCtrl) abortCtrl.abort(); });
     $("goal").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
     $("newBtn").addEventListener("click", newThread);
     $("clearThreadsBtn").addEventListener("click", clearThreads);
@@ -1861,7 +1863,9 @@
       const goal = $("goal").value.trim();
       if (!goal || running) return;
       running = true;
+      abortCtrl = new AbortController();
       $("sendBtn").disabled = true;
+      $("stopBtn").style.display = "inline-block";
       $("goal").value = "";
       appendAgentMsg("user", goal);
       const wait = appendAgentMsg("assist", "正在开始任务…");
@@ -1869,23 +1873,30 @@
       const steps = [];
       try {
         if (!currentThreadId) { const t = await api("/api/v1/agent/threads", { method: "POST" }); currentThreadId = t.id; }
-        await streamRun(goal, wait, steps);
+        await streamRun(goal, wait, steps, abortCtrl.signal);
         loadThreads(); loadCapabilities();
       } catch (e) {
-        wait.body.textContent = "出错了：" + e.message;
+        if (e && e.name === "AbortError") {
+          wait.body.textContent = "已停止本轮任务。";
+        } else {
+          wait.body.textContent = "出错了：" + e.message;
+        }
       } finally {
         running = false;
+        abortCtrl = null;
+        $("stopBtn").style.display = "none";
         $("sendBtn").disabled = false;
         $("goal").focus();
       }
     }
-    async function streamRun(goal, wait, steps) {
+    async function streamRun(goal, wait, steps, signal) {
       deltaBuf = "";
       resetRunPanel();
       const res = await fetch("/api/v1/agent/threads/" + currentThreadId + "/run-stream", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-tenant-id": "t_demo" },
         body: JSON.stringify({ goal }),
+        signal,
       });
       if (!res.ok) { let msg = "HTTP " + res.status; try { msg = (await res.json()).message || msg; } catch { } throw new Error(msg); }
       const reader = res.body.getReader();
@@ -1940,6 +1951,10 @@
         }
       } else if (evt.type === "tool_update") {
         wait.body.textContent = (evt.label || evt.toolName || "工具") + " 处理中…";
+      } else if (evt.type === "text_delta") {
+        deltaBuf += (evt.payload && evt.payload.text) || "";
+        wait.body.innerHTML = '<div class="md">' + renderMarkdown(deltaBuf) + '</div>';
+        if (window.mermaid) renderMermaidBlocks(wait.body);
       } else if (evt.type === "delta") {
         deltaBuf += evt.text || "";
         wait.body.innerHTML = '<div class="md">' + renderMarkdown(deltaBuf) + '</div>';
