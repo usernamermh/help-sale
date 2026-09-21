@@ -107,7 +107,7 @@ button.danger:hover { background:#fef2f2; }
 </style>
 </head>
 <body>
-<header><h1>销售军师</h1><span class="sub">助销 Agent</span><span id="health"><span class="dot" id="healthDot"></span><span id="healthText">检查中…</span></span></header>
+<header><h1>助销agent管理平台</h1><span class="sub">助销agent管理平台</span><span id="health"><span class="dot" id="healthDot"></span><span id="healthText">检查中…</span></span></header>
 <div class="tabs">
 <span class="tab active" data-tab="agent">AI 助销</span>
 <span class="tab" data-tab="workspace">工作台</span>
@@ -266,7 +266,7 @@ button.danger:hover { background:#fef2f2; }
 <aside class="func-menu">
 <div class="menu-title">洞察晨报</div>
 <button class="func-btn active" data-card="insightCard">经营洞察</button>
-<button class="func-btn" data-card="digestCard2">军师晨报</button>
+<button class="func-btn" data-card="digestCard2">助销晨报</button>
 <button class="func-btn" data-card="automationCard">自动任务</button>
 <button class="func-btn" data-card="subagentCard">子代理任务</button>
 <button class="func-btn" data-card="reflectionCard">反思改进</button>
@@ -277,7 +277,7 @@ button.danger:hover { background:#fef2f2; }
 <div id="insightBox" class="mini"></div>
 </div>
 <div class="card func-card" id="digestCard2">
-<h2>军师晨报</h2>
+<h2>助销晨报</h2>
 <button id="digestBtn2" class="secondary" style="margin-bottom:10px">生成今日晨报</button>
 <div id="digestList"></div>
 </div>
@@ -1047,7 +1047,7 @@ function extractAgentText(content) {
 }
 function clearAgentChat() {
   $("agentChat").innerHTML = "";
-  appendAgentMsg("assist", "你好，我是销售军师。给我一个目标，我会自己查数据、分析并给结论。");
+  appendAgentMsg("assist", "你好，我是助销 agent。给我一个目标，我会自己查数据、分析并给结论。");
 }
 async function loadAgentThreads() {
   const list = $("agentThreadList");

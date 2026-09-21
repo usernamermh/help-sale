@@ -85,7 +85,7 @@ describe("定时与主动任务", () => {
 		expect(run.detailJson).toBeTruthy();
 		const detail = JSON.parse(run.detailJson!) as { stats?: { pendingTasks?: number }; content?: string };
 		expect(detail.stats?.pendingTasks).toBeTypeOf("number");
-		expect(detail.content).toContain("销售军师晨报");
+		expect(detail.content).toContain("助销晨报");
 	});
 
 	it("沉默客户唤醒执行结果结构化落库:detail_json 含 created/skipped", () => {

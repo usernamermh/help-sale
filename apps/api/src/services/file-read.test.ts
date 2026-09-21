@@ -32,9 +32,9 @@ async function fileRead(params: Record<string, unknown>) {
 describe("file_read 任意路径读取", () => {
 	it("txt:仓库外任意路径可读", async () => {
 		const f = tmpPath(".txt");
-		fs.writeFileSync(f, "任意路径的文本内容:销售军师", "utf8");
+		fs.writeFileSync(f, "任意路径的文本内容:助销 agent", "utf8");
 		const { text } = await fileRead({ filePath: f });
-		expect(text).toContain("销售军师");
+		expect(text).toContain("助销 agent");
 	});
 
 	it("xlsx:仓库外任意路径可读", async () => {

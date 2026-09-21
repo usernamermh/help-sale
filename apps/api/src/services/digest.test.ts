@@ -49,7 +49,7 @@ describe("collectDigest", () => {
 		expect(out.stats.customers).toBe(1);
 		expect(out.stats.topIntents[0]).toEqual({ intent: "价格异议", count: 1 });
 		expect(out.stats.priorityTasks[0]).toMatchObject({ customer: "王经理", overdue: true });
-		expect(out.content).toContain("销售军师晨报");
+		expect(out.content).toContain("助销晨报");
 		expect(out.content).toContain("⚠️ 已到期");
 	});
 

@@ -166,7 +166,7 @@ describe("api", () => {
 		const client = await app.inject({ method: "GET", url: "/" });
 		expect(client.statusCode).toBe(200);
 		expect(client.headers["content-type"]).toContain("text/html");
-		expect(client.body).toContain("销售军师");
+		expect(client.body).toContain("助销agent管理平台");
 		expect(client.body).toContain("业务逻辑功能");
 
 		const consolePage = await app.inject({ method: "GET", url: "/console" });
@@ -473,7 +473,7 @@ describe("api", () => {
 		const after = await app.inject({ method: "GET", url: "/api/v1/knowledge/candidates?status=pending", headers });
 		expect(after.json().candidates).toHaveLength(0);
 	});
-		it("军师晨报:生成(当日幂等)并列出历史", async () => {
+		it("助销晨报:生成(当日幂等)并列出历史", async () => {
 		dir = tmpDataDir("api-digest");
 		app = buildApp({ dataDir: dir, mysqlSink: NOOP_MYSQL, reminders: createMemoryReminderQueue() });
 		const headers = { "x-tenant-id": "t1" };
@@ -481,7 +481,7 @@ describe("api", () => {
 		const first = await app.inject({ method: "POST", url: "/api/v1/assistant/digest", headers });
 		expect(first.statusCode).toBe(200);
 		expect(first.json().reused).toBe(false);
-		expect(first.json().title).toContain("销售军师晨报");
+		expect(first.json().title).toContain("助销晨报");
 		expect(first.json().stats.pendingTasks).toBe(0);
 
 		const second = await app.inject({ method: "POST", url: "/api/v1/assistant/digest", headers });

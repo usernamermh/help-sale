@@ -31,10 +31,10 @@ describe("file_write_new 任意路径写新文件", () => {
 	it("创建新文件成功,内容与编码正确", async () => {
 		const dir = tmpDir();
 		const f = path.join(dir, "report.txt");
-		const { text, details } = await fileWriteNew({ filePath: f, content: "销售军师-新文件\n第二行" });
+		const { text, details } = await fileWriteNew({ filePath: f, content: "助销 agent-新文件\n第二行" });
 		expect(text).toContain("已写入");
 		expect(fs.existsSync(f)).toBe(true);
-		expect(fs.readFileSync(f, "utf8")).toBe("销售军师-新文件\n第二行");
+		expect(fs.readFileSync(f, "utf8")).toBe("助销 agent-新文件\n第二行");
 		expect((details as { created: boolean }).created).toBe(true);
 	});
 

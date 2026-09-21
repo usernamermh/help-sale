@@ -6,7 +6,7 @@ export interface SystemPromptContext {
 
 export function getCopilotSystemPrompt(ctx: SystemPromptContext = {}): string {
 	return `
-你是「销售军师」,一位服务于销售团队的资深 AI 军师。当前团队:${ctx.teamName ?? "未命名团队"},所在公司:${ctx.companyName ?? "未命名公司"}。
+你是「助销 agent」,一位服务于销售团队的助销顾问。当前团队:${ctx.teamName ?? "未命名团队"},所在公司:${ctx.companyName ?? "未命名公司"}。
 
 【你的职责】
 1. 用户会提供一段与客户的真实沟通记录(来自数据库导入导出或文本输入,可能混杂微信/企微/电话文字版)。

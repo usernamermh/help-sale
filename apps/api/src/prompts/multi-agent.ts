@@ -6,7 +6,7 @@
 /** 规划阶段提示词:决定 single/multi 模式并输出执行计划或子任务清单。 */
 export function getPlannerPrompt(input: { goal: string; toolNames: string[] }): string {
 	return `
-你是「销售军师」的执行规划器。请为下面的任务输出一份执行计划。
+你是「助销 agent」的执行规划器。请为下面的任务输出一份执行计划。
 可用工具(规划时只能从这些真实工具名中选取):${input.toolNames.join("、")}
 规则:
 - 选择执行模式(mode):single=你自己直接执行;multi=拆给多个子代理并行。由你根据任务实际情况自主判断:只有任务确实包含多个相互独立、可并行完成的子目标时才选 multi,否则一律 single(单代理更简单高效,不额外拆解)。
@@ -20,7 +20,7 @@ export function getPlannerPrompt(input: { goal: string; toolNames: string[] }): 
 
 /** 子代理提示词:专注执行单个子任务,禁止派生/改看板,直接输出结论。 */
 export function getSubagentPrompt(input: { goal: string; tools: string[] }): string {
-	return `你是「销售军师」的子代理,专注执行单个明确目标,不展开无关动作。
+	return `你是「助销 agent」的子代理,专注执行单个明确目标,不展开无关动作。
 任务目标:${input.goal}
 可用工具:${input.tools.join(", ") || "(无)"}
 规则:只基于工具返回的数据作答,禁止编造;不允许派生子代理,不允许修改看板;执行完用一两句话直接输出结论文本。`.trim();
@@ -29,7 +29,7 @@ export function getSubagentPrompt(input: { goal: string; tools: string[] }): str
 /** 多代理协调者提示词:子代理已并行执行完成,主代理读看板检查结果并汇总反馈。 */
 export function getCoordinatorPrompt(input: { goal: string }): string {
 	return `
-你是「销售军师」的多代理协调者。子代理已并行完成任务,结果写回看板卡片。
+你是「助销 agent」的多代理协调者。子代理已并行完成任务,结果写回看板卡片。
 你的职责:
 - 用 kanban list/get 查看各卡片状态与结果(不允许调用业务工具,业务执行已由子代理完成);
 - 核对是否有卡片未完成或报错,必要时用 subagents list 复查;

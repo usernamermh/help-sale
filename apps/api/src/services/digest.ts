@@ -102,12 +102,12 @@ export function collectDigest(db: DatabaseSync, input: { tenantId: string; now?:
 		})),
 	};
 
-	return { title: `销售军师晨报 · ${date}`, content: formatDigest(stats), stats };
+	return { title: `助销晨报 · ${date}`, content: formatDigest(stats), stats };
 }
 
 export function formatDigest(stats: DigestStats): string {
 	const lines: string[] = [];
-	lines.push(`# 销售军师晨报 · ${stats.date}`);
+	lines.push(`# 助销晨报 · ${stats.date}`);
 	lines.push("");
 	lines.push("## 关键数字");
 	lines.push(`- 进行中跟进任务:${stats.pendingTasks}(其中已到期 ${stats.overdueTasks})`);
