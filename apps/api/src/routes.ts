@@ -46,7 +46,7 @@ import { listAutomationRuns, type AutomationRun } from "./repositories/automatio
 import { createAutomationJob, deleteAutomationJob, getAutomationJob, listAutomationJobs, updateAutomationJob } from "./repositories/automation-jobs.js";
 import { getBuiltinJobEnabled, setBuiltinJobEnabled } from "./repositories/builtin-job-settings.js";
 import { runAutomationJob, runCustomJob } from "./services/automation.js";
-import { listKanbanCards } from "./services/kanban-store.js";
+import { listKanbanCards, removeKanbanByThread } from "./services/kanban-store.js";
 import { createReflectionCase } from "./repositories/reflection-cases.js";
 import { applyReflectionToMemory, collectReflectionSuggestions } from "./services/reflection.js";
 import { compressHistory, ensureThreadSummary } from "./services/context-compress.js";
@@ -514,6 +514,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	app.delete<{ Params: { id: string } }>("/api/v1/agent/threads/:id", async (request, reply) => {
 		const removed = deleteThread(deps.db, request.tenantId, request.params.id);
 		if (!removed) return reply.code(404).send({ error: "thread_not_found", message: "会话不存在" });
+		if (removed) removeKanbanByThread(request.tenantId, request.params.id);
 		return { removed: true };
 	});
 
@@ -587,7 +588,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		try {
 			const result = await runSalesAgentWithPlan(
 				{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
-				{ goal, history, signal: abortController.signal, onProgress: (e) => write(e) },
+				{ goal, history, threadId: thread.id, signal: abortController.signal, onProgress: (e) => write(e) },
 			);
 			appendThreadMessage(deps.db, request.tenantId, thread.id, "user", [{ type: "text", text: goal }]);
 			// 运行期间客户端已断开:不落库、不写流,直接收尾
@@ -1143,12 +1144,14 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	});
 	// ── 子代理任务:队列状态与手动消费 ──
 	// ── 子代理任务与协作看板 ──
-	app.get("/api/v1/kanban", async (request) => {
-		return { cards: listKanbanCards(request.tenantId) };
+	app.get<{ Querystring: { threadId?: string } }>("/api/v1/kanban", async (request) => {
+		const threadId = request.query.threadId ? String(request.query.threadId) : undefined;
+		return { cards: listKanbanCards(request.tenantId, { threadId }) };
 	});
 
 	app.get<{ Querystring: { status?: string } }>("/api/v1/subagents", async (request) => {
 		const status = request.query.status === "pending" || request.query.status === "inprogress" || request.query.status === "done" || request.query.status === "error" ? request.query.status : undefined;
+		return { tasks: listKanbanCards(request.tenantId, { status }) };
 	});
 
 	app.post("/api/v1/subagents/run", async (request) => {

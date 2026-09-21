@@ -256,7 +256,7 @@ describe("多代理模式", () => {
 			};
 			const result = await runMultiAgentFlow({ db, tenantId: "t1", store, streamFn }, { goal: "并行分析客户" }, plan);
 			expect(result.final?.answer).toContain("汇总");
-			const cards = listKanbanCards("t1", "done");
+			const cards = listKanbanCards("t1", { status: "done", threadId: "default" });
 			expect(cards).toHaveLength(2);
 			expect(cards.every((c) => c.result)).toBe(true);
 		} finally {

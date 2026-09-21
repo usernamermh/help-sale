@@ -6,7 +6,7 @@ import { getSalesAgentSystemPrompt } from "../prompts/sales-agent.js";
 import { createPlanTools, createSalesAgentTools } from "./agent-tools.js";
 import { config } from "../env.js";
 import { createTimelineRecorder } from "../services/timeline.js";
-import { createKanbanTask, listKanbanCards } from "../services/kanban-store.js";
+import { createKanbanTask, listKanbanCards, resetKanban } from "../services/kanban-store.js";
 import { consumeKanbanSubagents } from "../services/subagent-runner.js";
 import { listCapabilityStates } from "../repositories/agent-capabilities.js";
 import { recordAgentPlan, updateAgentPlan } from "../repositories/agent-plans.js";
@@ -38,9 +38,10 @@ export interface SalesAgentInput {
 	onProgress?: (event: AgentProgressEvent) => void;
 	plan?: PlanDetails; // 执行计划(注入【执行计划】上下文)
 	collectExecutedTools?: boolean; // 收集本轮实际调用工具(用于验证)
+	threadId?: string; // 当前会话 ID:看板按会话隔离,只展示该会话的任务
 	signal?: AbortSignal; // 客户端中断信号:触发后终止 agent 循环(取消在途模型请求/工具执行)
-}
 
+}
 export class AgentCancelledError extends Error {
 	constructor(message = "agent run cancelled") {
 		super(message);
@@ -356,26 +357,29 @@ export async function runMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentI
 	const model = requiredModel(runtime);
 	const subtasks = plan.subtasks ?? [];
 	if (subtasks.length === 0) throw new Error("multi 模式缺少子任务清单(subtasks)");
+	const threadId = input.threadId ?? "default";
 
-	// 1) 主代理把子任务写上看板(agent 间通信总线)
+	// 1) 主代理把子任务写上看板(看板按会话隔离,只展示当前会话的任务)
+	resetKanban(deps.tenantId, threadId);
 	const createdCardIds: string[] = [];
 	for (const st of subtasks) {
-		const card = createKanbanTask({ tenantId: deps.tenantId, title: st.title, goal: st.goal, tools: st.tools });
+		const card = createKanbanTask({ tenantId: deps.tenantId, threadId, title: st.title, goal: st.goal, tools: st.tools });
 		createdCardIds.push(card.id);
 		if (input.onProgress) input.onProgress({ type: "tool_start", toolName: "kanban", label: "看板建卡", payload: { id: card.id, title: card.title } });
 		if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "kanban", label: "看板建卡", payload: { id: card.id, title: card.title } });
 	}
 
+	// 2) 子代理并行执行(消费者,并发上限 2;子代理不可再派生/不可改看板)
 	if (input.onProgress) input.onProgress({ type: "tool_start", toolName: "subagents", label: "子代理并行执行", payload: { count: subtasks.length } });
 	const deadline = Date.now() + 300_000;
 	while (true) {
-		await consumeKanbanSubagents({ db: deps.db, runtime, streamFn }, deps.tenantId, { limit: 2 });
-		const pending = listKanbanCards(deps.tenantId, "pending").length;
+		await consumeKanbanSubagents({ db: deps.db, runtime, streamFn }, deps.tenantId, { limit: 2, threadId });
+		const pending = listKanbanCards(deps.tenantId, { status: "pending", threadId }).length;
 		if (pending === 0 || Date.now() > deadline) break;
 		await new Promise((r) => setTimeout(r, 2000));
 	}
-	// 全部子任务就绪后,从看板读取最终结果(后台消费者可能已代为执行部分卡片)
-	const allCards = listKanbanCards(deps.tenantId).filter((c) => createdCardIds.includes(c.id));
+	// 全部子任务就绪后,从看板读取当前会话的最终结果(后台消费者可能已代为执行部分卡片)
+	const allCards = listKanbanCards(deps.tenantId, { threadId }).filter((c) => createdCardIds.includes(c.id));
 	const executed = allCards.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result, error: c.error }));
 	if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "subagents", label: "子代理并行执行", payload: { count: executed.length, results: executed.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result ? c.result.slice(0, 120) : null, error: c.error ?? null })) } });
 
@@ -424,7 +428,6 @@ export async function runMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentI
 	return { runId: randomUUID(), final, messages, plan, executedTools: ["kanban", "subagents"] };
 }
 
-/** 规划-执行-验证(P-E-V):先规划(落库+plan 事件),再按计划执行,最后验证并回填。 */
 export async function runSalesAgentWithPlan(deps: SalesAgentDeps, input: SalesAgentInput): Promise<SalesAgentResult> {
 	const runId = randomUUID();
 	if (input.signal?.aborted) throw new AgentCancelledError("agent run cancelled by client");

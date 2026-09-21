@@ -13,7 +13,7 @@ export function execute(ctx: ToolContext, params: any) {
 		const goal = String(params?.goal ?? "").trim();
 		if (!title || !goal) return { content: [{ type: "text", text: "create 需要 title 与 goal。" }] };
 		const tools = Array.isArray(params?.tools) ? params.tools.map((s: unknown) => String(s)) : undefined;
-		const card = createKanbanTask({ tenantId: ctx.tenantId, title, goal, description: params?.description ? String(params.description) : undefined, tools });
+		const card = createKanbanTask({ tenantId: ctx.tenantId, threadId: "default", title, goal, description: params?.description ? String(params.description) : undefined, tools });
 		return { content: [{ type: "text", text: `子代理任务已登记 ${card.id}: ${title}(状态 ${card.status},将由消费者并行执行)` }], details: { id: card.id, title: card.title, status: card.status } };
 	}
 	if (op === "get") {

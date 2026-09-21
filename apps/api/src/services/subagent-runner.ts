@@ -66,8 +66,8 @@ async function runSubTask(deps: SubagentRunnerDeps, card: KanbanCard): Promise<s
 }
 
 /** 消费看板:取 pending 卡片并行执行(至多 MAX_CONCURRENCY),结果回填看板。 */
-export async function consumeKanbanSubagents(deps: SubagentRunnerDeps, tenantId: string, opts: { limit?: number } = {}): Promise<KanbanCard[]> {
-	const pending = listKanbanCards(tenantId, "pending").slice(0, opts.limit ?? MAX_CONCURRENCY);
+export async function consumeKanbanSubagents(deps: SubagentRunnerDeps, tenantId: string, opts: { limit?: number; threadId?: string } = {}): Promise<KanbanCard[]> {
+	const pending = listKanbanCards(tenantId, { status: "pending", threadId: opts.threadId }).slice(0, opts.limit ?? MAX_CONCURRENCY);
 	if (pending.length === 0) return [];
 	const results: KanbanCard[] = [];
 	await Promise.all(
@@ -82,7 +82,7 @@ export async function consumeKanbanSubagents(deps: SubagentRunnerDeps, tenantId:
 		}),
 	);
 	for (const card of pending) {
-		const updated = listKanbanCards(tenantId).find((c) => c.id === card.id);
+		const updated = listKanbanCards(tenantId, { threadId: opts.threadId }).find((c) => c.id === card.id);
 		if (updated) results.push(updated);
 	}
 	return results;

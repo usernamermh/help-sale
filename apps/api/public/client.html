@@ -1167,7 +1167,7 @@
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>对话原文</button><button id="headerKanbanBtn" class="hdr-btn" title="显示/隐藏协作看板"><svg viewBox="0 0 24 24">
           <path d="M4 4h6v16H4zM14 4h6v10h-6z" />
-        </svg>协作看板</button><button id="headerJobsBtn" class="hdr-btn" title="查看定时任务"><svg viewBox="0 0 24 24">
+        </svg>子agent协作看板</button><button id="headerJobsBtn" class="hdr-btn" title="查看定时任务"><svg viewBox="0 0 24 24">
           <path d="M12 8v4l3 3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
         </svg>定时任务</button><a href="/console">进入编排端</a></span>
   </header>
@@ -1201,7 +1201,7 @@
         <div class="tr-list" id="trList"></div>
       </aside>
       <aside class="side-block tr-panel" id="kanbanPanel" style="display:none">
-        <div class="tr-head"><span>协作看板</span><button class="tr-close" onclick="hideKanbanPanel()">×</button></div>
+        <div class="tr-head"><span>子agent协作看板</span><button class="tr-close" onclick="hideKanbanPanel()">×</button></div>
         <div class="tr-meta" id="kanbanMeta"></div>
         <div class="tr-list" id="kanbanList"></div>
       </aside>
@@ -1271,7 +1271,7 @@
     async function loadKanban() {
       const box = $("kanbanList");
       try {
-        const r = await api("/api/v1/kanban");
+        const r = await api("/api/v1/kanban" + (currentThreadId ? "?threadId=" + encodeURIComponent(currentThreadId) : ""));
         const cards = r.cards || [];
         $("kanbanMeta").textContent = "共 " + cards.length + " 张卡片";
         if (!cards.length) { box.innerHTML = "<div class=\"mini\">看板为空</div>"; return; }
@@ -1878,7 +1878,7 @@
     }
     async function newThread() { const t = await api("/api/v1/agent/threads", { method: "POST" }); currentThreadId = t.id; clearChat(); loadThreads(); }
     async function selectThread(id) {
-      currentThreadId = id; loadThreads();
+      currentThreadId = id; loadThreads(); if ($("kanbanPanel").style.display !== "none") loadKanban();
       const chat = $("chat"); chat.innerHTML = "<div class=\"cap-item\">加载中…</div>";
       try {
         const r = await api("/api/v1/agent/threads/" + id);

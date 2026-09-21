@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 export interface KanbanCard {
 	id: string;
 	tenantId: string;
+	threadId: string; // 所属会话/任务:看板按会话隔离,只展示当前会话的任务
 	title: string;
 	description?: string;
 	status: string; // pending | inprogress | done | error
@@ -19,7 +20,7 @@ export interface KanbanCard {
 
 const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
-/** 看板文件:data/kanban-<tenantId>.json;测试用 KANBAN_FILE 重定向(仅当未设置 KANBAN_TENANT 时按租户分文件)。 */
+/** 看板文件:data/kanban-<tenantId>.json;测试用 KANBAN_FILE 重定向。 */
 export function kanbanFile(tenantId: string): string {
 	if (process.env.KANBAN_FILE) return process.env.KANBAN_FILE;
 	return path.join(repoRoot, "data", `kanban-${tenantId}.json`);
@@ -37,13 +38,26 @@ export function saveKanban(tenantId: string, board: { items: KanbanCard[]; nextI
 	writeFileSync(file, JSON.stringify(board, null, 2), "utf8");
 }
 
-/** 创建任务卡片:供主代理多 agent 模式与 subagents 工具使用。 */
-export function createKanbanTask(input: { tenantId: string; title: string; goal: string; description?: string; tools?: string[]; status?: string }): KanbanCard {
+/** 清空指定会话的看板(该会话新任务开始时调用,只影响当前会话,不影响其他历史会话)。 */
+export function resetKanban(tenantId: string, threadId: string): void {
+	const board = loadKanban(tenantId);
+	board.items = board.items.filter((c) => c.threadId !== threadId);
+	saveKanban(tenantId, board);
+}
+
+/** 删除会话时一并清理该会话的看板记录。 */
+export function removeKanbanByThread(tenantId: string, threadId: string): void {
+	resetKanban(tenantId, threadId);
+}
+
+/** 创建任务卡片:threadId 表示所属会话。 */
+export function createKanbanTask(input: { tenantId: string; threadId: string; title: string; goal: string; description?: string; tools?: string[]; status?: string }): KanbanCard {
 	const board = loadKanban(input.tenantId);
 	const now = new Date().toISOString();
 	const card: KanbanCard = {
 		id: `K${board.nextId++}`,
 		tenantId: input.tenantId,
+		threadId: input.threadId,
 		title: input.title,
 		description: input.description,
 		status: input.status ?? "pending",
@@ -62,10 +76,13 @@ export function getKanbanCard(tenantId: string, id: string): KanbanCard | undefi
 	return loadKanban(tenantId).items.find((c) => c.id === id);
 }
 
-/** 列出卡片(可按状态过滤)。 */
-export function listKanbanCards(tenantId: string, status?: string): KanbanCard[] {
+/** 列出卡片:threadId 缺省返回全部,传了则只返回该会话的卡片。 */
+export function listKanbanCards(tenantId: string, opts?: { status?: string; threadId?: string }): KanbanCard[] {
 	const items = loadKanban(tenantId).items;
-	return items.filter((c) => !status || c.status === status).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+	return items
+		.filter((c) => !opts?.status || c.status === opts.status)
+		.filter((c) => !opts?.threadId || c.threadId === opts.threadId)
+		.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
 /** 更新卡片字段。 */
@@ -73,7 +90,7 @@ export function updateKanbanCard(tenantId: string, id: string, patch: Partial<Ka
 	const board = loadKanban(tenantId);
 	const card = board.items.find((c) => c.id === id);
 	if (!card) return undefined;
-	const next: KanbanCard = { ...card, ...patch, id: card.id, tenantId: card.tenantId, createdAt: card.createdAt, updatedAt: new Date().toISOString() };
+	const next: KanbanCard = { ...card, ...patch, id: card.id, tenantId: card.tenantId, threadId: card.threadId, createdAt: card.createdAt, updatedAt: new Date().toISOString() };
 	board.items = board.items.map((c) => (c.id === id ? next : c));
 	saveKanban(tenantId, board);
 	return next;
