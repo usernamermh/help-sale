@@ -33,7 +33,8 @@ import { runCopilotAnalysis } from "./pi/copilot.js";
 import { replaceConversationMessages, listConversationMessages as listConvMessages, type ConversationMessageRow } from "./repositories/conversation-data.js";
 import { createDeal, getSalespersonById, getStore, getStoreManager, getStoreOverview, listDeals, listSales, listStores, upsertSalesperson, upsertStore } from "./repositories/store-ops.js";
 import { analysisRequestHash } from "./services/analysis-cache.js";
-import { runSalesAgent, runSalesAgentWithPlan, stripChartsForHistory } from "./pi/agent-runtime.js";
+import { runSalesAgent, runSalesAgentWithPlan, collectMultiAgentFlow, stripChartsForHistory } from "./pi/agent-runtime.js";
+import { getAgentPlanByRun } from "./repositories/agent-plans.js";
 import { CAPABILITIES, getCapabilityDef } from "./pi/capabilities.js";
 import { createWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled } from "./repositories/agent-capabilities.js";
 import { queryConsoleLogs } from "./services/console-logs.js";
@@ -621,6 +622,23 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		return reply;
 	});
 
+
+
+	// 多代理汇总:前端轮询看板确认子任务全部完成后调用,协调者读看板生成最终答复
+	app.post<{ Params: { id: string }; Body: { runId?: string } }>("/api/v1/agent/threads/:id/multi-summary", async (request, reply) => {
+		const thread = getThread(deps.db, request.tenantId, request.params.id);
+		if (!thread) return reply.code(404).send({ error: "thread_not_found", message: "会话不存在" });
+		const runId = request.body?.runId;
+		const plan = runId ? getAgentPlanByRun(deps.db, request.tenantId, runId) : undefined;
+		if (!plan) return reply.code(400).send({ error: "plan_not_found", message: "未找到该会话的执行计划" });
+		const goal = plan.goal;
+		const result = await collectMultiAgentFlow(
+			{ db: deps.db, tenantId: request.tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
+			{ goal, threadId: thread.id },
+			JSON.parse(plan.planJson),
+		);
+		return { final: result.final ?? null };
+	});
 
 	app.post<{ Params: { name: string }; Body: { params?: Record<string, unknown> } }>("/api/v1/agent/tools/:name/page", async (request, reply) => {
 		try {

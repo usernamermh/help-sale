@@ -62,6 +62,11 @@ export interface AppConfig {
 	analysisHistoryLimit: number;
 	vehicleSearchLimit: number;
 	// 自动任务(晨报/周报/沉默唤醒)
+	// 子代理/多代理(subagents 段)
+	subagentMaxConcurrency: number;
+	subagentPollIntervalMs: number;
+	subagentTimeoutMs: number;
+	subagentDefaultTools: string[];
 	automationEnabled: boolean;
 	morningDigestTime: string;
 	weeklyReportWeekday: number;
@@ -108,6 +113,12 @@ export interface FileConfig {
 		silentCustomerDays?: number;
 		silentWakeupEnabled?: boolean;
 		wakeupTaskTime?: string;
+	};
+	subagents?: {
+		maxConcurrency?: number;
+		pollIntervalMs?: number;
+		timeoutMs?: number;
+		defaultTools?: string[];
 	};
 	defaults?: {
 		insightsDays?: number;
@@ -254,6 +265,10 @@ export function loadConfig(): AppConfig {
 		remindersTakeLimit: num(file.defaults!.remindersTakeLimit!),
 		analysisHistoryLimit: num(file.defaults!.analysisHistoryLimit!),
 		vehicleSearchLimit: num(file.defaults!.vehicleSearchLimit!),
+		subagentMaxConcurrency: num(file.subagents!.maxConcurrency!),
+		subagentPollIntervalMs: num(file.subagents!.pollIntervalMs!),
+		subagentTimeoutMs: num(file.subagents!.timeoutMs!),
+		subagentDefaultTools: (file.subagents!.defaultTools ?? []).map(String),
 		automationEnabled: bool(file.automation!.enabled!),
 		morningDigestTime: String(file.automation!.morningDigestTime!),
 		weeklyReportWeekday: num(file.automation!.weeklyReportWeekday!),

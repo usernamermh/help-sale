@@ -7,15 +7,10 @@ import { config } from "../env.js";
 import { claimKanbanCard, finishKanbanCard, listKanbanCards, type KanbanCard } from "./kanban-store.js";
 import { getSubagentPrompt } from "../prompts/multi-agent.js";
 
-/** 子代理默认工具白名单:只读/安全工具;禁止编排类工具(不能派生子代理/不能抢看板)。 */
-const DEFAULT_SUBAGENT_TOOLS = [
-	"knowledge_search", "customer_query", "conversation_query", "vehicle_query", "insight_query", "funnel_query",
-	"sql", "computer", "table_generate", "chart_generate", "date_tool", "dialog_extract", "keyword_extract_free",
-	"similarity", "embedding", "file_read", "txt", "excel", "ppt",
-];
+/** 子代理默认工具白名单(来自配置 subagents.defaultTools)。 */
+const DEFAULT_SUBAGENT_TOOLS = config.subagentDefaultTools;
 /** 多代理模式下子代理绝对不允许使用的工具(派生/编排)。 */
 const FORBIDDEN_SUBAGENT_TOOLS = new Set(["subagents", "kanban", "todo_list", "emit_final"]);
-
 export interface SubagentRunnerDeps {
 	db: DatabaseSync;
 	runtime?: ModelRuntime;
@@ -23,7 +18,7 @@ export interface SubagentRunnerDeps {
 }
 
 /** 并行执行上限(资源隔离:同一批最多并发 2 个子代理,避免抢占)。 */
-const MAX_CONCURRENCY = 2;
+const MAX_CONCURRENCY = config.subagentMaxConcurrency;
 
 function subagentSystemPrompt(card: KanbanCard, tools: string[]): string {
 	return getSubagentPrompt({ goal: card.goal ?? card.title, tools });
@@ -85,16 +80,21 @@ export async function consumeKanbanSubagents(deps: SubagentRunnerDeps, tenantId:
 	return results;
 }
 
-/** 启动子代理消费者:每 15 秒扫描一次看板,按租户消费 pending 卡片。 */
+/** 启动子代理消费者:按轮询间隔扫描看板,消费全部线程的 pending 卡片(含多代理任务)。 */
 export function startSubagentConsumer(deps: SubagentRunnerDeps, tenantIds: string[] = []): () => void {
 	const timer = setInterval(() => {
 		const tenants = tenantIds.length > 0 ? tenantIds : ["t_demo"];
 		for (const tenantId of tenants) {
-			consumeKanbanSubagents(deps, tenantId, { limit: MAX_CONCURRENCY }).catch((error) => {
-				console.warn(`[subagents] 消费失败(${tenantId}): ${error instanceof Error ? error.message : String(error)}`);
-			});
+			// 按线程分组取 pending 卡片,逐线程消费(每个线程并发上限 MAX_CONCURRENCY)
+			const pending = listKanbanCards(tenantId, { status: "pending" });
+			const threadIds = [...new Set(pending.map((c) => c.threadId))];
+			for (const threadId of threadIds) {
+				consumeKanbanSubagents(deps, tenantId, { limit: MAX_CONCURRENCY, threadId }).catch((error) => {
+					console.warn(`[subagents] 消费失败(${tenantId}/${threadId}): ${error instanceof Error ? error.message : String(error)}`);
+				});
+			}
 		}
-	}, 15_000);
+	}, config.subagentPollIntervalMs);
 	timer.unref?.();
 	return () => clearInterval(timer);
 }

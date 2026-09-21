@@ -342,6 +342,80 @@ export function verifyPlan(plan: PlanDetails, executedTools: string[]): PlanVeri
 	return { planned: planned.length, executed: [...new Set(executedTools)], coveredTools: covered, missingTools: missing, summary };
 }
 
+/** 多代理提交阶段:主代理把子任务写上看板(仅建卡,不等待执行;子代理由后台消费者异步并行执行)。 */
+export async function submitMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentInput, plan: PlanDetails, runId: string): Promise<{ runId: string; threadId: string; cardIds: string[] }> {
+	const subtasks = plan.subtasks ?? [];
+	if (subtasks.length === 0) throw new Error("multi 模式缺少子任务清单(subtasks)");
+	const threadId = input.threadId ?? "default";
+	resetKanban(deps.tenantId, threadId);
+	const cardIds: string[] = [];
+	for (const st of subtasks) {
+		const card = createKanbanTask({ tenantId: deps.tenantId, threadId, title: st.title, goal: st.goal, tools: st.tools });
+		cardIds.push(card.id);
+		if (input.onProgress) input.onProgress({ type: "tool_start", toolName: "kanban", label: "看板建卡", payload: { id: card.id, title: card.title } });
+		if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "kanban", label: "看板建卡", payload: { id: card.id, title: card.title } });
+	}
+	return { runId, threadId, cardIds };
+}
+/** 多代理汇总阶段:等待当前会话子代理全部完成(后台消费者驱动),协调者读看板汇总输出。 */
+export async function collectMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentInput, plan: PlanDetails, opts: { threadId?: string; cardIds?: string[] } = {}): Promise<SalesAgentResult> {
+	const runtime = deps.runtime ?? createModelRegistry();
+	const streamFn = deps.streamFn ?? runtime.streamFn;
+	const model = requiredModel(runtime);
+	const threadId = opts.threadId ?? input.threadId ?? "default";
+	const createdCardIds = opts.cardIds ?? listKanbanCards(deps.tenantId, { threadId }).map((c) => c.id);
+
+	// 等待子代理完成(后台消费者在跑;这里轮询直到全部就绪或超时)
+	const deadline = Date.now() + config.subagentTimeoutMs;
+	while (true) {
+		const pending = listKanbanCards(deps.tenantId, { status: "pending", threadId }).length;
+		if (pending === 0 || Date.now() > deadline) break;
+		await new Promise((r) => setTimeout(r, config.subagentPollIntervalMs));
+	}
+	const allCards = listKanbanCards(deps.tenantId, { threadId }).filter((c) => createdCardIds.includes(c.id));
+	const executed = allCards.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result, error: c.error }));
+	if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "subagents", label: "子代理并行执行", payload: { count: executed.length, results: executed.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result ? c.result.slice(0, 120) : null, error: c.error ?? null })) } });
+
+	// 协调者汇总
+	const coordinatorTools = (await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store })).filter(
+		(t) => t.name === "kanban" || t.name === "emit_final" || t.name === "subagents",
+	);
+	const coordinatorPrompt = getCoordinatorPrompt({ goal: input.goal });
+	const coordinator = new Agent({
+		sessionId: "coord-" + randomUUID(),
+		streamFn,
+		initialState: { systemPrompt: coordinatorPrompt, tools: coordinatorTools as never, model, messages: [] },
+	});
+	coordinator.subscribe((event) => {
+		if (!input.onProgress) return;
+		for (const ce of toClientEvents(event)) {
+			if (ce.type === "text_delta") {
+				input.onProgress({ type: "text_delta", toolCallId: undefined, toolName: undefined, label: undefined, payload: ce.payload });
+			}
+		}
+	});
+	await coordinator.prompt("子代理已执行完毕,请检查看板结果并输出最终答复。");
+	const messages = coordinator.state.messages;
+	let final: AgentFinal | undefined;
+	for (const message of messages) {
+		if (message.role === "toolResult" && (message as { toolName?: string }).toolName === "emit_final") {
+			const details = (message as { details?: Partial<AgentFinal> }).details;
+			if (details?.answer) {
+				final = { answer: details.answer, summary: details.summary, nextSteps: Array.isArray(details.nextSteps) ? details.nextSteps : [] };
+			}
+		}
+	}
+	if (!final) {
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const m = messages[i] as { role?: string; content?: unknown };
+			if (m.role !== "assistant") continue;
+			const text = assistantText(m.content);
+			if (text.trim()) { final = { answer: text.trim(), summary: undefined, nextSteps: [] }; break; }
+		}
+	}
+	return { runId: randomUUID(), final, messages, plan, executedTools: ["kanban", "subagents"] };
+}
+
 /** 多代理执行流:主代理把子任务写上看板 -> 子代理并行执行 -> 协调者读看板检查结果并 emit_final。 */
 export async function runMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentInput, plan: PlanDetails): Promise<SalesAgentResult> {
 	const runtime = deps.runtime ?? createModelRegistry();
@@ -363,12 +437,12 @@ export async function runMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentI
 
 	// 2) 子代理并行执行(消费者,并发上限 2;子代理不可再派生/不可改看板)
 	if (input.onProgress) input.onProgress({ type: "tool_start", toolName: "subagents", label: "子代理并行执行", payload: { count: subtasks.length } });
-	const deadline = Date.now() + 300_000;
+	const deadline = Date.now() + config.subagentTimeoutMs;
 	while (true) {
 		await consumeKanbanSubagents({ db: deps.db, runtime, streamFn }, deps.tenantId, { limit: 2, threadId });
 		const pending = listKanbanCards(deps.tenantId, { status: "pending", threadId }).length;
 		if (pending === 0 || Date.now() > deadline) break;
-		await new Promise((r) => setTimeout(r, 2000));
+		await new Promise((r) => setTimeout(r, config.subagentPollIntervalMs));
 	}
 	// 全部子任务就绪后,从看板读取当前会话的最终结果(后台消费者可能已代为执行部分卡片)
 	const allCards = listKanbanCards(deps.tenantId, { threadId }).filter((c) => createdCardIds.includes(c.id));
@@ -422,19 +496,10 @@ export async function runSalesAgentWithPlan(deps: SalesAgentDeps, input: SalesAg
 	recordAgentPlan(deps.db, { runId, tenantId: deps.tenantId, goal: input.goal, plan });
 	if (input.onProgress) input.onProgress({ type: "plan", toolName: "emit_plan", label: "执行计划", payload: plan });
 
-	// 多代理模式:主代理只做规划/结果检查,业务执行由子代理并行完成
+	// 多代理模式:主代理提交子任务到看板后立即返回,子代理由后台消费者异步并行执行,前端轮询看板后调用汇总
 	if (plan.mode === "multi") {
-		const multi = await runMultiAgentFlow(deps, input, plan);
-		const verification: PlanVerification = {
-			planned: plan.subtasks?.length ?? 0,
-			executed: multi.executedTools ?? [],
-			coveredTools: multi.executedTools ?? [],
-			missingTools: [],
-			summary: "多代理模式:主代理规划并检查,子代理并行执行完成。",
-		};
-		updateAgentPlan(deps.db, deps.tenantId, multi.runId, { status: "verified", verification });
-		if (input.onProgress) input.onProgress({ type: "verified", toolName: "verify", label: "执行验证", payload: verification });
-		return multi;
+		const submitted = await submitMultiAgentFlow(deps, input, plan, runId);
+		return { runId: submitted.runId, final: undefined, messages: [], plan, executedTools: ["kanban"] };
 	}
 
 	const result = await runSalesAgent(deps, { ...input, plan, collectExecutedTools: true });
