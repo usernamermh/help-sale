@@ -4,7 +4,7 @@
 ![Stars](https://img.shields.io/github/stars/usernamermh/help-sale)
 ![Language](https://img.shields.io/github/languages/top/usernamermh/help-sale)
 
-面向销售团队的助销 agent 管理平台,以客户会话记录为基础,自动检索团队话术库、识别意向与风险、给出可复制的应对话术与跟进建议,并形成自动闭环。
+面向销售团队的助销agent管理平台,以客户会话记录为基础,自动检索团队话术库、识别意向与风险、给出可复制的应对话术与跟进建议,并形成自动闭环。
 
 
 ## 界面截图
