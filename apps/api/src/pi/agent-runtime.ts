@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { Agent, type AgentMessage, type StreamFn } from "@earendil-works/pi-agent-core";
 import { createModelRegistry, requiredModel, type ModelRuntime } from "./models.js";
 import { getSalesAgentSystemPrompt } from "../prompts/sales-agent.js";
+import { getPlannerPrompt, getCoordinatorPrompt } from "../prompts/multi-agent.js";
 import { createPlanTools, createSalesAgentTools } from "./agent-tools.js";
 import { config } from "../env.js";
 import { createTimelineRecorder } from "../services/timeline.js";
@@ -301,16 +302,7 @@ export async function runPlanPhase(deps: SalesAgentDeps, input: { goal: string; 
 	const model = requiredModel(runtime);
 
 	const toolNames = (await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store })).map((t) => t.name);
-	const systemPrompt = `你是「销售军师」的执行规划器。请为下面的任务输出一份执行计划。
-可用工具(规划时只能从这些真实工具名中选取):${toolNames.join("、")}
-规则:
-- 选择执行模式(mode):single=你自己直接执行;multi=拆给多个子代理并行。由你根据任务实际情况自主判断:只有任务确实包含多个相互独立、可并行完成的子目标时才选 multi,否则一律 single(单代理更简单高效,不额外拆解)。
-- mode=multi 时,用 subtasks 给出 2-6 个可独立并行执行的子任务(title/goal/tools),每个子任务由独立子代理执行,不要写 steps;mode=single 时用 steps 给执行步骤。
-- 只调用 emit_plan 输出计划,规划阶段不执行其他工具;
-- 步骤控制在 2-8 步,每步说明:做什么(step)、拟调用工具(tool)、预期产出(purpose);
-- 每个步骤的 tool 请从「可用工具」中选取真实存在的工具名;若没有合适工具,该步骤的 tool 留空;
-- 复杂查询/多数据源任务要拆步骤,单步简单查询可只列 1-2 步。
-任务:${input.goal}`.trim();
+	const systemPrompt = getPlannerPrompt({ goal: input.goal, toolNames });
 
 	const agent = new Agent({
 		sessionId: `plan-${randomUUID()}`,
@@ -387,12 +379,7 @@ export async function runMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentI
 	const coordinatorTools = (await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store })).filter(
 		(t) => t.name === "kanban" || t.name === "emit_final" || t.name === "subagents",
 	);
-	const coordinatorPrompt = `你是「销售军师」的多代理协调者。子代理已并行完成任务,结果写回看板卡片。
-你的职责:
-- 用 kanban list/get 查看各卡片状态与结果(不允许调用业务工具,业务执行已由子代理完成);
-- 核对是否有卡片未完成或报错,必要时用 subagents list 复查;
-- 汇总各子任务结果,向用户输出最终答复,包含每个子任务的结论;如有失败要如实说明。
-目标:${input.goal}`.trim();
+	const coordinatorPrompt = getCoordinatorPrompt({ goal: input.goal });
 	const coordinator = new Agent({
 		sessionId: `coord-${randomUUID()}`,
 		streamFn,

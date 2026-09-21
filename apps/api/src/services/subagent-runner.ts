@@ -5,6 +5,7 @@ import { createModelRegistry, type ModelRuntime } from "../pi/models.js";
 import { loadExternalAgentTools, externalToolPaths } from "./external-tools.js";
 import { config } from "../env.js";
 import { claimKanbanCard, finishKanbanCard, listKanbanCards, type KanbanCard } from "./kanban-store.js";
+import { getSubagentPrompt } from "../prompts/multi-agent.js";
 
 /** 子代理默认工具白名单:只读/安全工具;禁止编排类工具(不能派生子代理/不能抢看板)。 */
 const DEFAULT_SUBAGENT_TOOLS = [
@@ -25,12 +26,8 @@ export interface SubagentRunnerDeps {
 const MAX_CONCURRENCY = 2;
 
 function subagentSystemPrompt(card: KanbanCard, tools: string[]): string {
-	return `你是「销售军师」的子代理,专注执行单个明确目标,不展开无关动作。
-任务目标:${card.goal ?? card.title}
-可用工具:${tools.join(", ") || "(无)"}
-规则:只基于工具返回的数据作答,禁止编造;不允许派生子代理,不允许修改看板;执行完用一两句话直接输出结论文本。`.trim();
+	return getSubagentPrompt({ goal: card.goal ?? card.title, tools });
 }
-
 /** 从 agent 消息中提取最终答复:优先最后一条 assistant 文本(子代理不使用 emit_final)。 */
 function extractAnswer(messages: unknown[]): string {
 	for (let i = messages.length - 1; i >= 0; i--) {
