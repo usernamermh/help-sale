@@ -1745,7 +1745,7 @@
         if (currentThreadId === id) { currentThreadId = null; clearChat(); hideTrPanel(); }
         loadThreads();
       } catch (e) { alert("删除失败:" + e.message); }
-    } let running = false; let currentThreadId = null; let deltaBuf = ""; let abortCtrl = null;
+    } let running = false; let currentThreadId = null; let deltaBuf = ""; let abortCtrl = null; let kanbanTimer = null;
     const PAGE_TOOLS = ["customer_query", "vehicle_query", "excel", "table_generate", "playbook_check"];
     // ── 新会话欢迎区:默认定时任务结果按钮,点击展示结构化结果 ──
     let welcomeResults = null;
@@ -1925,6 +1925,8 @@
       if (!goal || running) return;
       running = true;
       abortCtrl = new AbortController();
+      if (kanbanTimer) clearInterval(kanbanTimer);
+      kanbanTimer = setInterval(() => { if ($("kanbanPanel").style.display !== "none") loadKanban(); }, 2500);
       $("sendBtn").disabled = true;
       $("stopBtn").style.display = "inline-block";
       $("goal").value = "";
@@ -1944,6 +1946,7 @@
         }
       } finally {
         running = false;
+        if (kanbanTimer) { clearInterval(kanbanTimer); kanbanTimer = null; }
         abortCtrl = null;
         $("stopBtn").style.display = "none";
         $("sendBtn").disabled = false;
