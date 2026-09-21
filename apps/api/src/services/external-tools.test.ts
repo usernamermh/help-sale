@@ -116,10 +116,10 @@ describe("tools_system 基础工具", () => {
 	});
 
 	it("kanban 增删改查(move/list)", async () => {
-		const boardFile = path.join(root, "kanban-test.json");
-		process.env.KANBAN_FILE = boardFile;
+		const db = openDatabase(":memory:");
+		requireTenant(db, "t1", "演示租户");
 		try {
-			const tools = await loadAll();
+			const tools = await loadExternalAgentTools(SYS_ROOTS, { db, tenantId: "t1" } as never);
 			const tool = tools.find((t) => t.name === "kanban")!;
 			const added = (await tool.execute("k1", { op: "add", title: "分析会话", description: "s1" })) as { details: { id: string } };
 			expect(added.details.id).toMatch(/^K\d+$/);
@@ -127,7 +127,7 @@ describe("tools_system 基础工具", () => {
 			const listed = (await tool.execute("k3", { op: "list", statusFilter: "inprogress" })) as { details: { items: unknown[] } };
 			expect(listed.details.items).toHaveLength(1);
 		} finally {
-			delete process.env.KANBAN_FILE;
+			db.close();
 		}
 	});
 
@@ -166,17 +166,17 @@ describe("tools_system 基础工具", () => {
 	});
 
 	it("subagents 队列 create/list(看板存储)", async () => {
-		const boardFile = path.join(root, "subagents-kanban.json");
-		process.env.KANBAN_FILE = boardFile;
+		const db = openDatabase(":memory:");
+		requireTenant(db, "t1", "演示租户");
 		try {
-			const tools = await loadAll();
+			const tools = await loadExternalAgentTools(SYS_ROOTS, { db, tenantId: "t1" } as never);
 			const tool = tools.find((t) => t.name === "subagents")!;
 			const created = (await tool.execute("s1", { op: "create", title: "子任务A", goal: "分析 c_001" })) as { details: { id: string } };
 			expect(created.details.id).toBeTruthy();
 			const listed = (await tool.execute("s2", { op: "list" })) as { details: { tasks: unknown[] } };
 			expect(listed.details.tasks).toHaveLength(1);
 		} finally {
-			delete process.env.KANBAN_FILE;
+			db.close();
 		}
 	});
 

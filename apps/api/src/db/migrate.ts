@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 26;
+export const MIGRATION_VERSION = 27;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 

@@ -35,6 +35,7 @@ import { createDeal, getSalespersonById, getStore, getStoreManager, getStoreOver
 import { analysisRequestHash } from "./services/analysis-cache.js";
 import { runSalesAgent, runSalesAgentWithPlan, collectMultiAgentFlow, stripChartsForHistory } from "./pi/agent-runtime.js";
 import { getAgentPlanByRun } from "./repositories/agent-plans.js";
+import { setStopSignal, clearStopSignal } from "./services/stop-signal.js";
 import { CAPABILITIES, getCapabilityDef } from "./pi/capabilities.js";
 import { createWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled } from "./repositories/agent-capabilities.js";
 import { queryConsoleLogs } from "./services/console-logs.js";
@@ -515,7 +516,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	app.delete<{ Params: { id: string } }>("/api/v1/agent/threads/:id", async (request, reply) => {
 		const removed = deleteThread(deps.db, request.tenantId, request.params.id);
 		if (!removed) return reply.code(404).send({ error: "thread_not_found", message: "会话不存在" });
-		if (removed) removeKanbanByThread(request.tenantId, request.params.id);
+		if (removed) removeKanbanByThread(deps.db, request.tenantId, request.params.id);
 		return { removed: true };
 	});
 
@@ -584,7 +585,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		// 客户端中断:连接关闭(关页面/断网/用户取消)时触发 agent 取消,不再继续执行/落库
 		const abortController = new AbortController();
 		let clientGone = false;
-		const onClientClose = () => { clientGone = true; abortController.abort(); };
+		const onClientClose = () => { clientGone = true; abortController.abort(); setStopSignal(thread.id).catch(() => undefined); };
 		request.raw.once("close", onClientClose);
 		try {
 			const result = await runSalesAgentWithPlan(
@@ -606,6 +607,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 			} catch (error) {
 				console.warn(`[context] 摘要落库失败: ${error instanceof Error ? error.message : String(error)}`);
 			}
+			clearStopSignal(thread.id).catch(() => undefined);
 			write({ type: "final", threadId: thread.id, runId: result.runId, final: result.final });
 			request.raw.removeListener("close", onClientClose);
 			reply.raw.end();
@@ -1164,12 +1166,12 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	// ── 子代理任务与协作看板 ──
 	app.get<{ Querystring: { threadId?: string } }>("/api/v1/kanban", async (request) => {
 		const threadId = request.query.threadId ? String(request.query.threadId) : undefined;
-		return { cards: listKanbanCards(request.tenantId, { threadId }) };
+		return { cards: listKanbanCards(deps.db, request.tenantId, { threadId }) };
 	});
 
 	app.get<{ Querystring: { status?: string } }>("/api/v1/subagents", async (request) => {
 		const status = request.query.status === "pending" || request.query.status === "inprogress" || request.query.status === "done" || request.query.status === "error" ? request.query.status : undefined;
-		return { tasks: listKanbanCards(request.tenantId, { status }) };
+		return { tasks: listKanbanCards(deps.db, request.tenantId, { status }) };
 	});
 
 	app.post("/api/v1/subagents/run", async (request) => {

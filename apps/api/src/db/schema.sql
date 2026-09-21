@@ -410,3 +410,20 @@ CREATE TABLE IF NOT EXISTS builtin_job_settings (
 	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	UNIQUE (tenant_id, job_key)
 );
+
+-- v27:看板卡片(多代理协作通信总线,SQLite 存储替代 JSON 文件)
+CREATE TABLE IF NOT EXISTS kanban_cards (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	thread_id TEXT NOT NULL,
+	title TEXT NOT NULL,
+	description TEXT,
+	status TEXT NOT NULL DEFAULT 'pending',
+	goal TEXT,
+	tools_json TEXT,
+	result TEXT,
+	error TEXT,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_kanban_thread ON kanban_cards (tenant_id, thread_id, status);

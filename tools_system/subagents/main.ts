@@ -13,12 +13,12 @@ export function execute(ctx: ToolContext, params: any) {
 		const goal = String(params?.goal ?? "").trim();
 		if (!title || !goal) return { content: [{ type: "text", text: "create 需要 title 与 goal。" }] };
 		const tools = Array.isArray(params?.tools) ? params.tools.map((s: unknown) => String(s)) : undefined;
-		const card = createKanbanTask({ tenantId: ctx.tenantId, threadId: "default", title, goal, description: params?.description ? String(params.description) : undefined, tools });
+		const card = createKanbanTask(ctx.db as never, { tenantId: ctx.tenantId, threadId: "default", title, goal, description: params?.description ? String(params.description) : undefined, tools });
 		return { content: [{ type: "text", text: `子代理任务已登记 ${card.id}: ${title}(状态 ${card.status},将由消费者并行执行)` }], details: { id: card.id, title: card.title, status: card.status } };
 	}
 	if (op === "get") {
 		const id = String(params?.taskId ?? params?.id ?? "").trim();
-		const card = getKanbanCard(ctx.tenantId, id);
+		const card = getKanbanCard(ctx.db as never, ctx.tenantId, id);
 		if (!card) return { content: [{ type: "text", text: "未找到该子代理任务。" }] };
 		const lines = [`[${card.status}] ${card.title}: ${card.goal ?? ""}`];
 		if (card.result) lines.push(`结果: ${card.result}`);
@@ -26,7 +26,7 @@ export function execute(ctx: ToolContext, params: any) {
 		return { content: [{ type: "text", text: lines.join("\n") }], details: card };
 	}
 	const filter = params?.statusFilter ? String(params.statusFilter) : undefined;
-	const tasks = listKanbanCards(ctx.tenantId, filter);
+	const tasks = listKanbanCards(ctx.db as never, ctx.tenantId, filter);
 	const text = tasks.length ? tasks.map(cardLine).join("\n") : "(子代理队列为空)";
 	return { content: [{ type: "text", text: `子代理队列(${tasks.length}):\n${text}` }], details: { tasks } };
 }

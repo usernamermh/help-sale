@@ -13,6 +13,7 @@ import { registerRoutes } from "./routes.js";
 import { createMysqlSink, type MysqlSink } from "./integrations/mysql-sink.js";
 import { createSyncMysqlDb } from "./db/mysql/client.js";
 import { createReminderQueue, type ReminderQueue } from "./integrations/reminder-queue.js";
+import { initStopSignal, closeStopSignal } from "./services/stop-signal.js";
 import { startAutomationScheduler } from "./services/automation.js";
 import { startSubagentConsumer } from "./services/subagent-runner.js";
 import { seedStoreData, seedVehicles } from "./services/seed.js";
@@ -71,6 +72,13 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 
 	// local 单一存储:默认不启用 MySQL 归档双写(测试可通过 options.mysqlSink 注入观察器)
 	const mysqlSink = options.mysqlSink ?? undefined;
+	initStopSignal({
+		enabled: config.redisEnabled,
+		host: config.redisHost,
+		port: config.redisPort,
+		password: config.redisPassword,
+	});
+
 	const reminders = options.reminders ?? createReminderQueue({
 		enabled: config.redisEnabled,
 		host: config.redisHost,

@@ -1290,13 +1290,22 @@
             d.innerHTML = '<div class="kb-card-head"><b>' + escapeHtml(card.id) + " " + escapeHtml(card.title || "") + '</b><span class="badge">' + (labels[card.status] || card.status) + '</span></div>'
               + (card.goal ? '<div class="kb-goal">' + escapeHtml(card.goal) + '</div>' : "")
               + (card.tools && card.tools.length ? '<div class="kb-tools">工具: ' + escapeHtml(card.tools.join(", ")) + '</div>' : "")
-              + (card.result ? '<div class="kb-result">结果: ' + escapeHtml(card.result) + '</div>' : "")
+              + (card.result ? renderKanbanResult(card.result) : "")
               + (card.error ? '<div class="kb-error">错误: ' + escapeHtml(card.error) + '</div>' : "");
             g.appendChild(d);
           }
           box.appendChild(g);
         }
       } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
+    }
+    // 看板长结果折叠:超过 200 字只显示前 200 字,可展开/收起
+    function renderKanbanResult(text) {
+      const MAX = 200;
+      const full = String(text || "");
+      if (full.length <= MAX) return '<div class="kb-result">结果: ' + escapeHtml(full) + '</div>';
+      const preview = escapeHtml(full.slice(0, MAX)) + "…";
+      const data = "data-full=\"" + escapeHtml(full).replace(/"/g, "&quot;") + "\"";
+      return '<div class="kb-result">结果: <span class="kb-collapse">' + preview + '</span> <button class="kb-toggle" onclick="var s=this.previousElementSibling;var f=this.getAttribute(\"data-full\");s.textContent=f;this.style.display=\"none\"" ' + data + '>展开</button></div>';
     }
     function showTrPanel() { $("trPanel").style.display = "flex"; $("headerTrBtn").classList.add("active"); syncRightCol(); } function renderMarkdown(text) {
       try {

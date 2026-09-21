@@ -347,10 +347,10 @@ export async function submitMultiAgentFlow(deps: SalesAgentDeps, input: SalesAge
 	const subtasks = plan.subtasks ?? [];
 	if (subtasks.length === 0) throw new Error("multi 模式缺少子任务清单(subtasks)");
 	const threadId = input.threadId ?? "default";
-	resetKanban(deps.tenantId, threadId);
+	resetKanban(deps.db, deps.tenantId, threadId);
 	const cardIds: string[] = [];
 	for (const st of subtasks) {
-		const card = createKanbanTask({ tenantId: deps.tenantId, threadId, title: st.title, goal: st.goal, tools: st.tools });
+		const card = createKanbanTask(deps.db, { tenantId: deps.tenantId, threadId, title: st.title, goal: st.goal, tools: st.tools });
 		cardIds.push(card.id);
 		if (input.onProgress) input.onProgress({ type: "tool_start", toolName: "kanban", label: "看板建卡", payload: { id: card.id, title: card.title } });
 		if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "kanban", label: "看板建卡", payload: { id: card.id, title: card.title } });
@@ -363,16 +363,16 @@ export async function collectMultiAgentFlow(deps: SalesAgentDeps, input: SalesAg
 	const streamFn = deps.streamFn ?? runtime.streamFn;
 	const model = requiredModel(runtime);
 	const threadId = opts.threadId ?? input.threadId ?? "default";
-	const createdCardIds = opts.cardIds ?? listKanbanCards(deps.tenantId, { threadId }).map((c) => c.id);
+	const createdCardIds = opts.cardIds ?? listKanbanCards(deps.db, deps.tenantId, { threadId }).map((c) => c.id);
 
 	// 等待子代理完成(后台消费者在跑;这里轮询直到全部就绪或超时)
 	const deadline = Date.now() + config.subagentTimeoutMs;
 	while (true) {
-		const pending = listKanbanCards(deps.tenantId, { status: "pending", threadId }).length;
+		const pending = listKanbanCards(deps.db, deps.tenantId, { status: "pending", threadId }).length;
 		if (pending === 0 || Date.now() > deadline) break;
 		await new Promise((r) => setTimeout(r, config.subagentPollIntervalMs));
 	}
-	const allCards = listKanbanCards(deps.tenantId, { threadId }).filter((c) => createdCardIds.includes(c.id));
+	const allCards = listKanbanCards(deps.db, deps.tenantId, { threadId }).filter((c) => createdCardIds.includes(c.id));
 	const executed = allCards.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result, error: c.error }));
 	if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "subagents", label: "子代理并行执行", payload: { count: executed.length, results: executed.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result ? c.result.slice(0, 120) : null, error: c.error ?? null })) } });
 
@@ -426,10 +426,10 @@ export async function runMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentI
 	const threadId = input.threadId ?? "default";
 
 	// 1) 主代理把子任务写上看板(看板按会话隔离,只展示当前会话的任务)
-	resetKanban(deps.tenantId, threadId);
+	resetKanban(deps.db, deps.tenantId, threadId);
 	const createdCardIds: string[] = [];
 	for (const st of subtasks) {
-		const card = createKanbanTask({ tenantId: deps.tenantId, threadId, title: st.title, goal: st.goal, tools: st.tools });
+		const card = createKanbanTask(deps.db, { tenantId: deps.tenantId, threadId, title: st.title, goal: st.goal, tools: st.tools });
 		createdCardIds.push(card.id);
 		if (input.onProgress) input.onProgress({ type: "tool_start", toolName: "kanban", label: "看板建卡", payload: { id: card.id, title: card.title } });
 		if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "kanban", label: "看板建卡", payload: { id: card.id, title: card.title } });
@@ -440,12 +440,12 @@ export async function runMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentI
 	const deadline = Date.now() + config.subagentTimeoutMs;
 	while (true) {
 		await consumeKanbanSubagents({ db: deps.db, runtime, streamFn }, deps.tenantId, { limit: 2, threadId });
-		const pending = listKanbanCards(deps.tenantId, { status: "pending", threadId }).length;
+		const pending = listKanbanCards(deps.db, deps.tenantId, { status: "pending", threadId }).length;
 		if (pending === 0 || Date.now() > deadline) break;
 		await new Promise((r) => setTimeout(r, config.subagentPollIntervalMs));
 	}
 	// 全部子任务就绪后,从看板读取当前会话的最终结果(后台消费者可能已代为执行部分卡片)
-	const allCards = listKanbanCards(deps.tenantId, { threadId }).filter((c) => createdCardIds.includes(c.id));
+	const allCards = listKanbanCards(deps.db, deps.tenantId, { threadId }).filter((c) => createdCardIds.includes(c.id));
 	const executed = allCards.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result, error: c.error }));
 	if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "subagents", label: "子代理并行执行", payload: { count: executed.length, results: executed.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result ? c.result.slice(0, 120) : null, error: c.error ?? null })) } });
 

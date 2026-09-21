@@ -6,6 +6,7 @@ import { loadExternalAgentTools, externalToolPaths } from "./external-tools.js";
 import { config } from "../env.js";
 import { claimKanbanCard, finishKanbanCard, listKanbanCards, type KanbanCard } from "./kanban-store.js";
 import { getSubagentPrompt } from "../prompts/multi-agent.js";
+import { isStopped } from "./stop-signal.js";
 
 /** 子代理默认工具白名单(来自配置 subagents.defaultTools)。 */
 const DEFAULT_SUBAGENT_TOOLS = config.subagentDefaultTools;
@@ -39,6 +40,7 @@ function extractAnswer(messages: unknown[]): string {
 }
 
 async function runSubTask(deps: SubagentRunnerDeps, card: KanbanCard): Promise<string> {
+	if (await isStopped(card.threadId)) throw new Error("agent stopped by user");
 	const runtime = deps.runtime ?? createModelRegistry();
 	const streamFn = deps.streamFn ?? runtime.streamFn;
 	const model = runtime.models.getModel(config.modelProvider, config.modelId);
@@ -59,22 +61,23 @@ async function runSubTask(deps: SubagentRunnerDeps, card: KanbanCard): Promise<s
 
 /** 消费看板:取 pending 卡片并行执行(至多 MAX_CONCURRENCY),结果回填看板。 */
 export async function consumeKanbanSubagents(deps: SubagentRunnerDeps, tenantId: string, opts: { limit?: number; threadId?: string } = {}): Promise<KanbanCard[]> {
-	const pending = listKanbanCards(tenantId, { status: "pending", threadId: opts.threadId }).slice(0, opts.limit ?? MAX_CONCURRENCY);
+	if (opts.threadId && await isStopped(opts.threadId)) return [];
+	const pending = listKanbanCards(deps.db, tenantId, { status: "pending", threadId: opts.threadId }).slice(0, opts.limit ?? MAX_CONCURRENCY);
 	if (pending.length === 0) return [];
 	const results: KanbanCard[] = [];
 	await Promise.all(
 		pending.map(async (card) => {
-			claimKanbanCard(tenantId, card.id);
+			claimKanbanCard(deps.db, tenantId, card.id);
 			try {
 				const result = await runSubTask(deps, card);
-				finishKanbanCard(tenantId, card.id, { ok: true, result });
+				finishKanbanCard(deps.db, tenantId, card.id, { ok: true, result });
 			} catch (error) {
-				finishKanbanCard(tenantId, card.id, { ok: false, error: error instanceof Error ? error.message : String(error) });
+				finishKanbanCard(deps.db, tenantId, card.id, { ok: false, error: error instanceof Error ? error.message : String(error) });
 			}
 		}),
 	);
 	for (const card of pending) {
-		const updated = listKanbanCards(tenantId, { threadId: opts.threadId }).find((c) => c.id === card.id);
+		const updated = listKanbanCards(deps.db, tenantId, { threadId: opts.threadId }).find((c) => c.id === card.id);
 		if (updated) results.push(updated);
 	}
 	return results;
@@ -86,7 +89,7 @@ export function startSubagentConsumer(deps: SubagentRunnerDeps, tenantIds: strin
 		const tenants = tenantIds.length > 0 ? tenantIds : ["t_demo"];
 		for (const tenantId of tenants) {
 			// 按线程分组取 pending 卡片,逐线程消费(每个线程并发上限 MAX_CONCURRENCY)
-			const pending = listKanbanCards(tenantId, { status: "pending" });
+			const pending = listKanbanCards(deps.db, tenantId, { status: "pending" });
 			const threadIds = [...new Set(pending.map((c) => c.threadId))];
 			for (const threadId of threadIds) {
 				consumeKanbanSubagents(deps, tenantId, { limit: MAX_CONCURRENCY, threadId }).catch((error) => {

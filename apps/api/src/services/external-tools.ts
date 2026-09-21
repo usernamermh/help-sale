@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { AgentTool, AgentToolResult } from "@earendil-works/pi-agent-core";
+import { isStopped } from "./stop-signal.js";
 
 /**
  * 外部工具目录约定:
@@ -147,9 +148,24 @@ export async function loadExternalAgentTools(
 			description: tool.description,
 			parameters: schema as never,
 			async execute(_toolCallId, params: any): Promise<AgentToolResult<any>> {
-				const raw = await execute(ctx, params);
-				if (typeof raw === "string") return { content: [{ type: "text" as const, text: raw }], details: null };
-				return { content: raw.content as never, details: raw.details ?? null };
+				// 停止键检测:用户提交停止后,工具执行入口立即终止
+				const tenantKey = (ctx as { tenantId?: string }).tenantId;
+				if (tenantKey && (await isStopped(tenantKey))) throw new Error("agent stopped by user");
+				const startedAt = Date.now();
+				let lastError: unknown;
+				for (let attempt = 0; attempt < 2; attempt++) {
+					try {
+						const raw = await execute(ctx, params);
+						console.log(`[tool-exec] ${tool.name} ok, ${Date.now() - startedAt}ms, attempt=${attempt + 1}`);
+						if (typeof raw === "string") return { content: [{ type: "text" as const, text: raw }], details: null };
+						return { content: raw.content as never, details: raw.details ?? null };
+					} catch (error) {
+						lastError = error;
+						console.warn(`[tool-exec] ${tool.name} failed(attempt=${attempt + 1}): ${error instanceof Error ? error.message : String(error)}`);
+						if (attempt === 0) await new Promise((r) => setTimeout(r, 500));
+					}
+				}
+				throw lastError instanceof Error ? lastError : new Error(String(lastError));
 			},
 		});
 	}
