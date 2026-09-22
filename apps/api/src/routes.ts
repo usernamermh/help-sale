@@ -1231,6 +1231,13 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 			status: body.status,
 		});
 		return { deal };
+		// 成交后自动生成提车关怀任务(3 天用车体验 / 30 天保养邀约)
+		let followups: string[] = [];
+		if (deal.status === "closed") {
+			const base = deal.dealed_at ?? deal.created_at;
+			followups = scheduleDeliveryFollowups(deps.db, request.tenantId, customer.id, base);
+		}
+		return { deal, followups };
 	});
 
 	app.get<{ Params: { id: string } }>("/api/v1/conversations/:id/transcript", async (request, reply) => {
