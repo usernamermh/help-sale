@@ -78,12 +78,11 @@ describe("scanExternalTools", () => {
 describe("buildExternalToolsText", () => {
 	it("生成 prompt 块:工具名/描述/函数", () => {
 		const text = buildExternalToolsText([
-			{ root: "tools_system", dir: "todo_list", name: "todo_list", description: "创建、细化、标记完成 todo list", functions: ["main.createTodoList", "main.finishTodoList"] },
+			{ root: "tools_system", dir: "kanban", name: "kanban", description: "看板协作", functions: ["main.execute"] },
 			{ root: "tools", dir: "date_tool", name: "date_tool", description: "把周X转为年月日", functions: [] },
 		]);
 		expect(text).toContain("【外部工具】");
-		expect(text).toContain("todo_list(tools_system/todo_list): 创建、细化、标记完成 todo list");
-		expect(text).toContain("main.createTodoList");
+		expect(text).toContain("kanban(tools_system/kanban)");
 		expect(text).toContain("date_tool");
 	});
 
@@ -101,7 +100,7 @@ describe("tools_system 基础工具", () => {
 	it("八个系统工具全部具备实现可加载", async () => {
 		const tools = await loadAll();
 		const names = tools.map((t) => t.name);
-		for (const n of ["browser", "computer", "kanban", "redis", "sql", "subagents", "table_generate", "todo_list"]) {
+		for (const n of ["browser", "computer", "kanban", "redis", "sql", "subagents", "table_generate"]) {
 			expect(names).toContain(n);
 		}
 	});

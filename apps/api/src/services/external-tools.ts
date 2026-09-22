@@ -8,7 +8,7 @@ import { isStopped } from "./stop-signal.js";
  * 外部工具目录约定:
  * - 在 tools / tools_system 下,每个工具的入口子目录内放 readme.json(不再支持 readme.md)。
  * - readme.json 格式:
- *   { "name": "todo_list", "description": "创建、细化、标记完成 todo list", "function_list": ["main.createTodoList", ...] }
+ *   { "name": "kanban", "description": "看板协作", "function_list": ["main.execute"] }
  * - function_list 缺省时,从同目录 main.ts / main.py 提取 export function / def 函数名。
  */
 export interface ExternalToolInfo {

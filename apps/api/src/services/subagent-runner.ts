@@ -11,7 +11,7 @@ import { isStopped } from "./stop-signal.js";
 /** 子代理默认工具白名单(来自配置 subagents.defaultTools)。 */
 const DEFAULT_SUBAGENT_TOOLS = config.subagentDefaultTools;
 /** 多代理模式下子代理绝对不允许使用的工具(派生/编排)。 */
-const FORBIDDEN_SUBAGENT_TOOLS = new Set(["subagents", "kanban", "todo_list", "emit_final"]);
+const FORBIDDEN_SUBAGENT_TOOLS = new Set(["subagents", "kanban", "emit_final"]);
 export interface SubagentRunnerDeps {
 	db: DatabaseSync;
 	runtime?: ModelRuntime;
