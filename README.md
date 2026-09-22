@@ -56,7 +56,7 @@
 ### 5. 销售漏斗与客户阶段
 
 - **阶段状态机**，客户可流转 新进店 → 已联系 → 试驾 → 报价 → 成交/战败，记录战败原因与进入阶段时间，支持阶段流转。
-- **漏斗看板**，各阶段数量/占比/平均停留、关键转化率(已联系/试驾/报价/成交)、战败原因分布;前端门店管理页展示;工具 `funnel_query`。
+- **漏斗看板**，各阶段数量/占比/平均停留、关键转化率(已联系/试驾/报价/成交)、战败原因分布;前端门店管理页展示。
 - **沉默客户**，近 N 天无会话/任务/试驾的客户自动进入唤醒名单。
 
 ### 6. 试驾管理与回访节奏
@@ -152,7 +152,7 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 
 ## 工具清单
 
-业务级，`customer_query`(客户)、`conversation_query`(会话)、`knowledge_search`(话术检索)、`knowledge_ingest`(话术沉淀)、`knowledge_candidate`(话术候选)、`task_manage`(跟进任务)、`vehicle_query`(车型)、`insight_query`(经营洞察)、`funnel_query`(销售漏斗)、`test_drive_manage`(试驾管理)。
+业务级，`customer_query`(客户)、`conversation_query`(会话)、`knowledge_search`(话术检索)、`knowledge_ingest`(话术沉淀)、`knowledge_candidate`(话术候选)、`task_manage`(跟进任务)、`vehicle_query`(车型)、`insight_query`(经营洞察)、`test_drive_manage`(试驾管理)。
 
 系统级，`sql`、`redis`、`kanban`、`subagents`、`table_generate`、`chart_generate`、`file_read`、`file_write_new`、`txt`、`excel`、`ppt`、`browser`、`computer`、`update_memory`、`todo_list`、`embedding`、`cluster`、`keyword_extract_free`、`keyword_extract_strict`、`dialog_extract`、`dialog_select`、`date_tool`。
 ## 目录结构
