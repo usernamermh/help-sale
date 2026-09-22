@@ -1,7 +1,7 @@
 {
   "name": "knowledge_ingest",
   "label": "话术沉淀",
-  "description": "把话术、政策、竞品资料批量写入团队知识库,自动分块与去重。",
+  "description": "发现值得沉淀/更新的话术、政策、竞品资料时,生成「沉淀候选」(不直接入库),由后台二次确认(检索+相似度判断新增/覆盖/跳过)后审批入库。",
   "category": "话术",
   "parameters": {
     "type": "object",

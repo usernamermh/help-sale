@@ -40,6 +40,40 @@ export function insertKnowledgeDocument(
 	return { documentId, chunkIds };
 }
 
+/** 删除文档及其分块(触发器自动清理 FTS 索引);返回是否删除。 */
+export function deleteKnowledgeDocumentById(db: DatabaseSync, tenantId: string, documentId: string): boolean {
+	const existing = db.prepare("SELECT id FROM knowledge_documents WHERE tenant_id = ? AND id = ?").get(tenantId, documentId);
+	if (!existing) return false;
+	db.exec("BEGIN");
+	try {
+		db.prepare("DELETE FROM knowledge_chunks WHERE tenant_id = ? AND document_id = ?").run(tenantId, documentId);
+		db.prepare("DELETE FROM knowledge_documents WHERE tenant_id = ? AND id = ?").run(tenantId, documentId);
+		db.exec("COMMIT");
+	} catch (error) {
+		db.exec("ROLLBACK");
+		throw error;
+	}
+	return true;
+}
+
+/** 按标题删除文档(覆盖旧版本用)。 */
+export function deleteKnowledgeDocumentByTitle(db: DatabaseSync, tenantId: string, title: string): boolean {
+	const doc = findDocumentByTitle(db, tenantId, title);
+	if (!doc) return false;
+	return deleteKnowledgeDocumentById(db, tenantId, doc.id);
+}
+
+/** 读取文档完整内容(二次确认对比用)。 */
+export function getKnowledgeDocumentContent(db: DatabaseSync, tenantId: string, documentId: string): string | undefined {
+	const row = db.prepare("SELECT content FROM knowledge_documents WHERE tenant_id = ? AND id = ?").get(tenantId, documentId) as { content: string } | undefined;
+	return row?.content;
+}
+
+/** 读取某文档的所有分块内容(相似度对比用)。 */
+export function listKnowledgeDocumentChunks(db: DatabaseSync, tenantId: string, documentId: string): string[] {
+	const rows = db.prepare("SELECT content FROM knowledge_chunks WHERE tenant_id = ? AND document_id = ? ORDER BY chunk_index").all(tenantId, documentId) as Array<{ content: string }>;
+	return rows.map((r) => r.content);
+}
 export function findDocumentByTitle(db: DatabaseSync, tenantId: string, title: string) {
 	return db.prepare("SELECT id FROM knowledge_documents WHERE tenant_id = ? AND title = ?").get(tenantId, title) as
 		| { id: string }

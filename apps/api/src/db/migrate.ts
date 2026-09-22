@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 27;
+export const MIGRATION_VERSION = 29;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -163,6 +163,24 @@ export function migrate(db: DatabaseSync): void {
 		addCol("conversation_messages", "end_ms", "INTEGER");
 		addCol("conversation_messages", "speaker", "TEXT");
 		addCol("conversation_messages", "file_start_time", "TEXT");
+	}
+	// v29:修复 FTS 删除触发器(node:sqlite 下 'delete' 命令不可用,改为直接删除行)
+	if (current.user_version < 29) {
+		db.exec("DROP TRIGGER IF EXISTS knowledge_chunks_ad;");
+		db.exec("CREATE TRIGGER IF NOT EXISTS knowledge_chunks_ad AFTER DELETE ON knowledge_chunks BEGIN DELETE FROM knowledge_chunks_fts WHERE chunk_id = old.id; END;");
+	}
+	// v28:话术沉淀候选二次确认(建议动作/相似度/旧版本快照)
+	if (current.user_version < 28) {
+		const addCol = (table: string, col: string, ddl: string) => {
+			const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+			if (!cols.some((c) => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl};`);
+		};
+		addCol("knowledge_candidates", "suggest_action", "TEXT");
+		addCol("knowledge_candidates", "matched_title", "TEXT");
+		addCol("knowledge_candidates", "similarity_score", "REAL");
+		addCol("knowledge_candidates", "old_title", "TEXT");
+		addCol("knowledge_candidates", "old_content", "TEXT");
+		addCol("knowledge_candidates", "review_note", "TEXT");
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }

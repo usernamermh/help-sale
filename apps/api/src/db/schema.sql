@@ -59,8 +59,7 @@ CREATE TRIGGER IF NOT EXISTS knowledge_chunks_ai AFTER INSERT ON knowledge_chunk
 END;
 
 CREATE TRIGGER IF NOT EXISTS knowledge_chunks_ad AFTER DELETE ON knowledge_chunks BEGIN
-	INSERT INTO knowledge_chunks_fts (knowledge_chunks_fts, tenant_id, chunk_id, content)
-	VALUES ('delete', old.tenant_id, old.id, old.content);
+	DELETE FROM knowledge_chunks_fts WHERE chunk_id = old.id;
 END;
 
 CREATE TABLE IF NOT EXISTS analyses (
@@ -149,6 +148,12 @@ CREATE TABLE IF NOT EXISTS knowledge_candidates (
 	draft_title TEXT NOT NULL,
 	draft_content TEXT NOT NULL,
 	status TEXT NOT NULL DEFAULT 'pending',
+	suggest_action TEXT,
+	matched_title TEXT,
+	similarity_score REAL,
+	old_title TEXT,
+	old_content TEXT,
+	review_note TEXT,
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	approved_at TEXT
 );

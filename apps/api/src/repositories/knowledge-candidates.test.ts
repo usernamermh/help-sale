@@ -28,19 +28,24 @@ describe("knowledge candidates", () => {
 		expect(listCandidates(db, "t1", "approved", 50)).toHaveLength(0);
 	});
 
-	it("approve 入库并标记,同名文档复用", async () => {
+	it("approve 入库并标记;同名文档走覆盖,文档数量不增", async () => {
 		const c = createCandidate(db, { tenantId: "t1", analysisId: "an-1", intent: "价格异议", draftTitle: "话术·价格异议", draftContent: "内容A" });
-		const approved = approveCandidate(db, "t1", c.id);
+		// 直接指定建议动作,避免二次确认依赖向量模型
+		db.prepare("UPDATE knowledge_candidates SET suggest_action = 'add', review_note = 'test' WHERE id = ?").run(c.id);
+		const approved = await approveCandidate(db, "t1", c.id);
 		expect(approved?.status).toBe("approved");
 		expect(approved?.documentId).toBeTruthy();
 		expect(findDocumentByTitle(db, "t1", "话术·价格异议")).toBeTruthy();
 
-		// 同 title 再次通过:不新增文档,复用
+		// 同 title 再次通过:建议覆盖,执行后文档仍为 1 份(内容被替换)
 		const c2 = createCandidate(db, { tenantId: "t1", analysisId: "an-2", intent: "价格异议", draftTitle: "话术·价格异议", draftContent: "内容B" });
-		const approved2 = approveCandidate(db, "t1", c2.id);
+		db.prepare("UPDATE knowledge_candidates SET suggest_action = 'update', old_title = '话术·价格异议', review_note = 'test' WHERE id = ?").run(c2.id);
+		const approved2 = await approveCandidate(db, "t1", c2.id);
 		expect(approved2?.status).toBe("approved");
 		const docs = db.prepare("SELECT COUNT(*) AS n FROM knowledge_documents").get() as { n: number };
 		expect(docs.n).toBe(1);
+		const doc = db.prepare("SELECT content FROM knowledge_documents WHERE title = ?").get("话术·价格异议") as { content: string };
+		expect(doc.content).toContain("内容B");
 	});
 
 	it("reject 标记拒绝", () => {

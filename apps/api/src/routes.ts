@@ -840,7 +840,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	});
 
 	app.post<{ Params: { id: string } }>("/api/v1/knowledge/candidates/:id/approve", async (request, reply) => {
-		const candidate = approveCandidate(deps.db, request.tenantId, request.params.id);
+		const candidate = await approveCandidate(deps.db, request.tenantId, request.params.id);
 		if (!candidate) return reply.code(404).send({ error: "candidate_not_found", message: "候选不存在" });
 		return { candidate };
 	});

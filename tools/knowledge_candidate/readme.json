@@ -1,7 +1,7 @@
 {
   "name": "knowledge_candidate",
   "label": "话术质检",
-  "description": "查看待确认的话术候选,确认入库或拒绝,沉淀团队话术资产。",
+  "description": "查看待确认的沉淀候选(含后台建议:新增/覆盖/跳过),确认入库或拒绝;确认时按建议执行——新增入库、覆盖旧版本、跳过不落库。",
   "category": "话术",
   "parameters": {
     "type": "object",
