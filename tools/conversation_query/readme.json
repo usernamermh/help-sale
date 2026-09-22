@@ -1,7 +1,7 @@
 {
   "name": "conversation_query",
   "label": "会话查询",
-  "description": "查看最近的会话列表(时间/ID/销售/客户/消息数),或按会话 ID 读取完整对话原文,便于分析客户沟通内容。",
+  "description": "查看最近的会话列表(每页 10 行,可翻页;表格由前端原样渲染),或按会话 ID 读取完整对话原文,便于分析客户沟通内容。",
   "category": "查询",
   "parameters": {
     "type": "object",
@@ -22,7 +22,7 @@
       "page": {
         "type": "number",
         "default": 1,
-        "description": "原文页码,每页最多 10 句"
+        "description": "页码,每页最多 10 行;默认第 1 页,仅当用户明确要求查看更多时才翻页"
       },
       "limit": {
         "type": "number",

@@ -5,13 +5,28 @@ import { config } from "../../apps/api/src/env.js";
 interface ToolContext { db: any; tenantId: string; }
 const PAGE_SIZE = 10;
 
+function conversationTable(rows: any[]): string {
+	const lines = ["| 会话ID | 客户 | 销售 | 消息数 | 时间 |", "| --- | --- | --- | --- | --- |"];
+	for (const r of rows) {
+		lines.push(`| ${String(r.id).slice(0, 10)}… | ${r.customerName ?? r.customerKey ?? "未知客户"} | ${r.salesName ?? "—"} | ${r.messageCount ?? 0} | ${String(r.createdAt ?? "").slice(0, 16)} |`);
+	}
+	return lines.join("\n");
+}
+
 export function execute(ctx: ToolContext, params: any) {
 	const view = params?.view === "load" ? "load" : "list";
 	if (view === "list") {
 		const list = listConversations(ctx.db, ctx.tenantId, params.limit ?? config.agentListLimit);
+		if (!list.length) return { content: [{ type: "text", text: "暂无会话。" }], details: { conversations: [], page: 1, pageSize: PAGE_SIZE, totalRows: 0, totalPages: 1, hasMore: false } };
+		const page = Math.max(Number(params.page ?? 1) || 1, 1);
+		const totalPages = Math.max(Math.ceil(list.length / PAGE_SIZE), 1);
+		const p = Math.min(page, totalPages);
+		const slice = list.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE);
+		const table = conversationTable(slice);
+		const footer = totalPages > 1 ? `\n(第 ${p}/${totalPages} 页 · 共 ${list.length} 条;用户要求查看更多时再传 page=${p + 1})` : "";
 		return {
-			content: [{ type: "text", text: list.length ? list.map((c: any) => `${c.id.slice(0, 10)}… ${c.customerName ?? c.customerKey ?? "未知客户"} | 销售:${c.salesName} | ${c.messageCount}条 | ${c.createdAt}`).join("\n") : "暂无会话。" }],
-			details: { conversations: list },
+			content: [{ type: "text", text: `当前会话列表(${list.length} 条,第 ${p}/${totalPages} 页):\n${table}${footer}` }],
+			details: { conversations: slice, rawTable: table, page: p, pageSize: PAGE_SIZE, totalRows: list.length, totalPages, hasMore: p < totalPages },
 		};
 	}
 	const conversationId = String(params.conversationId ?? "").trim();

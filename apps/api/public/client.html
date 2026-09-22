@@ -1770,7 +1770,7 @@
         loadThreads();
       } catch (e) { alert("删除失败:" + e.message); }
     } let running = false; let currentThreadId = null; let deltaBuf = ""; let abortCtrl = null; let kanbanTimer = null; let multiState = null;
-    const PAGE_TOOLS = ["customer_query", "vehicle_query", "excel", "table_generate", "playbook_check"];
+    const PAGE_TOOLS = ["customer_query", "conversation_query", "vehicle_query", "excel", "table_generate", "playbook_check"];
     // ── 新会话欢迎区:默认定时任务结果按钮,点击展示结构化结果 ──
     let welcomeResults = null;
     function welcomeAll() { return (welcomeResults || []).filter((x) => x.kind === "builtin" || x.kind === "custom"); }
