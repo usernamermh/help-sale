@@ -1230,7 +1230,6 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 			dealedAt: body.dealedAt,
 			status: body.status,
 		});
-		return { deal };
 		// 成交后自动生成提车关怀任务(3 天用车体验 / 30 天保养邀约)
 		let followups: string[] = [];
 		if (deal.status === "closed") {
