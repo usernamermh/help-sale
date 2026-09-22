@@ -154,7 +154,7 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 
 业务级，`customer_query`(客户)、`conversation_query`(会话)、`knowledge_search`(话术检索)、`knowledge_ingest`(话术沉淀)、`knowledge_candidate`(话术候选)、`task_manage`(跟进任务)、`vehicle_query`(车型)、`insight_query`(经营洞察)、`test_drive_manage`(试驾管理)。
 
-系统级，`sql`、`redis`、`kanban`、`subagents`、`table_generate`、`chart_generate`、`file_read`、`file_write_new`、`txt`、`excel`、`ppt`、`browser`、`computer`、`update_memory`、`embedding`、`cluster`、`keyword_extract_free`、`keyword_extract_strict`、`dialog_extract`、`dialog_select`、`date_tool`。
+系统级，`sql`、`redis`、`kanban`、`subagents`、`table_generate`、`chart_generate`、`file_read`、`file_write_new`、`txt`、`excel`、`ppt`、`browser`、`computer`、`update_memory`、`embedding`、`cluster`、`keyword_extract_free`、`keyword_extract_strict`、`dialog_extract`、`date_tool`。
 
 
 ## 工具实现
@@ -162,8 +162,8 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 ### 业务级工具
 
 #### 客户与查询
-- [customer_query] — 客户清单/档案/历史/标签（支持按姓名解析真实客户）
 - [conversation_query] — 会话列表/对话原文（翻页）
+- [customer_query] — 客户清单/档案/历史/标签（支持按姓名解析真实客户）
 - [vehicle_query] — 车型检索（预算/座位/能源/级别/关键词）
 
 #### 话术与质检
@@ -404,8 +404,46 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 #### 算法与呈现
 - [embedding] / [similarity] / [cluster] — 文本向量、语义相似度、聚类
 - [keyword_extract_free] / [keyword_extract_strict] — 标签抽取/匹配
-- [dialog_extract] / [dialog_select] — 对话抽取与筛选
 - [table_generate] / [chart_generate] — 表格/流程图/统计图
 - [computer] / [date_tool] / [browser] — 计算、日期转换、HTTP 抓取
 - [update_memory] — 系统记忆更新（memory.md）
-
+  update_memory(section, content)
+  │
+  ├─ 输入: 小节(section) + 内容(content)
+  │   ├─ section 白名单: 用户记忆 / 系统记忆 / 工具经验 / 规则改进 / 模型端点
+  │   └─ content 限制: 单条 ≤ 2000 字符
+  │
+  ├─ ① 校验小节
+  │   └─ normalizeSection: section 字符串包含白名单任一项才通过,否则抛错
+  │
+  ├─ ② 读取 memory.md(不存在则用模板)
+  │   ├─ 模板含 5 个固定小节标题(## 用户记忆 / ## 系统记忆 / …)
+  │   └─ 文件路径来自配置 memoryFile(默认 apps/api/data/memory.md)
+  │
+  ├─ ③ 幂等去重
+  │   ├─ 内容清洗: 压缩空白 → 拼成 "- 内容" 一行
+  │   └─ 若该行已存在 → 直接返回,不重复追加
+  │
+  ├─ ④ 定位小节并插入
+  │   ├─ 找到 "## 目标小节" 标记
+  │   ├─ 在该标题行之后插入新行
+  │   └─ 写回文件
+  │
+  └─ ⑤ 生效方式: 下次构建系统提示词时生效
+      └─ getSalesAgentSystemPrompt → loadMemoryText 读取 memory.md
+            └─ 拼进【系统记忆】段 → 模型后续行为受记忆影响
+  触发路径：
+  1. 模型主动调用（主路径）
+  模型在以下场景会主动写记忆：
+  - 发现用户偏好：比如用户说"报告都用表格""优先用客户原话检索" → 写入「用户记忆」；
+  - 沉淀工具使用经验：比如发现某个检索技巧有效 → 写入「工具经验」；
+  - 记录模型端点信息：比如确认某个模型网关的行为 → 写入「模型端点」；
+  - 规则改进：模型在反思类任务中主动沉淀规则 → 写入「规则改进」。
+  判断标准是模型自己觉得"这条值得长期记住"，提示词约束了边界：只写偏好/经验，业务数据落库。
+  2. 反思闭环自动触发（定时任务）
+  每周一 09:30 的「反思改进」定时任务（automation.ts:103）：
+  聚合近 7 天反思案例(reflection_cases)
+    → applyReflectionToMemory
+    → 把改进建议批量写入 memory「规则改进」小节
+  这个不需要模型主动调用，是系统自动把"话术评估低分、agent 运行失败"等案例总结成规则写进记忆，从而影响后续 agent 行为。
+  另外还有一个手动入口：POST /api/v1/reflections/apply（routes.ts:1189），前端「反思改进」卡片可以手动应用同样的逻辑。
