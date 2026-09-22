@@ -35,6 +35,7 @@ import { createDeal, getSalespersonById, getStore, getStoreManager, getStoreOver
 import { analysisRequestHash } from "./services/analysis-cache.js";
 import { runSalesAgent, runSalesAgentWithPlan, collectMultiAgentFlow, stripChartsForHistory } from "./pi/agent-runtime.js";
 import { getAgentPlanByRun } from "./repositories/agent-plans.js";
+import { listKeywords, getKeyword, upsertKeyword, updateKeyword, deleteKeyword } from "./repositories/keywords.js";
 import { setStopSignal, clearStopSignal } from "./services/stop-signal.js";
 import { CAPABILITIES, getCapabilityDef } from "./pi/capabilities.js";
 import { createWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled } from "./repositories/agent-capabilities.js";
@@ -1179,6 +1180,29 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		const executed = await consumeKanbanSubagents({ db: deps.db }, request.tenantId, { limit: 2 });
 		return { executed };
 	});
+	// ── 关键词库:用户增删改查(自由抽取入库/严格匹配回写的落点) ──
+	app.get("/api/v1/keywords", async (request) => {
+		const { category, keyword } = request.query as { category?: string; keyword?: string };
+		return { keywords: listKeywords(deps.db, request.tenantId, { category, keyword, limit: 200 }) };
+	});
+	app.post("/api/v1/keywords", async (request, reply) => {
+		const body = (request.body ?? {}) as { keyword?: string; category?: string };
+		if (!body.keyword?.trim()) return reply.code(400).send({ error: "keyword is required" });
+		const k = upsertKeyword(deps.db, request.tenantId, { keyword: body.keyword, category: body.category, source: "manual" });
+		return { keyword: k };
+	});
+	app.put<{ Params: { id: string } }>("/api/v1/keywords/:id", async (request, reply) => {
+		const body = (request.body ?? {}) as { keyword?: string; category?: string };
+		const k = updateKeyword(deps.db, request.tenantId, request.params.id, body);
+		if (!k) return reply.code(404).send({ error: "keyword_not_found" });
+		return { keyword: k };
+	});
+	app.delete<{ Params: { id: string } }>("/api/v1/keywords/:id", async (request, reply) => {
+		const ok = deleteKeyword(deps.db, request.tenantId, request.params.id);
+		if (!ok) return reply.code(404).send({ error: "keyword_not_found" });
+		return { removed: true };
+	});
+
 	// ── 反思与自我改进:案例摘要与应用到记忆 ──
 	app.get("/api/v1/reflections", async (request) => {
 		return { summary: collectReflectionSuggestions(deps.db, request.tenantId, 7) };

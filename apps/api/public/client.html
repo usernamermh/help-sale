@@ -1167,7 +1167,10 @@
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>对话原文</button><button id="headerKanbanBtn" class="hdr-btn" title="显示/隐藏协作看板"><svg viewBox="0 0 24 24">
           <path d="M4 4h6v16H4zM14 4h6v10h-6z" />
-        </svg>子agent协作看板</button><button id="headerJobsBtn" class="hdr-btn" title="查看定时任务" onclick="openJobsModal()"><svg viewBox="0 0 24 24">
+        </svg>子agent协作看板</button><button id="headerKeywordsBtn" class="hdr-btn" title="关键词管理"><svg viewBox="0 0 24 24">
+          <path d="M7 7h10v2H7zM7 11h6v2H7zM7 15h8v2H7z" />
+        </svg>关键词管理</button>
+        <button id="headerJobsBtn" class="hdr-btn" title="查看定时任务" onclick="openJobsModal()"><svg viewBox="0 0 24 24">
           <path d="M12 8v4l3 3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
         </svg>定时任务</button><a href="/console">进入编排端</a></span>
   </header>
@@ -1215,6 +1218,13 @@
         <div class="jobs-list" id="jobsList">加载中…</div>
         <div class="jobs-detail" id="jobsDetail">请选择左侧任务，或新增一个定时任务</div>
       </div>
+    </div>
+  </div>
+  <div id="keywordsModal" class="modal-mask" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head"><span>🏷️ 关键词管理</span><button class="modal-close" onclick="closeKeywordsModal()">关闭</button></div>
+      <div class="keywords-add" style="display:flex;gap:8px;padding:10px 0"><input id="kwInput" placeholder="新增关键词" style="flex:2;padding:8px;border:1px solid #cbd5e1;border-radius:8px" /><input id="kwCatInput" placeholder="分类(可选)" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px" /><button class="secondary" onclick="addKeyword()">＋ 添加</button></div>
+      <div class="keywords-list" id="keywordsList" style="flex:1;overflow:auto;display:flex;flex-direction:column;gap:6px">加载中…</div>
     </div>
   </div>
   <script src="/vendor/marked.min.js"></script>
@@ -2131,6 +2141,41 @@
     let jobsState = { selected: null, customs: [], runs: [], editing: null, builtin: {} };
     function openJobsModal() { $("jobsModal").style.display = "flex"; loadJobsData(); }
     function closeJobsModal() { $("jobsModal").style.display = "none"; jobsState.editing = null; }
+    function closeKeywordsModal() { $("keywordsModal").style.display = "none"; }
+    async function loadKeywords() {
+      const box = $("keywordsList");
+      try {
+        const r = await api("/api/v1/keywords");
+        const list = r.keywords || [];
+        box.innerHTML = list.length ? "" : "<div class=\"mini\">暂无关键词,添加一个吧</div>";
+        for (const k of list) {
+          const d = document.createElement("div"); d.className = "kw-item";
+          d.style.cssText = "display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:6px 10px";
+          d.innerHTML = "<div style=\"flex:1\"><b>" + escapeHtml(k.keyword) + "</b> " + (k.category ? "<span class=\"badge\">" + escapeHtml(k.category) + "</span>" : "") + " <span class=\"mini\">×" + k.hitCount + "</span></div>"
+            + "<input data-id=\"" + k.id + "\" value=\"" + escapeHtml(k.keyword) + "\" style=\"width:140px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px\" />"
+            + "<button class=\"secondary\" onclick=\"saveKeyword(this)\">保存</button>"
+            + "<button class=\"secondary\" style=\"color:#dc2626\" onclick=\"deleteKeyword(this)\">删除</button>";
+          box.appendChild(d);
+        }
+      } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
+    }
+    async function addKeyword() {
+      const kw = $("kwInput").value.trim(); if (!kw) return;
+      const cat = $("kwCatInput").value.trim();
+      await api("/api/v1/keywords", { method: "POST", body: JSON.stringify({ keyword: kw, category: cat || undefined }), headers: { "Content-Type": "application/json" } });
+      $("kwInput").value = ""; $("kwCatInput").value = ""; loadKeywords();
+    }
+    async function saveKeyword(btn) {
+      const input = btn.previousElementSibling;
+      await api("/api/v1/keywords/" + input.dataset.id, { method: "PUT", body: JSON.stringify({ keyword: input.value.trim() }), headers: { "Content-Type": "application/json" } });
+      loadKeywords();
+    }
+    async function deleteKeyword(btn) {
+      const input = btn.previousElementSibling.previousElementSibling;
+      if (!confirm("确认删除该关键词?")) return;
+      await api("/api/v1/keywords/" + input.dataset.id, { method: "DELETE" });
+      loadKeywords();
+    }
     async function loadJobsData() {
       let runs = []; let customs = []; let builtin = {};
       let failed = 0;
@@ -2247,6 +2292,7 @@
         jobsState.editing = null; loadJobsData();
       } catch (e) { alert("保存失败:" + e.message); }
     }
+    $("headerKeywordsBtn").addEventListener("click", () => { $("keywordsModal").style.display = "flex"; loadKeywords(); });
     $("headerJobsBtn").addEventListener("click", openJobsModal);
     $("jobsModal").addEventListener("click", (e) => { if (e.target === $("jobsModal")) closeJobsModal(); });
     // ── 表格手动翻页:直接执行工具翻页,只替换表格原文,不经过大模型 ──
