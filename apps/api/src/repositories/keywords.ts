@@ -21,7 +21,7 @@ export function listKeywords(db: DatabaseSync, tenantId: string, opts: { categor
 	if (opts.keyword) { clauses.push("keyword LIKE ?"); params.push(`%${opts.keyword}%`); }
 	params.push(opts.limit ?? 100);
 	return (db
-		.prepare(`SELECT * FROM keywords WHERE ${clauses.join(" AND ")} ORDER BY hit_count DESC, created_at DESC LIMIT ?`)
+		.prepare(`SELECT * FROM keywords WHERE ${clauses.join(" AND ")} ORDER BY updated_at DESC, created_at DESC LIMIT ?`)
 		.all(...params) as Record<string, unknown>[]).map(mapRow);
 }
 
@@ -67,7 +67,7 @@ export function deleteKeyword(db: DatabaseSync, tenantId: string, id: string): b
 
 /** 取前 N 个关键词(自由抽取时参考词库)。 */
 export function listKeywordWords(db: DatabaseSync, tenantId: string, limit: number): string[] {
-	return (db.prepare("SELECT keyword FROM keywords WHERE tenant_id = ? ORDER BY hit_count DESC, created_at DESC LIMIT ?").all(tenantId, limit) as Array<{ keyword: string }>).map((r) => r.keyword);
+	return (db.prepare("SELECT keyword FROM keywords WHERE tenant_id = ? ORDER BY updated_at DESC, created_at DESC LIMIT ?").all(tenantId, limit) as Array<{ keyword: string }>).map((r) => r.keyword);
 }
 
 function mapRow(row: Record<string, unknown>): KeywordRecord {
