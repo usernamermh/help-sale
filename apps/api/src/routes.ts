@@ -214,11 +214,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
 
 	app.get("/api/v1/health", async () => ({ status: "ok", ts: Date.now() }));
-	// 点击探针:前端点击定时任务等按钮时打点,用于确认请求是否到达本服务
-	app.get("/api/v1/diag/ping", async (request) => {
-		console.log(`[diag] ping from ${request.ip} url=${request.url}`);
-		return { ok: true, ts: Date.now() };
-	});
+
 	// 分析执行 + 落库 + 请求级缓存(相同对话原文+上下文直接复用,不调模型)
 	async function runAndPersistAnalysis(
 		request: { tenantId: string },

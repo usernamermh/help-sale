@@ -2114,16 +2114,7 @@
       return "每天 " + (j.scheduleTime || "");
     }
     let jobsState = { selected: null, customs: [], runs: [], editing: null, builtin: {} };
-    function openJobsModal() { $("jobsModal").style.display = "flex"; loadJobsData(); clickProbe(); }
-    function clickProbe() {
-      try {
-        var b = document.createElement("div"); b.id = "clickProbe";
-        b.style.cssText = "position:fixed;top:60px;right:8px;z-index:99999;background:#2563eb;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px";
-        b.textContent = "click at " + new Date().toLocaleTimeString();
-        document.body.appendChild(b);
-        fetch("/api/v1/diag/ping").catch(() => {});
-      } catch (e) {}
-    }
+    function openJobsModal() { $("jobsModal").style.display = "flex"; loadJobsData(); }
     function closeJobsModal() { $("jobsModal").style.display = "none"; jobsState.editing = null; }
     async function loadJobsData() {
       let runs = []; let customs = []; let builtin = {};
