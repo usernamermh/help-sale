@@ -795,7 +795,6 @@
     .kb-result { color: #166534; background: #f0fdf4; border-radius: 6px; padding: 6px 8px; margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
     .kb-error { color: #991b1b; background: #fef2f2; border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
     .plan-card {
-    .plan-card {
       margin: 0 0 10px;
       border: 1px solid #bfdbfe;
       background: #eff6ff;
@@ -1167,7 +1166,7 @@
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>对话原文</button><button id="headerKanbanBtn" class="hdr-btn" title="显示/隐藏协作看板"><svg viewBox="0 0 24 24">
           <path d="M4 4h6v16H4zM14 4h6v10h-6z" />
-        </svg>子agent协作看板</button><button id="headerJobsBtn" class="hdr-btn" title="查看定时任务"><svg viewBox="0 0 24 24">
+        </svg>子agent协作看板</button><button id="headerJobsBtn" class="hdr-btn" title="查看定时任务" onclick="openJobsModal()"><svg viewBox="0 0 24 24">
           <path d="M12 8v4l3 3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
         </svg>定时任务</button><a href="/console">进入编排端</a></span>
   </header>
@@ -1219,7 +1218,14 @@
   </div>
   <script src="/vendor/marked.min.js"></script>
   <script src="/vendor/purify.min.js"></script>
-  <script>const $ = (id) => document.getElementById(id);
+  <script>
+  window.addEventListener("error", function (e) {
+    var d = document.getElementById("jsErrorBadge");
+    if (!d) { d = document.createElement("div"); d.id = "jsErrorBadge"; d.style.cssText = "position:fixed;top:8px;right:8px;z-index:9999;background:#dc2626;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;max-width:60vw;white-space:pre-wrap"; document.body.appendChild(d); }
+    d.textContent = "JS错误: " + (e.message || "unknown") + " @ " + (e.filename || "") + ":" + (e.lineno || "?");
+  });
+</script>
+<script>const $ = (id) => document.getElementById(id);
     function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
     let trPager = null;
     function renderTrPanel(meta, list, pager) {
@@ -1694,8 +1700,17 @@
     }
     // ── 本轮任务栏 ──
     function resetRunPanel() { $("runList").innerHTML = ""; $("runMeta").textContent = ""; $("runPanel").style.display = "flex"; $("headerRunBtn").classList.add("active"); syncRightCol(); }
-    function addRunTask(label, status, detail) {
+    function addRunTask(label, status, detail, toolName) {
+      // tool call 结果返回后不再新增记录:同名工具已存在时只更新状态
+      const items = $("runList").children;
+      for (const it of items) {
+        if (toolName && it.getAttribute("data-tool") === toolName) {
+          it.className = "run-item run-" + status;
+          return it;
+        }
+      }
       const d = document.createElement("div"); d.className = "run-item run-" + status;
+      if (toolName) d.setAttribute("data-tool", toolName);
       d.innerHTML = '<div class="run-head"><span>' + escapeHtml(label) + '</span><span class="run-time">' + new Date().toLocaleTimeString() + '</span></div>' + (detail ? '<div class="run-detail">' + escapeHtml(detail) + '</div>' : "");
       $("runList").appendChild(d); $("runList").scrollTop = $("runList").scrollHeight;
       $("runPanel").style.display = "flex";
@@ -2035,17 +2050,12 @@
         const name = evt.label || evt.toolName || "工具";
         steps.push({ eventType: "tool_start", toolName: evt.toolName, label: name });
         if (PAGE_TOOLS.indexOf(evt.toolName) >= 0 && evt.payload && typeof evt.payload === "object") wait.pageArgs = evt.payload;
-        addRunTask(name, "start");
+        addRunTask(name, "start", "", evt.toolName);
         wait.body.textContent = "正在调用 " + name + "…";
       } else if (evt.type === "tool_end") {
         const name = evt.label || evt.toolName || "工具";
         steps.push({ eventType: "tool_end", toolName: evt.toolName, label: name });
-        addRunTask(name, "done");
-        if (evt.toolName === "subagents" && evt.payload && Array.isArray(evt.payload.results)) {
-          for (const r of evt.payload.results) {
-            addRunTask("子任务 · " + (r.title || r.id), r.status === "done" ? "done" : "error", r.status === "done" ? (r.result || "完成") : ("失败: " + (r.error || "")));
-          }
-        }
+        addRunTask(name, "done", "", evt.toolName);
         wait.body.textContent = name + " 完成，正在整理结果…";
         const det = evt.payload && evt.payload.details;
         if (det && Array.isArray(det.messages) && det.messages.length) {
@@ -2104,7 +2114,16 @@
       return "每天 " + (j.scheduleTime || "");
     }
     let jobsState = { selected: null, customs: [], runs: [], editing: null, builtin: {} };
-    function openJobsModal() { $("jobsModal").style.display = "flex"; loadJobsData(); }
+    function openJobsModal() { $("jobsModal").style.display = "flex"; loadJobsData(); clickProbe(); }
+    function clickProbe() {
+      try {
+        var b = document.createElement("div"); b.id = "clickProbe";
+        b.style.cssText = "position:fixed;top:60px;right:8px;z-index:99999;background:#2563eb;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px";
+        b.textContent = "click at " + new Date().toLocaleTimeString();
+        document.body.appendChild(b);
+        fetch("/api/v1/diag/ping").catch(() => {});
+      } catch (e) {}
+    }
     function closeJobsModal() { $("jobsModal").style.display = "none"; jobsState.editing = null; }
     async function loadJobsData() {
       let runs = []; let customs = []; let builtin = {};
