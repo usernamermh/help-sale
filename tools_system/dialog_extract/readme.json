@@ -1,9 +1,27 @@
 {
   "name": "dialog_extract",
-  "label": "抽取对话原文",
-  "description": "从人-人对话转写文本中抽取结构化对话原文(识别「客户:」「销售:」等角色标注,无标注时按交替启发式归属)。",
+  "label": "对话原文抽取",
+  "description": "按抽取标准从指定会话中保真抽取命中的对话片段:模型只返回命中序号,工具按序号从库里取原始原文,不经过模型转述;返回 conversationId+hitIndexes+messages,前端对话原文卡片对命中句加粗。",
   "category": "文本算法",
-  "parameters": { "type": "object", "required": ["transcript"], "properties": { "transcript": { "type": "string", "description": "带角色标注的对话文本" } } },
+  "parameters": {
+    "type": "object",
+    "required": [
+      "conversationId",
+      "standard"
+    ],
+    "properties": {
+      "conversationId": {
+        "type": "string",
+        "description": "会话 ID(agent 内部流转)"
+      },
+      "standard": {
+        "type": "string",
+        "description": "抽取标准,如:提及价格异议的句子、客户表达购买意向的句子"
+      }
+    }
+  },
   "entry": "main.ts",
-  "function_list": ["main.execute"]
+  "function_list": [
+    "main.execute"
+  ]
 }
