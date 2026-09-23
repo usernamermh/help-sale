@@ -370,8 +370,10 @@ export async function collectMultiAgentFlow(deps: SalesAgentDeps, input: SalesAg
 	// 等待子代理完成(后台消费者在跑;这里轮询直到全部就绪或超时)
 	const deadline = Date.now() + config.subagentTimeoutMs;
 	while (true) {
-		const pending = listKanbanCards(deps.db, deps.tenantId, { status: "pending", threadId }).length;
-		if (pending === 0 || Date.now() > deadline) break;
+		const cards = listKanbanCards(deps.db, deps.tenantId, { threadId }).filter((c) => createdCardIds.includes(c.id));
+		// 等待全部子任务进入终态(done/error);inprogress 卡不视为完成,否则协调者拿到的是未完成结果
+		const allDone = cards.length > 0 && cards.every((c) => c.status === "done" || c.status === "error");
+		if (allDone || Date.now() > deadline) break;
 		await new Promise((r) => setTimeout(r, config.subagentPollIntervalMs));
 	}
 	const allCards = listKanbanCards(deps.db, deps.tenantId, { threadId }).filter((c) => createdCardIds.includes(c.id));

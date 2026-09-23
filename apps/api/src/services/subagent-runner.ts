@@ -96,6 +96,13 @@ export async function consumeKanbanSubagents(deps: SubagentRunnerDeps, tenantId:
 /** 启动子代理消费者:按轮询间隔扫描看板,消费全部线程的 pending 卡片(含多代理任务)。 */
 export function startSubagentConsumer(deps: SubagentRunnerDeps, tenantIds: string[] = []): () => void {
 	const timer = setInterval(() => {
+		// 清理陈旧 inprogress 卡:子代理进程被中断/重启后,已领取但长期未完成的卡标记 error,避免前端一直等待
+		try {
+			const staleCutoff = new Date(Date.now() - config.subagentTimeoutMs).toISOString();
+			deps.db.prepare("UPDATE kanban_cards SET status = 'error', error = '子代理执行中断(超时或服务重启)', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE status = 'inprogress' AND updated_at < ?").run(staleCutoff);
+		} catch (error) {
+			console.warn("[subagents] 清理陈旧卡片失败:", error instanceof Error ? error.message : String(error));
+		}
 		const tenants = tenantIds.length > 0 ? tenantIds : ["t_demo"];
 		for (const tenantId of tenants) {
 			// 按线程分组取 pending 卡片,逐线程消费(每个线程并发上限 MAX_CONCURRENCY)
