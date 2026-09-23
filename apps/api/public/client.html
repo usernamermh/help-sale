@@ -2120,7 +2120,7 @@
         steps.push({ eventType: "tool_start", toolName: evt.toolName, label: name });
         if (PAGE_TOOLS.indexOf(evt.toolName) >= 0 && evt.payload && typeof evt.payload === "object") wait.pageArgs = evt.payload;
         addRunTask(name, "start", "", evt.toolName);
-        wait.body.textContent = "正在调用 " + name + "…";
+        if (evt.toolName !== "emit_final") wait.body.textContent = "正在调用 " + name + "…";
       } else if (evt.type === "tool_end") {
         if (evt.toolName === "dialog_extract" && evt.payload && evt.payload.details && evt.payload.details.conversationId) {
           const d = evt.payload.details;
@@ -2136,7 +2136,7 @@
         const name = evt.label || evt.toolName || "工具";
         steps.push({ eventType: "tool_end", toolName: evt.toolName, label: name });
         addRunTask(name, "done", "", evt.toolName);
-        wait.body.textContent = name + " 完成，模型生成答复中…";
+        if (evt.toolName !== "emit_final") wait.body.textContent = name + " 完成，模型生成答复中…";
         const det = evt.payload && evt.payload.details;
         if (det && Array.isArray(det.messages) && det.messages.length) {
           renderTrPanel("会话 " + String(det.conversationId || "").slice(0, 10) + "…", det.messages, { conversationId: det.conversationId, page: Number(det.page) || 1, pageSize: Number(det.pageSize) || 10, totalPages: Number(det.totalPages) || 1, totalMessages: Number(det.totalMessages) || det.messages.length });
