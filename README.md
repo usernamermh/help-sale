@@ -94,7 +94,7 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 
 #### 话术与质检
 - **knowledge_search**：话术/知识库检索（FTS5 中文检索）
-1. 数据入库（前置环节，决定检索质量）
+- 数据入库（前置环节，决定检索质量）
 知识不是直接整篇存进去的，入库时先分块：
 - knowledge_ingest 把话术/政策/竞品资料交给 chunker.splitText 按段落切分（默认 600 字符/块、80 字符重叠，配置在 yaml chunker 段）；
 - 每个块写入 knowledge_chunks 表（带 tenant_id 租户隔离、document_id 归属、chunk_index 顺序）；
@@ -105,12 +105,12 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 汉EV → EV冠 → V冠军 → 冠军版
 每个子串都进索引。用户搜「冠军版」时，查询也被切成 冠军版，与索引里的 trigram 直接命中——不需要先做中文分词，也不依赖词库，所以对中文关键词（尤其是品牌名、话术短语）特别友好。
 
-2. 检索入口（工具层）
+- 检索入口（工具层）
 knowledge_search 工具拿到 query 后：
 - 先走 withToolCache：按「工具名 + 租户 + 参数」算哈希查 tool_call_cache，相同查询直接返回缓存结果，不再查库；
 - 未命中则调用 searchKnowledge 真正检索。
 
-3. 检索策略（仓库层，双通道 + 回退）
+- 检索策略（仓库层，双通道 + 回退）
 searchKnowledge 把查询先做清洗（去标点、归一化），然后按词拆分：
 - 长词（≥3 字符）→ FTS5 全文检索：用 MATCH + snippet() 生成带高亮标记的摘要，按 rank 排序——这是主通道，命中质量高；
 - 短词（<3 字符）→ LIKE 模糊匹配：因为 trigram 对过短词效果差，短词直接走 content LIKE '%词%'；
@@ -153,35 +153,34 @@ searchKnowledge 把查询先做清洗（去标点、归一化），然后按词�
       - 理由: 内容基本一致,建议跳过
     - 每条候选带 review_note(可解释的判断说明)
 
-  - 4. 审批(knowledge_candidate)
-  - op = list → 列出 pending 候选(含建议动作)
-  - op = approve → 按建议执行
-    - 建议 add → 正常入库(见 5)
-    - 建议 update → 覆盖旧版本
-      - deleteKnowledgeDocumentByTitle(删旧文档)
-        - 删 knowledge_chunks(触发器清 FTS 索引)
-        - 删 knowledge_documents
-      - 写入新内容(见 5)
+  - 审批(knowledge_candidate)
+    - op = list → 列出 pending 候选(含建议动作)
+    - op = approve → 按建议执行
+      - 建议 add → 正常入库
+      - 建议 update → 覆盖旧版本
+        - deleteKnowledgeDocumentByTitle(删旧文档)
+        - 删 knowledge_chunks和knowledge_documents(触发器清 FTS 索引) 
+      - 写入新内容
     - 建议 skip → 不落库,直接标记 approved
     - 候选 → status = 'approved', 记录 approved_at
   - op = reject → 标记 rejected(不落库)
 
-  - 5. 入库(ingestDocument, 供新增/覆盖共用)
+  - 入库(ingestDocument, 供新增/覆盖共用)
     - 分块(splitText)
-  - 默认 600 字符/块、80 字符重叠(yaml chunker 段)
-  - 按空行分段落,不超 size 就合并进当前块
-  - 超长段落按 600 硬切
-  - 下一段从 size - overlap(520 字符)处开始 → 上下文不丢
-    - 写 knowledge_documents
-  - 租户 / 标题 / 分类 / 整篇内容拼接
-  - tenant_id 隔离
-    - 写 knowledge_chunks
-  - 每块一行(租户 / 文档ID / chunk_index / 内容)
-  - 事务批量插入
-    - FTS 索引同步(触发器)
-        - AFTER INSERT → 自动写入 knowledge_chunks_fts
-        - AFTER DELETE → 自动删除对应索引行
-        - 结果: 入库即索引, knowledge_search 立即可检索
+    - 默认 600 字符/块、80 字符重叠(yaml chunker 段)
+    - 按空行分段落,不超 size 就合并进当前块
+    - 超长段落按 600 硬切
+    - 下一段从 size - overlap(520 字符)处开始 → 上下文不丢
+      - 写 knowledge_documents
+    - 租户 / 标题 / 分类 / 整篇内容拼接
+    - tenant_id 隔离
+      - 写 knowledge_chunks
+    - 每块一行(租户 / 文档ID / chunk_index / 内容)
+    - 事务批量插入
+      - FTS 索引同步(触发器)
+          - AFTER INSERT → 自动写入 knowledge_chunks_fts
+          - AFTER DELETE → 自动删除对应索引行
+          - 结果: 入库即索引, knowledge_search 立即可检索
 
 - **playbook_check**：话术命中检测（原文+语义双通道，默认匹配全部类别）
 playbook_check 原理
@@ -358,14 +357,14 @@ update_memory(section, content)
     - getSalesAgentSystemPrompt → loadMemoryText 读取 memory.md
         - 拼进【系统记忆】段 → 模型后续行为受记忆影响
 触发路径：
-1. 模型主动调用（主路径）
+- 模型主动调用（主路径）
 模型在以下场景会主动写记忆：
 - 发现用户偏好：比如用户说"报告都用表格""优先用客户原话检索" → 写入「用户记忆」；
 - 沉淀工具使用经验：比如发现某个检索技巧有效 → 写入「工具经验」；
 - 记录模型端点信息：比如确认某个模型网关的行为 → 写入「模型端点」；
 - 规则改进：模型在反思类任务中主动沉淀规则 → 写入「规则改进」。
 判断标准是模型自己觉得"这条值得长期记住"，提示词约束了边界：只写偏好/经验，业务数据落库。
-2. 反思闭环自动触发（定时任务）
+- 反思闭环自动触发（定时任务）
 每周一 09:30 的「反思改进」定时任务（automation.ts:103）：
 聚合近 7 天反思案例(reflection_cases)
 → applyReflectionToMemory
