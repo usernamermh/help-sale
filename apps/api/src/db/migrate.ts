@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 30;
+export const MIGRATION_VERSION = 31;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -196,6 +196,16 @@ export function migrate(db: DatabaseSync): void {
 			UNIQUE (tenant_id, keyword)
 		);`);
 		db.exec(`CREATE INDEX IF NOT EXISTS idx_keywords_tenant ON keywords (tenant_id, keyword);`);
+	}
+	// v31:关键词三级分类目录(category_l1/l2/l3)
+	if (current.user_version < 31) {
+		const addCol = (table: string, col: string, ddl: string) => {
+			const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+			if (!cols.some((c) => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl};`);
+		};
+		addCol("keywords", "category_l1", "TEXT");
+		addCol("keywords", "category_l2", "TEXT");
+		addCol("keywords", "category_l3", "TEXT");
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }

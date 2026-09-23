@@ -35,7 +35,7 @@ import { createDeal, getSalespersonById, getStore, getStoreManager, getStoreOver
 import { analysisRequestHash } from "./services/analysis-cache.js";
 import { runSalesAgent, runSalesAgentWithPlan, collectMultiAgentFlow, stripChartsForHistory } from "./pi/agent-runtime.js";
 import { getAgentPlanByRun } from "./repositories/agent-plans.js";
-import { listKeywords, getKeyword, upsertKeyword, updateKeyword, deleteKeyword } from "./repositories/keywords.js";
+import { listKeywordCategories, listKeywords, getKeyword, upsertKeyword, updateKeyword, deleteKeyword } from "./repositories/keywords.js";
 import { setStopSignal, clearStopSignal } from "./services/stop-signal.js";
 import { CAPABILITIES, getCapabilityDef } from "./pi/capabilities.js";
 import { createWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled } from "./repositories/agent-capabilities.js";
@@ -1182,17 +1182,28 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	});
 	// ── 关键词库:用户增删改查(自由抽取入库/严格匹配回写的落点) ──
 	app.get("/api/v1/keywords", async (request) => {
-		const { category, keyword } = request.query as { category?: string; keyword?: string };
-		return { keywords: listKeywords(deps.db, request.tenantId, { category, keyword, limit: 200 }) };
+		const q = request.query as { categoryL1?: string; categoryL2?: string; categoryL3?: string; keyword?: string; page?: string; pageSize?: string };
+		const page = listKeywords(deps.db, request.tenantId, {
+			categoryL1: q.categoryL1,
+			categoryL2: q.categoryL2,
+			categoryL3: q.categoryL3,
+			keyword: q.keyword,
+			page: q.page ? Number(q.page) : undefined,
+			pageSize: q.pageSize ? Number(q.pageSize) : undefined,
+		});
+		return { keywords: page.items, total: page.total, page: page.page, pageSize: page.pageSize, totalPages: page.totalPages };
+	});
+	app.get("/api/v1/keywords/categories", async (request) => {
+		return listKeywordCategories(deps.db, request.tenantId);
 	});
 	app.post("/api/v1/keywords", async (request, reply) => {
-		const body = (request.body ?? {}) as { keyword?: string; category?: string };
+		const body = (request.body ?? {}) as { keyword?: string; category?: string; categoryL1?: string; categoryL2?: string; categoryL3?: string };
 		if (!body.keyword?.trim()) return reply.code(400).send({ error: "keyword is required" });
-		const k = upsertKeyword(deps.db, request.tenantId, { keyword: body.keyword, category: body.category, source: "manual" });
+		const k = upsertKeyword(deps.db, request.tenantId, { keyword: body.keyword, category: body.category, categoryL1: body.categoryL1, categoryL2: body.categoryL2, categoryL3: body.categoryL3, source: "manual" });
 		return { keyword: k };
 	});
 	app.put<{ Params: { id: string } }>("/api/v1/keywords/:id", async (request, reply) => {
-		const body = (request.body ?? {}) as { keyword?: string; category?: string };
+		const body = (request.body ?? {}) as { keyword?: string; category?: string; categoryL1?: string; categoryL2?: string; categoryL3?: string };
 		const k = updateKeyword(deps.db, request.tenantId, request.params.id, body);
 		if (!k) return reply.code(404).send({ error: "keyword_not_found" });
 		return { keyword: k };

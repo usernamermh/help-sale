@@ -1221,15 +1221,29 @@
     </div>
   </div>
   <div id="keywordsModal" class="modal-mask" style="display:none">
+  <div id="keywordsModal" class="modal-mask" style="display:none">
     <div class="modal-box">
       <div class="modal-head"><span>🏷️ 关键词管理</span><button class="modal-close" onclick="closeKeywordsModal()">关闭</button></div>
-      <div class="keywords-add" style="display:flex;gap:8px;padding:10px 0"><input id="kwInput" placeholder="新增关键词" style="flex:2;padding:8px;border:1px solid #cbd5e1;border-radius:8px" /><input id="kwCatInput" placeholder="分类(可选)" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px" /><button class="secondary" onclick="addKeyword()">＋ 添加</button></div>
+      <div class="keywords-filter" style="display:flex;gap:8px;padding:8px 0;align-items:center">
+        <select id="kwL1" onchange="kwFilterChanged(1)"><option value="">一级分类(全部)</option></select>
+        <select id="kwL2" onchange="kwFilterChanged(2)"><option value="">二级分类(全部)</option></select>
+        <select id="kwL3" onchange="kwFilterChanged(3)"><option value="">三级分类(全部)</option></select>
+      </div>
+      <div class="keywords-add" style="display:flex;gap:8px;padding:10px 0">
+        <input id="kwInput" placeholder="新增关键词" style="flex:2;padding:8px;border:1px solid #cbd5e1;border-radius:8px" />
+        <select id="kwAddL1" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px"><option value="">一级</option></select>
+        <select id="kwAddL2" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px"><option value="">二级</option></select>
+        <select id="kwAddL3" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px"><option value="">三级</option></select>
+        <button class="secondary" onclick="addKeyword()">＋ 添加</button>
+      </div>
       <div class="keywords-list" id="keywordsList" style="flex:1;overflow:auto;display:flex;flex-direction:column;gap:6px">加载中…</div>
+      <div class="keywords-pager" style="display:flex;justify-content:center;gap:10px;padding:8px 0;align-items:center">
+        <button class="pager-btn" onclick="kwPage(-1)">上一页</button>
+        <span id="kwPageInfo">第 1/1 页 · 共 0 条</span>
+        <button class="pager-btn" onclick="kwPage(1)">下一页</button>
+      </div>
     </div>
   </div>
-  <script src="/vendor/marked.min.js"></script>
-  <script src="/vendor/purify.min.js"></script>
-  <script>
   window.addEventListener("error", function (e) {
     var d = document.getElementById("jsErrorBadge");
     if (!d) { d = document.createElement("div"); d.id = "jsErrorBadge"; d.style.cssText = "position:fixed;top:8px;right:8px;z-index:9999;background:#dc2626;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;max-width:60vw;white-space:pre-wrap"; document.body.appendChild(d); }
@@ -2148,17 +2162,62 @@
     function openJobsModal() { $("jobsModal").style.display = "flex"; loadJobsData(); }
     function closeJobsModal() { $("jobsModal").style.display = "none"; jobsState.editing = null; }
     function closeKeywordsModal() { $("keywordsModal").style.display = "none"; }
+    let kwState = { page: 1, pageSize: 10, total: 0, totalPages: 1, cats: { l1: [], l2: {}, l3: {} }, filter: { l1: "", l2: "", l3: "" } };
+    function fillSelect(sel, items, placeholder) {
+      const cur = sel.value;
+      sel.innerHTML = "<option value=\"\">" + placeholder + "</option>" + items.map((v) => "<option value=\"" + escapeHtml(v) + "\"" + (v === cur ? " selected" : "") + ">" + escapeHtml(v) + "</option>").join("");
+    }
+    async function loadKwCats() {
+      const r = await api("/api/v1/keywords/categories");
+      kwState.cats = r;
+      fillSelect($("kwL1"), r.l1, "一级分类(全部)");
+      fillSelect($("kwAddL1"), r.l1, "一级");
+      kwRefreshFilterSelects();
+    }
+    function kwRefreshFilterSelects() {
+      const c = kwState.cats;
+      fillSelect($("kwL2"), kwState.filter.l1 ? (c.l2[kwState.filter.l1] || []) : [], "二级分类(全部)");
+      fillSelect($("kwL3"), kwState.filter.l1 && kwState.filter.l2 ? (c.l3[kwState.filter.l1 + "/" + kwState.filter.l2] || []) : [], "三级分类(全部)");
+    }
+    function kwRefreshAddSelects() {
+      const c = kwState.cats;
+      const l1 = $("kwAddL1").value, l2 = $("kwAddL2").value;
+      fillSelect($("kwAddL2"), l1 ? (c.l2[l1] || []) : [], "二级");
+      fillSelect($("kwAddL3"), l1 && l2 ? (c.l3[l1 + "/" + l2] || []) : [], "三级");
+    }
+    function kwFilterChanged(level) {
+      if (level === 1) { kwState.filter.l1 = $("kwL1").value; kwState.filter.l2 = ""; kwState.filter.l3 = ""; }
+      else if (level === 2) { kwState.filter.l2 = $("kwL2").value; kwState.filter.l3 = ""; }
+      else { kwState.filter.l3 = $("kwL3").value; }
+      kwState.page = 1;
+      kwRefreshFilterSelects();
+      loadKeywords();
+    }
+    function kwPage(dir) {
+      const target = kwState.page + dir;
+      if (target < 1 || target > kwState.totalPages) return;
+      kwState.page = target;
+      loadKeywords();
+    }
     async function loadKeywords() {
       const box = $("keywordsList");
       try {
-        const r = await api("/api/v1/keywords");
+        const q = new URLSearchParams();
+        if (kwState.filter.l1) q.set("categoryL1", kwState.filter.l1);
+        if (kwState.filter.l2) q.set("categoryL2", kwState.filter.l2);
+        if (kwState.filter.l3) q.set("categoryL3", kwState.filter.l3);
+        q.set("page", String(kwState.page)); q.set("pageSize", String(kwState.pageSize));
+        const r = await api("/api/v1/keywords?" + q.toString());
+        kwState.total = r.total || 0; kwState.totalPages = r.totalPages || 1;
+        $("kwPageInfo").textContent = "第 " + kwState.page + "/" + kwState.totalPages + " 页 · 共 " + kwState.total + " 条";
         const list = r.keywords || [];
         box.innerHTML = list.length ? "" : "<div class=\"mini\">暂无关键词,添加一个吧</div>";
         for (const k of list) {
           const d = document.createElement("div"); d.className = "kw-item";
           d.style.cssText = "display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:6px 10px";
-          d.innerHTML = "<div style=\"flex:1\"><b>" + escapeHtml(k.keyword) + "</b> " + (k.category ? "<span class=\"badge\">" + escapeHtml(k.category) + "</span>" : "") + " <span class=\"mini\">×" + k.hitCount + "</span></div>"
-            + "<input data-id=\"" + k.id + "\" value=\"" + escapeHtml(k.keyword) + "\" style=\"width:140px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px\" />"
+          const cat = [k.categoryL1, k.categoryL2, k.categoryL3].filter(Boolean).join(" / ");
+          d.innerHTML = "<div style=\"flex:1\"><b>" + escapeHtml(k.keyword) + "</b> " + (cat ? "<span class=\"badge\">" + escapeHtml(cat) + "</span>" : "") + " <span class=\"mini\">×" + k.hitCount + "</span></div>"
+            + "<input data-id=\"" + k.id + "\" data-l1=\"" + escapeHtml(k.categoryL1 || "") + "\" data-l2=\"" + escapeHtml(k.categoryL2 || "") + "\" data-l3=\"" + escapeHtml(k.categoryL3 || "") + "\" value=\"" + escapeHtml(k.keyword) + "\" style=\"width:130px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px\" />"
             + "<button class=\"secondary\" onclick=\"saveKeyword(this)\">保存</button>"
             + "<button class=\"secondary\" style=\"color:#dc2626\" onclick=\"deleteKeyword(this)\">删除</button>";
           box.appendChild(d);
@@ -2167,24 +2226,26 @@
     }
     async function addKeyword() {
       const kw = $("kwInput").value.trim(); if (!kw) return;
-      const cat = $("kwCatInput").value.trim();
-      await api("/api/v1/keywords", { method: "POST", body: JSON.stringify({ keyword: kw, category: cat || undefined }), headers: { "Content-Type": "application/json" } });
-      $("kwInput").value = ""; $("kwCatInput").value = ""; loadKeywords();
+      const body = { keyword: kw };
+      if ($("kwAddL1").value) body.categoryL1 = $("kwAddL1").value;
+      if ($("kwAddL2").value) body.categoryL2 = $("kwAddL2").value;
+      if ($("kwAddL3").value) body.categoryL3 = $("kwAddL3").value;
+      await api("/api/v1/keywords", { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } });
+      $("kwInput").value = ""; loadKwCats(); loadKeywords();
     }
     async function saveKeyword(btn) {
       const input = btn.previousElementSibling;
-      await api("/api/v1/keywords/" + input.dataset.id, { method: "PUT", body: JSON.stringify({ keyword: input.value.trim() }), headers: { "Content-Type": "application/json" } });
-      loadKeywords();
+      await api("/api/v1/keywords/" + input.dataset.id, { method: "PUT", body: JSON.stringify({ keyword: input.value.trim(), categoryL1: input.dataset.l1, categoryL2: input.dataset.l2, categoryL3: input.dataset.l3 }), headers: { "Content-Type": "application/json" } });
+      loadKwCats(); loadKeywords();
     }
     async function deleteKeyword(btn) {
       const input = btn.previousElementSibling.previousElementSibling;
       if (!confirm("确认删除该关键词?")) return;
       await api("/api/v1/keywords/" + input.dataset.id, { method: "DELETE" });
-      loadKeywords();
+      loadKwCats(); loadKeywords();
     }
     async function loadJobsData() {
       let runs = []; let customs = []; let builtin = {};
-      let failed = 0;
       try { const r = await api("/api/v1/automations?limit=100"); runs = r.runs || []; } catch { failed++; }
       try { const r = await api("/api/v1/automations/jobs"); customs = r.jobs || []; } catch { failed++; }
       try { const r = await api("/api/v1/automations/builtin"); builtin = r.settings || {}; } catch { failed++; }
