@@ -163,18 +163,18 @@ npm run dev                                     # 监听 help-sale.config.yaml �
   - 会话分析自动创建（分析出「建议下一步」→ 自动建首条任务）
   - 试驾完成自动生成（24h/3天/7天三段回访）
   - 成交后自动生成（3天提车关怀 / 30天保养邀约）
-  处理流程：
-  - 创建（op=create）
-    - 输入：customerKey（或姓名）+ action + dueAt（可选）
-    - 客户解析：姓名 → 真实客户 key（杜绝幽灵客户）
-    - 落库：next_step_tasks（tenant/customer/action/due_at/status=pending）
-    - 入提醒队列：Redis ZSET 或内存 Map
-  - 自动来源细节
-    - 试驾完成（complete）：24h 确认试驾感受与疑虑；3d 推进报价/方案、问竞品；7d 促成到店/成交或长线培育
-    - 成交（closed）：3d 提车关怀（确认用车体验、收集满意度）；30d 保养邀约、老带新转介绍
-  - 到期提醒（自动）：定时取到期任务（Redis ZRANGEBYSCORE 0~now / 内存遍历），GET /api/v1/reminders/overdue 前端显示「已到期」，可选 Webhook 通知（notification_logs 留痕）
-  - 查询（op=list）：按状态过滤（pending/done），关联客户名，按 due_at 升序（紧急在前），返回文本列表给模型/前端
-  - 完成（op=complete）：状态 → done + 记录 completed_at，从提醒队列移除（防止已完成再提醒）
+  - 处理流程：
+    - 创建（op=create）
+      - 输入：customerKey（或姓名）+ action + dueAt（可选）
+      - 客户解析：姓名 → 真实客户 key（杜绝幽灵客户）
+      - 落库：next_step_tasks（tenant/customer/action/due_at/status=pending）
+      - 入提醒队列：Redis ZSET 或内存 Map
+    - 自动来源细节
+      - 试驾完成（complete）：24h 确认试驾感受与疑虑；3d 推进报价/方案、问竞品；7d 促成到店/成交或长线培育
+      - 成交（closed）：3d 提车关怀（确认用车体验、收集满意度）；30d 保养邀约、老带新转介绍
+    - 到期提醒（自动）：定时取到期任务（Redis ZRANGEBYSCORE 0~now / 内存遍历），GET /api/v1/reminders/overdue 前端显示「已到期」，可选 Webhook 通知（notification_logs 留痕）
+    - 查询（op=list）：按状态过滤（pending/done），关联客户名，按 due_at 升序（紧急在前），返回文本列表给模型/前端
+    - 完成（op=complete）：状态 → done + 记录 completed_at，从提醒队列移除（防止已完成再提醒）
 
 - **test_drive_manage**：试驾管理（登记/完成/取消，自动生成 24h/3天/7天回访）
   状态机：scheduled（已登记）→ completed（已完成）/ cancelled（已取消）。

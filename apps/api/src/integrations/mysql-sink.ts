@@ -80,7 +80,8 @@ export function createMysqlSink(config: MysqlConfig): MysqlSink {
 	if (!config.enabled) return createNoopSink("mysql disabled");
 	let pool: mysql.Pool | undefined;
 	let ready: Promise<mysql.Pool> | undefined;
-
+	
+	// const [a, b] = await Promise.all([fetchA(), fetchB()]);  // 并行，都完成才继续
 	async function ensure(): Promise<mysql.Pool> {
 		if (ready) return ready;
 		ready = (async () => {
@@ -115,7 +116,10 @@ export function createMysqlSink(config: MysqlConfig): MysqlSink {
 		});
 		return ready;
 	}
-
+	
+	// <T>	泛型参数：一个"类型变量"，调用时确定
+	// fn: (p: mysql.Pool) => Promise<T>	参数 fn 是一个回调函数
+	// : Promise<void>	函数返回一个 Promise，里面没有有意义的值
 	async function withPool<T>(fn: (p: mysql.Pool) => Promise<T>): Promise<void> {
 		try {
 			const p = await ensure();

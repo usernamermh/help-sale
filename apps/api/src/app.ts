@@ -19,6 +19,7 @@ import { startSubagentConsumer } from "./services/subagent-runner.js";
 import { seedStoreData, seedVehicles } from "./services/seed.js";
 import { appendRuntimeLog } from "./services/runtime-log.js";
 
+// 给一个"已经存在、但 TypeScript 不认识"的模块补充类型声明。 这里的作用是给 Fastify 的 FastifyRequest 接口"加一个字段 tenantId"。
 declare module "fastify" {
 	interface FastifyRequest {
 		tenantId: string;
@@ -64,7 +65,8 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		seedVehicles(db, targets);
 		seedStoreData(db, targets);
 	}
-
+	
+	// 给每个 request 加上 tenantId 字段，初始值是空字符串 ""
 	app.decorateRequest("tenantId", "");
 	app.addHook("preHandler", async (request) => {
 		request.tenantId = (request.headers["x-tenant-id"] as string | undefined) ?? config.tenantId;

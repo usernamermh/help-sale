@@ -19,7 +19,7 @@ export interface SyncMysqlStatement {
 
 interface MysqlCallResult {
 	status: "ok" | "error";
-	rows?: Array<Record<string, unknown>>;
+	rows?: Array<Record<string, unknown>>;   // Record<string, unknown> 表示键是字符串、值类型未知
 	changes?: number;
 	message?: string;
 }
@@ -28,30 +28,47 @@ const RESULT_BUF_BYTES = 16 * 1024 * 1024; // 16MB(单次查询结果上限)
 
 export class SyncMysqlDb {
 	private worker: Worker;
-	private resultBuf: SharedArrayBuffer;
+	private resultBuf: SharedArrayBuffer;  // worker 把结果 JSON 写进这里，主线程读出来。SharedArrayBuffer 可以在主线程和 worker 之间共享同一块内存。
+	// 	在 resultBuf 上建立的 Int32Array 视图，专门用来当信号量/标志位。约定：
+	// 索引 0：状态标志，0 = 还没结果，1 = 结果就绪。
+	// 索引 1（即字节偏移 4）：结果数据的长度（写入的是 uint32，读时也用 DataView 读）。
 	private resultView: Int32Array;
 	private timeoutMs: number;
-	private closed = false;
+	private closed = false;  // "声明 + 初始化"合二为一
 
-	constructor(opts: {
-		host: string;
-		port: number;
-		user: string;
-		password: string;
-		database: string;
-		schemaSql?: string;
-		forceRebuild?: boolean;
-		timeoutMs?: number;
-	}) {
-		this.timeoutMs = opts.timeoutMs ?? config.mysqlConnectTimeout;
+	constructor(
+		opts: {
+			host: string;
+			port: number;
+			user: string;
+			password: string;
+			database: string;
+			schemaSql?: string;
+			forceRebuild?: boolean;
+			timeoutMs?: number;
+		}
+	) {
+
+		this.worker = new Worker(new URL("./worker.js", import.meta.url), { workerData: {} });
 		this.resultBuf = new SharedArrayBuffer(RESULT_BUF_BYTES);
 		this.resultView = new Int32Array(this.resultBuf);
-		this.worker = new Worker(new URL("./worker.js", import.meta.url), { workerData: {} });
+		this.timeoutMs = opts.timeoutMs ?? config.mysqlConnectTimeout;
 		this.worker.on("error", () => {
 			// worker 异常:把 pending 请求标记失败,否则主线程可能无限等待
-			if (Atomics.load(this.resultView, 0) === 0) {
-				const dv = new DataView(this.resultBuf);
-				const msg = Buffer.from(JSON.stringify({ status: "error", message: "mysql worker 进程异常退出" }), "utf8");
+			if (Atomics.load(this.resultView, 0) === 0) {    // Atomics 是 JavaScript 的一个内置对象，专门用于多线程共享内存的安全操作。 原子地读取 resultView 中索引 0 处的值。
+				const dv = new DataView(this.resultBuf);  // 在共享缓冲区上建一个 DataView，用来按字节偏移读写。因为缓冲区里既有"长度"又有"数据"，用 DataView 方便按指定偏移操作。
+				const msg = Buffer.from(
+					JSON.stringify({ status: "error", message: "mysql worker 进程异常退出" }), 
+					"utf8"
+				); // 把各种形式的数据，转换成原始的二进制字节
+
+				// 共享缓冲区的前 8 个字节不是用来放数据的，而是用来放"头部信息"的。数据区从偏移 8 开始，所以能装数据的空间 = 总大小 − 8。
+				// 偏移: 0        4                8 ..............................
+					//   ┌────────┬────────────────┬─────────────────────────────────┐
+					//   │   1    │   msg.length   │  {"status":"error","message":...}│
+					//   └────────┴────────────────┴─────────────────────────────────┘
+					//      ↑           ↑                        ↑
+					//   标志=就绪    数据长度              错误结果的 JSON 字节
 				if (msg.length <= this.resultBuf.byteLength - 8) {
 					dv.setUint32(4, msg.length, true);
 					new Uint8Array(this.resultBuf, 8, msg.length).set(msg);
@@ -60,6 +77,8 @@ export class SyncMysqlDb {
 				}
 			}
 		});
+
+		// 主线程把"初始化 worker 所需的全部信息"打包成一个对象，通过 postMessage 发送给 worker 线程。
 		const init: Record<string, unknown> = {
 			kind: "init",
 			host: opts.host,

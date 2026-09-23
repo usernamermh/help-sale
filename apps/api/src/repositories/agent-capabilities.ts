@@ -9,6 +9,7 @@ export interface CapabilityState {
 
 export function listCapabilityStates(db: DatabaseSync, tenantId: string): CapabilityState[] {
 	const rows = db.prepare("SELECT * FROM agent_capabilities WHERE tenant_id = ?").all(tenantId) as Array<Record<string, unknown>>;
+	// 数据库列叫 capability_name，业务对象叫 name
 	return rows.map((r) => ({
 		name: String(r.capability_name),
 		enabled: Number(r.enabled) !== 0,

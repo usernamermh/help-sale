@@ -1,4 +1,5 @@
 import { Redis } from "ioredis";
+import { config } from "../env.js";
 
 export interface ReminderQueue {
 	add(taskId: string, dueAtMs: number | null): Promise<void>;
@@ -14,7 +15,7 @@ export interface RedisConfig {
 	password?: string;
 }
 
-const KEY = "rmh:tasks:due";
+const KEY = `${config.userKey}:tasks:due`;
 
 /** Redis ZSET 到期队列:失败时静默降级,不影响主流程。 */
 export function createReminderQueue(config: RedisConfig): ReminderQueue {

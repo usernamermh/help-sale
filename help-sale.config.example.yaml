@@ -57,7 +57,7 @@ model:
   modelId: your-model-id
   # OpenAI 兼容端点根地址(以 /v1 结尾,不含 /chat/completions)
   baseUrl: http://your-llm-gateway/v1
-  # API key:云知声模型网关 key
+  # API key:模型网关 key
   apiKey: your-api-key
   # 访问模型的 HTTP 代理(内网受限时使用;为空表示直连)
   proxy: ""
@@ -179,3 +179,5 @@ company:
   name: 你的公司
   # 团队名称:写入系统提示词
   team: 销售团队
+
+userkey: test
