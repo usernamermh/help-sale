@@ -1248,10 +1248,7 @@
         <!-- 右侧:关键词列表 -->
         <div style="flex:1;min-width:0;display:flex;flex-direction:column">
           <div class="keywords-add" style="display:flex;gap:8px;padding:6px 0;flex-wrap:wrap;align-items:center">
-            <input id="kwInput" placeholder="新增关键词" style="flex:1;min-width:110px;padding:7px;border:1px solid #cbd5e1;border-radius:8px" />
-            <select id="kwAddL1" onchange="kwRefreshAddSelects()" style="width:92px;padding:7px;border:1px solid #cbd5e1;border-radius:8px"><option value="">一级</option></select>
-            <select id="kwAddL2" onchange="kwRefreshAddSelects()" style="width:92px;padding:7px;border:1px solid #cbd5e1;border-radius:8px"><option value="">二级</option></select>
-            <select id="kwAddL3" style="width:92px;padding:7px;border:1px solid #cbd5e1;border-radius:8px"><option value="">三级</option></select>
+            <input id="kwInput" placeholder="新增关键词(分类取左侧勾选路径,未勾选则不分类)" style="flex:1;min-width:150px;padding:7px;border:1px solid #cbd5e1;border-radius:8px" />
             <button class="secondary" onclick="addKeyword()">＋ 添加</button>
           </div>
           <div class="keywords-list" id="keywordsList" style="flex:1;overflow:auto;display:flex;flex-direction:column;gap:6px">加载中…</div>
@@ -2206,7 +2203,6 @@
         kwState.catTree = r.tree || [];
         kwState.catFlat = flattenTree(kwState.catTree);
         renderCatTree();
-        kwRefreshAddSelects();
       } catch (e) { $("kwCatTree").innerHTML = "分类加载失败:" + escapeHtml(e.message); }
     }
     function renderCatTree() {
@@ -2256,15 +2252,7 @@
       renderCatTree();
       loadKeywords();
     }
-    function kwRefreshAddSelects() {
-      const l1 = $("kwAddL1").value, l2 = $("kwAddL2").value;
-      const tree = kwState.catTree || [];
-      fillSelect($("kwAddL1"), tree.map((n) => n.name), "一级");
-      const node1 = tree.find((n) => n.name === l1);
-      fillSelect($("kwAddL2"), node1 ? (node1.children || []).map((n) => n.name) : [], "二级");
-      const node2 = node1 && (node1.children || []).find((n) => n.name === l2);
-      fillSelect($("kwAddL3"), node2 ? (node2.children || []).map((n) => n.name) : [], "三级");
-    }
+
     function openCategoryForm(catId, isEdit) {
       const editing = isEdit ? (kwState.catFlat.find((c) => c.id === catId) || null) : null;
       kwState.editingCat = editing;
@@ -2388,9 +2376,13 @@
     async function addKeyword() {
       const kw = $("kwInput").value.trim(); if (!kw) return;
       const body = { keyword: kw };
-      if ($("kwAddL1").value) body.categoryL1 = $("kwAddL1").value;
-      if ($("kwAddL2").value) body.categoryL2 = $("kwAddL2").value;
-      if ($("kwAddL3").value) body.categoryL3 = $("kwAddL3").value;
+      const paths = [...kwState.filterPaths];
+      if (paths.length) {
+        const parts = paths[paths.length - 1].split("/").filter(Boolean);
+        if (parts.length >= 1) body.categoryL1 = parts[0];
+        if (parts.length >= 2) body.categoryL2 = parts[1];
+        if (parts.length >= 3) body.categoryL3 = parts[2];
+      }
       try {
         await api("/api/v1/keywords", { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } });
       } catch (e) { alert("添加失败:" + e.message); return; }
