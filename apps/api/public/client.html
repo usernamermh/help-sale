@@ -2159,11 +2159,18 @@
       } else if (evt.type === "final") {
         if (multiState && evt.runId) multiState.runId = evt.runId;
         deltaBuf = "";
-        const answer = evt.final && evt.final.answer ? evt.final.answer : "（未生成答复）";
-        renderAssistantContent(answer, wait.body);
-        wait.meta.textContent = (evt.final && evt.final.nextSteps && evt.final.nextSteps.length) ? ("下一步：" + evt.final.nextSteps.join(" · ")) : "";
-        if (wait.pager) attachPager(wait);
-        $("runMeta").textContent = "本轮任务完成 · " + runTaskCount() + " 项";
+        const answer = evt.final && evt.final.answer ? evt.final.answer : "";
+        if (multiState && !answer) {
+          // 多代理:子任务刚提交,最终答复由看板轮询汇总生成;这里不渲染空结果,避免误显示'未生成答复/已完成'
+          wait.body.textContent = "子任务已提交,正在后台并行执行…";
+          wait.meta.textContent = "";
+          $("runMeta").textContent = "子任务执行中 · " + runTaskCount() + " 项";
+        } else {
+          renderAssistantContent(answer || "（未生成答复）", wait.body);
+          wait.meta.textContent = (evt.final && evt.final.nextSteps && evt.final.nextSteps.length) ? ("下一步：" + evt.final.nextSteps.join(" · ")) : "";
+          if (wait.pager) attachPager(wait);
+          $("runMeta").textContent = "本轮任务完成 · " + runTaskCount() + " 项";
+        }
       } else if (evt.type === "error") {
         wait.body.textContent = "出错了：" + (evt.error || "未知错误");
         $("runMeta").textContent = "本轮出错:" + (evt.error || "未知错误");
