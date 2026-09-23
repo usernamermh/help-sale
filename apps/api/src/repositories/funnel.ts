@@ -120,18 +120,20 @@ export function getFunnelStats(db: DatabaseSync, tenantId: string, storeId?: str
 }
 
 /** 沉默客户:N 天内无会话/任务/试驾记录的客户(默认 7 天)。 */
-export function listSilentCustomers(db: DatabaseSync, tenantId: string, days = 7, storeId?: string): FunnelCustomer[] {
+/** 沉默客户:N 天内无会话/任务/试驾记录的客户(默认 7 天);时间基准用传入 now(默认为当前时间),保证测试可注入固定时间。 */
+export function listSilentCustomers(db: DatabaseSync, tenantId: string, days = 7, storeId?: string, now: Date = new Date()): FunnelCustomer[] {
 	const { clause, params } = storeCustomerFilter(db, tenantId, storeId);
+	const since = new Date(now.getTime() - days * 86400000).toISOString();
 	const rows = db
 		.prepare(
 			`SELECT c.* FROM customers c
 			 WHERE c.tenant_id = ? AND COALESCE(c.funnel_stage, 'new') NOT IN ('closed_won', 'closed_lost')${clause}
-			   AND NOT EXISTS (SELECT 1 FROM conversations cv WHERE cv.tenant_id = c.tenant_id AND cv.customer_id = c.id AND cv.updated_at >= datetime('now', ?))
-			   AND NOT EXISTS (SELECT 1 FROM next_step_tasks t WHERE t.tenant_id = c.tenant_id AND t.customer_id = c.id AND t.status = 'pending' AND (t.due_at IS NULL OR t.due_at >= datetime('now', ?)))
-			   AND NOT EXISTS (SELECT 1 FROM test_drives td WHERE td.tenant_id = c.tenant_id AND td.customer_id = c.id AND td.scheduled_at >= datetime('now', ?))
+			   AND NOT EXISTS (SELECT 1 FROM conversations cv WHERE cv.tenant_id = c.tenant_id AND cv.customer_id = c.id AND cv.updated_at >= ?)
+			   AND NOT EXISTS (SELECT 1 FROM next_step_tasks t WHERE t.tenant_id = c.tenant_id AND t.customer_id = c.id AND t.status = 'pending' AND (t.due_at IS NULL OR t.due_at >= ?))
+			   AND NOT EXISTS (SELECT 1 FROM test_drives td WHERE td.tenant_id = c.tenant_id AND td.customer_id = c.id AND td.scheduled_at >= ?)
 			 LIMIT 200`,
 		)
-		.all(tenantId, `-${days} days`, `-${days} days`, `-${days} days`, ...params) as Record<string, unknown>[];
+		.all(tenantId, since, since, since, ...params) as Record<string, unknown>[];
 	return rows.map((r) => ({
 		id: String(r.id),
 		key: String(r.key),

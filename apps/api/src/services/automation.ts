@@ -158,7 +158,7 @@ function runWeeklyReport(db: DatabaseSync, tenantId: string, now: Date): { summa
 
 /** 沉默客户唤醒:为近 N 天未跟进客户建唤醒任务(该客户已有 pending 唤醒任务则跳过)。 */
 function runSilentWakeup(db: DatabaseSync, tenantId: string, days: number, now: Date): { summary: string; detail: { total: number; created: number; skipped: number } } {
-	const silent = listSilentCustomers(db, tenantId, days);
+	const silent = listSilentCustomers(db, tenantId, days, undefined, now);
 	let created = 0;
 	let skipped = 0;
 	for (const c of silent) {
