@@ -17,14 +17,12 @@ interface HitMessage {
 function parseIndexes(text: string): number[] {
 	let t = String(text ?? "").trim();
 	t = t.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-	const arrMatch = t.match(/\[([\d\s,，]+)\]/);
-	if (!arrMatch) return [];
-	return arrMatch[1]
-		.split(/[，,\s]+/)
-		.map((s) => Number(s))
-		.filter((n) => Number.isInteger(n) && n >= 1);
+	// 优先取方括号数组([1,3,7]);没有方括号时退化到整段文本,兼容 "1、3、7" "1 3 7" 等常见格式
+	const arrMatch = t.match(/\[([\d\s,，、]+)\]/);
+	const source = arrMatch ? arrMatch[1] : t;
+	const nums = source.match(/\d+/g) || [];
+	return [...new Set(nums.map((s) => Number(s)).filter((n) => Number.isInteger(n) && n >= 1))];
 }
-
 export async function execute(ctx: ToolContext, params: any) {
 	const conversationId = String(params?.conversationId ?? "").trim();
 	const standard = String(params?.standard ?? params?.criteria ?? "").trim();
@@ -42,6 +40,7 @@ export async function execute(ctx: ToolContext, params: any) {
 
 	const prompt = `你是对话片段抽取器。下面是一段编号后的销售对话(1~${rows.length})。
 任务:根据「抽取标准」选出所有符合条件的句子序号。
+判定要求:只选明确涉及抽取标准的句子;标准未明确指向时不要扩大范围(例如只查「试驾」时,不要把一般产品对比、闲聊、价格讨论、与试驾无关的空间/配置感受算入),拿不准的句子不要选。
 
 抽取标准:${standard}
 
