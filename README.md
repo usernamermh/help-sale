@@ -187,41 +187,41 @@ playbook_check 原理
 
   - 输入: 销售姓名/ID + 时间范围 + 可选分类
 
-  - 1. 取话术库
+  - 取话术库
   - 查 knowledge_chunks(关联 documents)
   - 默认匹配全部类别;传 category 才按分类过滤
   - 每条话术做清洗(cleanText) + embedding 向量
 
-  - 2. 取待检对话
+  - 取待检对话
   - 按销售姓名/ID 找最近 N 条会话
   - 只取 speaker_role = 'sales' 的发言
   - 逐句清洗
 
-  - 3. 双通道匹配(每条销售发言 vs 每条话术)
+  - 双通道匹配(每条销售发言 vs 每条话术)
   - 通道A 原文命中: 归一化后句子包含话术原文(话术长度≥4)
     - 命中方式 = exact, 相似度 = 1
   - 通道B 语义命中: 销售发言 embedding vs 话术 embedding
   - 余弦相似度 top-1 ≥ 阈值(默认0.72) → 命中方式 = semantic
 
-  - 4. 聚合统计
+  - 聚合统计
   - 检查了多少会话/句子
   - 命中多少句(原文/语义各多少)
   - 覆盖了多少条话术 + 覆盖率
   - 生成命中明细表格(日期/销售/命中话术/方式/相似度)
 
-  - 5. 返回: 摘要 + 明细表格(rawTable, 前端原样渲染)
+  - 返回: 摘要 + 明细表格(rawTable, 前端原样渲染)
 
 #### 任务与销售流程
 - **task_manage**：跟进任务（创建/列表/完成，到期提醒）
 跟进任务(task_manage)
 
   - 任务从哪来(四个来源)
-  - ① 主 agent 主动创建(op=create, 销售/模型发现下一步动作)
-  - ② 会话分析自动创建(分析出"建议下一步" → 自动建首条任务)
-  - ③ 试驾完成自动生成(24h/3天/7天三段回访)
-  - ④ 成交后自动生成(3天提车关怀 / 30天保养邀约)
+  - 主 agent 主动创建(op=create, 销售/模型发现下一步动作)
+  - 会话分析自动创建(分析出"建议下一步" → 自动建首条任务)
+  - 试驾完成自动生成(24h/3天/7天三段回访)
+  - 成交后自动生成(3天提车关怀 / 30天保养邀约)
 
-  - ① 创建(op=create)
+  - 创建(op=create)
   - 输入: customerKey(或姓名) + action + dueAt(可选)
   - 客户解析: 姓名 → 真实客户 key(杜绝幽灵客户)
   - 落库: next_step_tasks(tenant/customer/action/due_at/status=pending)
@@ -236,17 +236,17 @@ playbook_check 原理
   - 3d  → 提车关怀:确认用车体验,收集满意度
   - 30d → 保养邀约,老带新转介绍
 
-  - ② 到期提醒(自动)
+  - 到期提醒(自动)
   - 定时取到期任务(Redis ZRANGEBYSCORE 0~now / 内存遍历)
   - GET /api/v1/reminders/overdue → 前端「已到期」标记
   - 可选 Webhook 通知(notification_logs 留痕)
 
-  - ③ 查询(op=list)
+  - 查询(op=list)
   - 按状态过滤(pending/done)
   - 关联客户名,按 due_at 升序(紧急的在前)
   - 返回文本列表给模型/前端
 
-  - ④ 完成(op=complete)
+  - 完成(op=complete)
     - 状态 → done + 记录 completed_at
     - 从提醒队列移除(防止已完成的再提醒)
 
@@ -255,14 +255,14 @@ playbook_check 原理
 
   - 状态机: scheduled(已登记) → completed(已完成) / cancelled(已取消)
 
-  - ① 登记(op=create)
+  - 登记(op=create)
   - 输入: customerKey(或姓名) + 可选 salesId/storeId/vehicleId/scheduledAt
   - 客户解析: 姓名 → 真实客户 key(resolveCustomerByKeyOrName)
   - 落库: test_drives 表,status='scheduled'
   - 漏斗联动: setFunnelStage(客户 → "test_drive" 试驾阶段)
   - 返回试驾记录(含预约时间)
 
-  - ② 完成(op=complete)
+  - 完成(op=complete)
   - 输入: testDriveId + 可选 feedback(试驾反馈)/ competitorCompared(对比竞品)
   - 更新: status='completed' + 记录反馈
   - 自动生成三段回访(scheduleTestDriveFollowups)
@@ -272,12 +272,12 @@ playbook_check 原理
   - +7天 → "试驾后回访:促成到店/成交,或转长线培育"
   - 逐条 createTask → next_step_tasks + 到期提醒队列
 
-  - ③ 取消(op=cancel)
+  - 取消(op=cancel)
   - 输入: testDriveId
   - 更新: status='cancelled'
   - 不生成回访任务
 
-  - ④ 查询(op=list)
+  - 查询(op=list)
     - 可选过滤: storeId / status / limit
     - 关联客户名 + 车型名(LEFT JOIN)
     - 按预约时间排序
@@ -286,7 +286,7 @@ playbook_check 原理
 - **insight_query**：每日晨报/经营趋势（分析量、意图、任务完成率、车型偏好）
 insight_query(type = morning / trend)
 
-  - ① 每日晨报(type=morning, 默认)
+  - 每日晨报(type=morning, 默认)
   - collectDigest(租户, 当前时间)
   - 统计内容
     - 进行中跟进任务数 + 已到期数(按 due_at ≤ now 判断)
@@ -303,7 +303,7 @@ insight_query(type = morning / trend)
     - ## 今日建议(按是否有到期/待办给出)
   - 返回文本 + 结构化 stats(前端可单独渲染)
 
-  - ② 经营趋势(type=trend, 近 N 天,默认 7)
+  - 经营趋势(type=trend, 近 N 天,默认 7)
     - collectInsights(days, 上限 90)
     - 统计内容
   - 分析量(总数 + 按天分布 analysesByDay)
@@ -337,23 +337,23 @@ update_memory(section, content)
   - section 白名单: 用户记忆 / 系统记忆 / 工具经验 / 规则改进 / 模型端点
   - content 限制: 单条 ≤ 2000 字符
 
-  - ① 校验小节
+  - 校验小节
   - normalizeSection: section 字符串包含白名单任一项才通过,否则抛错
 
-  - ② 读取 memory.md(不存在则用模板)
+  - 读取 memory.md(不存在则用模板)
   - 模板含 5 个固定小节标题(## 用户记忆 / ## 系统记忆 / …)
   - 文件路径来自配置 memoryFile(默认 apps/api/data/memory.md)
 
-  - ③ 幂等去重
+  - 幂等去重
   - 内容清洗: 压缩空白 → 拼成 "- 内容" 一行
   - 若该行已存在 → 直接返回,不重复追加
 
-  - ④ 定位小节并插入
+  - 定位小节并插入
   - 找到 "## 目标小节" 标记
   - 在该标题行之后插入新行
   - 写回文件
 
-  - ⑤ 生效方式: 下次构建系统提示词时生效
+  - 生效方式: 下次构建系统提示词时生效
     - getSalesAgentSystemPrompt → loadMemoryText 读取 memory.md
         - 拼进【系统记忆】段 → 模型后续行为受记忆影响
 触发路径：
