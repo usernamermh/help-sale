@@ -2452,6 +2452,7 @@
     }
     async function loadJobsData() {
       let runs = []; let customs = []; let builtin = {};
+      let failed = 0;
       try { const r = await api("/api/v1/automations?limit=100"); runs = r.runs || []; } catch { failed++; }
       try { const r = await api("/api/v1/automations/jobs"); customs = r.jobs || []; } catch { failed++; }
       try { const r = await api("/api/v1/automations/builtin"); builtin = r.settings || {}; } catch { failed++; }
