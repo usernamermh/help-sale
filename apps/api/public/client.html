@@ -1717,7 +1717,7 @@
       const headers = { "x-tenant-id": "t_demo" };
       if (o.body != null) headers["Content-Type"] = "application/json";
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 20000);
+      const timer = setTimeout(() => ctrl.abort(new Error("请求超时(20s),请重试")), 20000);
       try {
         const res = await fetch(path, Object.assign({}, o, { headers: Object.assign(headers, o.headers || {}), signal: ctrl.signal }));
         if (!res.ok) { let msg = "HTTP " + res.status; try { msg = (await res.json()).message || msg; } catch { } throw new Error(msg); }
