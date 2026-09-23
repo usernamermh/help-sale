@@ -2136,7 +2136,7 @@
         const name = evt.label || evt.toolName || "工具";
         steps.push({ eventType: "tool_end", toolName: evt.toolName, label: name });
         addRunTask(name, "done", "", evt.toolName);
-        wait.body.textContent = name + " 完成，正在整理结果…";
+        wait.body.textContent = name + " 完成，模型生成答复中…";
         const det = evt.payload && evt.payload.details;
         if (det && Array.isArray(det.messages) && det.messages.length) {
           renderTrPanel("会话 " + String(det.conversationId || "").slice(0, 10) + "…", det.messages, { conversationId: det.conversationId, page: Number(det.page) || 1, pageSize: Number(det.pageSize) || 10, totalPages: Number(det.totalPages) || 1, totalMessages: Number(det.totalMessages) || det.messages.length });
