@@ -2083,13 +2083,13 @@
           return;
         }
         }
-        const r = await api("/api/v1/agent/threads/" + currentThreadId + "/multi-summary", { method: "POST", body: JSON.stringify({ runId: multiState.runId }), headers: { "Content-Type": "application/json" } });
-        const k2 = await api("/api/v1/kanban?threadId=" + encodeURIComponent(currentThreadId));
-        const unfinished = (k2.cards || []).filter((c) => c.status === "pending" || c.status === "inprogress");
-        const answer = r.final && r.final.answer ? r.final.answer : (unfinished.length ? "部分子任务仍在执行中,可打开协作看板查看进度;完成后会保留在看板。" : "（未生成答复）");
-        renderAssistantContent(answer, wait.body);
-        if (r.final && r.final.nextSteps && r.final.nextSteps.length) wait.meta.textContent = "下一步：" + r.final.nextSteps.join(" · ");
-        multiState = null;
+        const sumCtrl = new AbortController();
+        const sumTimer = setTimeout(() => sumCtrl.abort(new Error("汇总超时(180s)")), 180000);
+        let r;
+        try {
+          const res2 = await fetch("/api/v1/agent/threads/" + currentThreadId + "/multi-summary", { method: "POST", headers: { "Content-Type": "application/json", "x-tenant-id": "t_demo" }, body: JSON.stringify({ runId: multiState.runId }), signal: sumCtrl.signal });
+          r = await res2.json();
+        } finally { clearTimeout(sumTimer); }
       }
     }
     // ── 执行计划展示 ──
