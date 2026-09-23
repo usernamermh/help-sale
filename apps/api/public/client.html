@@ -1343,7 +1343,7 @@
             d.innerHTML = '<div class="kb-card-head"><b>' + escapeHtml(card.id) + " " + escapeHtml(card.title || "") + '</b><span class="badge">' + (labels[card.status] || card.status) + '</span></div>'
               + (card.goal ? '<div class="kb-goal">' + escapeHtml(card.goal) + '</div>' : "")
               + (card.tools && card.tools.length ? '<div class="kb-tools">工具: ' + escapeHtml(card.tools.join(", ")) + '</div>' : "")
-              + (card.result ? renderKanbanResult(card.result) : "")
+              + (card.result ? renderKanbanResult(card.result, card.id, !!kanbanExpanded[card.id]) : "")
               + (card.error ? '<div class="kb-error">错误: ' + escapeHtml(card.error) + '</div>' : "");
             g.appendChild(d);
           }
@@ -1352,13 +1352,27 @@
       } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
     }
     // 看板长结果折叠:超过 200 字只显示前 200 字,可展开/收起
-    function renderKanbanResult(text) {
+    // 看板长结果折叠:超过 200 字只显示前 200 字,可展开/收起(状态记忆,轮询刷新后保持)
+    function toggleKanbanResult(btn, id, expanded) {
+      const span = btn.previousElementSibling;
+      if (expanded && span) {
+        kanbanExpanded[id] = true;
+        span.textContent = btn.getAttribute("data-full") || span.textContent;
+        btn.style.display = "none";
+      } else {
+        kanbanExpanded[id] = false;
+      }
+    }
+    function renderKanbanResult(text, id, expanded) {
       const MAX = 200;
       const full = String(text || "");
       if (full.length <= MAX) return '<div class="kb-result">结果: ' + escapeHtml(full) + '</div>';
-      const preview = escapeHtml(full.slice(0, MAX)) + "…";
       const data = "data-full=\"" + escapeHtml(full).replace(/"/g, "&quot;") + "\"";
-      return '<div class="kb-result">结果: <span class="kb-collapse">' + preview + '</span> <button class="kb-toggle" onclick="var s=this.previousElementSibling;var f=this.getAttribute(\"data-full\");s.textContent=f;this.style.display=\"none\"" ' + data + '>展开</button></div>';
+      if (expanded) {
+        return '<div class="kb-result">结果: <span class="kb-collapse">' + escapeHtml(full) + '</span> <button class="kb-toggle" onclick="toggleKanbanResult(this, \'' + id + '\', false)" ' + data + '>收起</button></div>';
+      }
+      const preview = escapeHtml(full.slice(0, MAX)) + "…";
+      return '<div class="kb-result">结果: <span class="kb-collapse">' + preview + '</span> <button class="kb-toggle" onclick="toggleKanbanResult(this, \'' + id + '\', true)" ' + data + '>展开</button></div>';
     }
     function showTrPanel() { $("trPanel").style.display = "flex"; $("headerTrBtn").classList.add("active"); syncRightCol(); } function renderMarkdown(text) {
       try {
@@ -1828,6 +1842,7 @@
       }
       return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
     }
+    let kanbanExpanded = {}; // cardId -> 是否展开(刷新后保持)
     const PAGE_TOOLS = ["customer_query", "conversation_query", "vehicle_query", "excel", "table_generate", "playbook_check"];
     // ── 新会话欢迎区:默认定时任务结果按钮,点击展示结构化结果 ──
     let welcomeResults = null;
