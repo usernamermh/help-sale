@@ -81,6 +81,11 @@ export function updateKanbanCard(db: DatabaseSync, tenantId: string, id: string,
 	return getKanbanCard(db, tenantId, id);
 }
 
+/** 心跳:刷新卡片 updated_at(供主代理监督子代理是否仍在执行)。 */
+export function touchKanbanCard(db: DatabaseSync, tenantId: string, id: string): void {
+	db.prepare("UPDATE kanban_cards SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ? AND tenant_id = ?").run(id, tenantId);
+}
+
 /** 把运行中的子代理标记为 inprogress;返回 false 表示卡片不存在。 */
 export function claimKanbanCard(db: DatabaseSync, tenantId: string, id: string): boolean {
 	return updateKanbanCard(db, tenantId, id, { status: "inprogress" }) !== undefined;

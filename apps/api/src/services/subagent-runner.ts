@@ -4,7 +4,7 @@ import { Agent } from "@earendil-works/pi-agent-core";
 import { createModelRegistry, type ModelRuntime } from "../pi/models.js";
 import { loadExternalAgentTools, externalToolPaths } from "./external-tools.js";
 import { config } from "../env.js";
-import { claimKanbanCard, finishKanbanCard, listKanbanCards, type KanbanCard } from "./kanban-store.js";
+import { claimKanbanCard, finishKanbanCard, listKanbanCards, touchKanbanCard, type KanbanCard } from "./kanban-store.js";
 import { getSubagentPrompt } from "../prompts/multi-agent.js";
 import { isStopped } from "./stop-signal.js";
 
@@ -55,6 +55,12 @@ async function runSubTask(deps: SubagentRunnerDeps, card: KanbanCard): Promise<s
 		streamFn,
 		initialState: { systemPrompt: subagentSystemPrompt(card, tools.map((t) => t.name)), tools: tools as never, model, messages: [] },
 	});
+	// 心跳:定期刷新卡片 updated_at,供主代理监督判断是否仍在执行(避免被误判为无进展)
+	const heartbeat = setInterval(() => {
+		try { touchKanbanCard(deps.db, card.tenantId, card.id); } catch { /* 忽略 */ }
+	}, 30000);
+	// 单任务超时:超过上限仍未完成视为执行卡死,主动中止(兜底,避免永久占用资源)
+	const taskTimer = setTimeout(() => { agent.abort(); }, config.subagentTimeoutMs);
 	// 执行中定时检查停止键:用户点击停止后,正在执行的子代理立即中止(不再等待模型完成)
 	const stopTimer = setInterval(() => {
 		isStopped(card.threadId)
@@ -65,6 +71,8 @@ async function runSubTask(deps: SubagentRunnerDeps, card: KanbanCard): Promise<s
 		await agent.prompt(card.goal ?? card.title);
 	} finally {
 		clearInterval(stopTimer);
+		clearInterval(heartbeat);
+		clearTimeout(taskTimer);
 	}
 	return extractAnswer(agent.state.messages);
 }

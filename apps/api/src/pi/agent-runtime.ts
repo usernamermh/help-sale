@@ -7,7 +7,7 @@ import { getPlannerPrompt, getCoordinatorPrompt } from "../prompts/multi-agent.j
 import { createPlanTools, createSalesAgentTools } from "./agent-tools.js";
 import { config } from "../env.js";
 import { createTimelineRecorder } from "../services/timeline.js";
-import { createKanbanTask, listKanbanCards, resetKanban } from "../services/kanban-store.js";
+import { createKanbanTask, listKanbanCards, resetKanban, updateKanbanCard } from "../services/kanban-store.js";
 import { consumeKanbanSubagents } from "../services/subagent-runner.js";
 import { listCapabilityStates } from "../repositories/agent-capabilities.js";
 import { recordAgentPlan, updateAgentPlan } from "../repositories/agent-plans.js";
@@ -374,6 +374,16 @@ export async function collectMultiAgentFlow(deps: SalesAgentDeps, input: SalesAg
 		// 等待全部子任务进入终态(done/error);inprogress 卡不视为完成,否则协调者拿到的是未完成结果
 		const allDone = cards.length > 0 && cards.every((c) => c.status === "done" || c.status === "error");
 		if (allDone || Date.now() > deadline) break;
+		// 监督:总超时之内,若某个 inprogress 卡长时间无心跳(无进展),主代理主动结束它
+		const now = Date.now();
+		for (const card of cards) {
+			if (card.status !== "inprogress") continue;
+			const last = new Date(card.updatedAt).getTime();
+			if (!Number.isNaN(last) && now - last > 120_000) {
+				updateKanbanCard(deps.db, deps.tenantId, card.id, { status: "error", error: "主代理判定子代理长时间无进展,主动结束" });
+				console.warn(`[subagents] 主代理主动结束无进展子任务 ${card.id}`);
+			}
+		}
 		await new Promise((r) => setTimeout(r, config.subagentPollIntervalMs));
 	}
 	const allCards = listKanbanCards(deps.db, deps.tenantId, { threadId }).filter((c) => createdCardIds.includes(c.id));
