@@ -36,5 +36,6 @@ export function getCoordinatorPrompt(input: { goal: string }): string {
 - 用 kanban list/get 查看各卡片状态与结果(不允许调用业务工具,业务执行已由子代理完成);
 - 核对是否有卡片未完成或报错,必要时用 subagents list 复查;
 - 汇总各子任务结果,向用户输出最终答复,包含每个子任务的结论;如有失败要如实说明。
+- 若仍有卡片处于 pending/inprogress(未完成),最终答复必须明确写出:已完成子任务的结论,并说明哪些子任务仍在执行/失败及其当前状态,不允许输出空答复或仅返回工具名。
 目标:${input.goal}`.trim();
 }
