@@ -14,14 +14,18 @@ interface HitMessage {
 }
 
 /** 从模型输出中解析序号数组(容忍 ```json 包裹与杂讯)。 */
+/** 严格解析:只接受 ```json 代码块包裹的 JSON 数组(如 [1,3,7]);其他格式视为不合规返回空。 */
 function parseIndexes(text: string): number[] {
-	let t = String(text ?? "").trim();
-	t = t.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-	// 优先取方括号数组([1,3,7]);没有方括号时退化到整段文本,兼容 "1、3、7" "1 3 7" 等常见格式
-	const arrMatch = t.match(/\[([\d\s,，、]+)\]/);
-	const source = arrMatch ? arrMatch[1] : t;
-	const nums = source.match(/\d+/g) || [];
-	return [...new Set(nums.map((s) => Number(s)).filter((n) => Number.isInteger(n) && n >= 1))];
+	const t = String(text ?? "").trim();
+	const block = t.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+	const raw = block ? block[1] : t;
+	const arrMatch = raw.match(/\[\s*\d[\d\s,，、]*\]|\[\s*\]/);
+	if (!arrMatch) return [];
+	return arrMatch[0]
+		.replace(/[\[\]]/g, "")
+		.split(/[，,\s]+/)
+		.map((s) => Number(s))
+		.filter((n) => Number.isInteger(n) && n >= 1);
 }
 export async function execute(ctx: ToolContext, params: any) {
 	const conversationId = String(params?.conversationId ?? "").trim();
@@ -47,7 +51,7 @@ export async function execute(ctx: ToolContext, params: any) {
 对话:
 ${numbered.join("\n")}
 
-只输出一个 JSON 数组(如 [1,3,7]),不要输出其他内容,不要转述对话原文。`;
+只输出一个 \`\`\`json 代码块,内容是 JSON 数组(如 \`\`\`json\n[1,3,7]\n\`\`\`),数组元素为命中的句子序号;不要输出其他任何内容,不要转述对话原文。`;
 	const agent = new Agent({
 		sessionId: `extract-${Date.now()}`,
 		streamFn: runtime.streamFn,
