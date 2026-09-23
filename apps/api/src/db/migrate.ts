@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 31;
+export const MIGRATION_VERSION = 32;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -206,6 +206,20 @@ export function migrate(db: DatabaseSync): void {
 		addCol("keywords", "category_l1", "TEXT");
 		addCol("keywords", "category_l2", "TEXT");
 		addCol("keywords", "category_l3", "TEXT");
+	}
+	// v32:独立分类目录树(增删改查)
+	if (current.user_version < 32) {
+		db.exec(`CREATE TABLE IF NOT EXISTS keyword_categories (
+			id TEXT PRIMARY KEY,
+			tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+			parent_id TEXT REFERENCES keyword_categories(id) ON DELETE CASCADE,
+			name TEXT NOT NULL,
+			level INTEGER NOT NULL DEFAULT 1,
+			created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+			updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+			UNIQUE (tenant_id, parent_id, name)
+		);`);
+		db.exec(`CREATE INDEX IF NOT EXISTS idx_kc_parent ON keyword_categories (tenant_id, parent_id);`);
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }

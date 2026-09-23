@@ -36,6 +36,7 @@ import { analysisRequestHash } from "./services/analysis-cache.js";
 import { runSalesAgent, runSalesAgentWithPlan, collectMultiAgentFlow, stripChartsForHistory } from "./pi/agent-runtime.js";
 import { getAgentPlanByRun } from "./repositories/agent-plans.js";
 import { listKeywordCategories, listKeywords, getKeyword, upsertKeyword, updateKeyword, deleteKeyword } from "./repositories/keywords.js";
+import { buildCategoryTree, createCategory, deleteCategory, renameCategory } from "./repositories/keyword-categories.js";
 import { setStopSignal, clearStopSignal } from "./services/stop-signal.js";
 import { CAPABILITIES, getCapabilityDef } from "./pi/capabilities.js";
 import { createWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled } from "./repositories/agent-capabilities.js";
@@ -1195,6 +1196,26 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	});
 	app.get("/api/v1/keywords/categories", async (request) => {
 		return listKeywordCategories(deps.db, request.tenantId);
+	});
+	app.get("/api/v1/keyword-categories/tree", async (request) => {
+		return { tree: buildCategoryTree(deps.db, request.tenantId) };
+	});
+	app.post("/api/v1/keyword-categories", async (request, reply) => {
+		const body = (request.body ?? {}) as { name?: string; parentId?: string; level?: number };
+		if (!body.name?.trim()) return reply.code(400).send({ error: "name is required" });
+		const cat = createCategory(deps.db, request.tenantId, { name: body.name, parentId: body.parentId, level: body.level });
+		return { category: cat };
+	});
+	app.put<{ Params: { id: string } }>("/api/v1/keyword-categories/:id", async (request, reply) => {
+		const body = (request.body ?? {}) as { name?: string };
+		const cat = renameCategory(deps.db, request.tenantId, request.params.id, body.name ?? "");
+		if (!cat) return reply.code(404).send({ error: "category_not_found" });
+		return { category: cat };
+	});
+	app.delete<{ Params: { id: string } }>("/api/v1/keyword-categories/:id", async (request, reply) => {
+		const ok = deleteCategory(deps.db, request.tenantId, request.params.id);
+		if (!ok) return reply.code(404).send({ error: "category_not_found" });
+		return { removed: true };
 	});
 	app.post("/api/v1/keywords", async (request, reply) => {
 		const body = (request.body ?? {}) as { keyword?: string; category?: string; categoryL1?: string; categoryL2?: string; categoryL3?: string };

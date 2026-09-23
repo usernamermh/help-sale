@@ -1221,29 +1221,39 @@
     </div>
   </div>
   <div id="keywordsModal" class="modal-mask" style="display:none">
+  <div id="keywordsModal" class="modal-mask" style="display:none">
     <div class="modal-box">
       <div class="modal-head"><span>🏷️ 关键词管理</span><button class="modal-close" onclick="closeKeywordsModal()">关闭</button></div>
-      <div class="keywords-filter" style="display:flex;gap:8px;padding:8px 0;align-items:center">
-        <select id="kwL1" onchange="kwFilterChanged(1)"><option value="">一级分类(全部)</option></select>
-        <select id="kwL2" onchange="kwFilterChanged(2)"><option value="">二级分类(全部)</option></select>
-        <select id="kwL3" onchange="kwFilterChanged(3)"><option value="">三级分类(全部)</option></select>
-      </div>
-      <div class="keywords-add" style="display:flex;gap:8px;padding:10px 0">
-        <input id="kwInput" placeholder="新增关键词" style="flex:2;padding:8px;border:1px solid #cbd5e1;border-radius:8px" />
-        <select id="kwAddL1" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px"><option value="">一级</option></select>
-        <select id="kwAddL2" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px"><option value="">二级</option></select>
-        <select id="kwAddL3" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px"><option value="">三级</option></select>
-        <button class="secondary" onclick="addKeyword()">＋ 添加</button>
-      </div>
-      <div class="keywords-list" id="keywordsList" style="flex:1;overflow:auto;display:flex;flex-direction:column;gap:6px">加载中…</div>
-      <div class="keywords-pager" style="display:flex;justify-content:center;gap:10px;padding:8px 0;align-items:center">
-        <button class="pager-btn" onclick="kwPage(-1)">上一页</button>
-        <span id="kwPageInfo">第 1/1 页 · 共 0 条</span>
-        <button class="pager-btn" onclick="kwPage(1)">下一页</button>
+      <div style="display:flex;flex:1;min-height:0;gap:12px">
+        <!-- 左侧:分类目录管理 -->
+        <div style="width:260px;flex-shrink:0;border-right:1px solid var(--line);padding-right:10px;display:flex;flex-direction:column">
+          <div style="font-weight:600;font-size:13px;padding:6px 0">📁 分类目录<button class="secondary" style="margin-left:auto" onclick="addCategory()">＋ 新建一级</button></div>
+          <div id="kwCatTree" style="flex:1;overflow:auto;font-size:12.5px">加载中…</div>
+        </div>
+        <!-- 右侧:关键词列表 -->
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div class="keywords-filter" style="display:flex;gap:8px;padding:6px 0;align-items:center">
+            <select id="kwL1" onchange="kwFilterChanged(1)"><option value="">一级分类(全部)</option></select>
+            <select id="kwL2" onchange="kwFilterChanged(2)"><option value="">二级分类(全部)</option></select>
+            <select id="kwL3" onchange="kwFilterChanged(3)"><option value="">三级分类(全部)</option></select>
+          </div>
+          <div class="keywords-add" style="display:flex;gap:8px;padding:8px 0;flex-wrap:wrap">
+            <input id="kwInput" placeholder="新增关键词" style="flex:2;min-width:120px;padding:8px;border:1px solid #cbd5e1;border-radius:8px" />
+            <select id="kwAddL1" onchange="kwRefreshAddSelects()" style="flex:1;min-width:80px;padding:8px;border:1px solid #cbd5e1;border-radius:8px"><option value="">一级</option></select>
+            <select id="kwAddL2" onchange="kwRefreshAddSelects()" style="flex:1;min-width:80px;padding:8px;border:1px solid #cbd5e1;border-radius:8px"><option value="">二级</option></select>
+            <select id="kwAddL3" style="flex:1;min-width:80px;padding:8px;border:1px solid #cbd5e1;border-radius:8px"><option value="">三级</option></select>
+            <button class="secondary" onclick="addKeyword()">＋ 添加</button>
+          </div>
+          <div class="keywords-list" id="keywordsList" style="flex:1;overflow:auto;display:flex;flex-direction:column;gap:6px">加载中…</div>
+          <div class="keywords-pager" style="display:flex;justify-content:center;gap:10px;padding:8px 0;align-items:center">
+            <button class="pager-btn" onclick="kwPage(-1)">上一页</button>
+            <span id="kwPageInfo">第 1/1 页 · 共 0 条</span>
+            <button class="pager-btn" onclick="kwPage(1)">下一页</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-<script>const $ = (id) => document.getElementById(id);
     function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
     let trPager = null;
     let trHighlights = {}; // conversationId -> Set<seq> 抽取命中加粗
@@ -2155,30 +2165,69 @@
     function openJobsModal() { $("jobsModal").style.display = "flex"; loadJobsData(); }
     function closeJobsModal() { $("jobsModal").style.display = "none"; jobsState.editing = null; }
     function closeKeywordsModal() { $("keywordsModal").style.display = "none"; }
-    let kwState = { page: 1, pageSize: 10, total: 0, totalPages: 1, cats: { l1: [], l2: {}, l3: {} }, filter: { l1: "", l2: "", l3: "" } };
+    let kwState = { page: 1, pageSize: 10, total: 0, totalPages: 1, cats: { l1: [], l2: {}, l3: {} }, catTree: [], filter: { l1: "", l2: "", l3: "" } };
     function fillSelect(sel, items, placeholder) {
       const cur = sel.value;
       sel.innerHTML = "<option value=\"\">" + placeholder + "</option>" + items.map((v) => "<option value=\"" + escapeHtml(v) + "\"" + (v === cur ? " selected" : "") + ">" + escapeHtml(v) + "</option>").join("");
     }
     async function loadKwCats() {
-      const r = await api("/api/v1/keywords/categories");
-      kwState.cats = r;
-      fillSelect($("kwL1"), r.l1, "一级分类(全部)");
-      fillSelect($("kwAddL1"), r.l1, "一级");
-      kwRefreshFilterSelects();
+      try {
+        const r = await api("/api/v1/keyword-categories/tree");
+        kwState.catTree = r.tree || [];
+        renderCatTree();
+        kwRefreshAddSelects();
+      } catch (e) { $("kwCatTree").innerHTML = "分类加载失败:" + escapeHtml(e.message); }
+    }
+    function renderCatTree() {
+      const box = $("kwCatTree"); box.innerHTML = "";
+      if (!kwState.catTree || !kwState.catTree.length) { box.innerHTML = "<div class=\"mini\">暂无分类,点击上方「＋ 新建一级」创建</div>"; return; }
+      const renderNode = (node, depth) => {
+        const d = document.createElement("div"); d.className = "cat-node";
+        d.style.cssText = "padding:4px 0;display:flex;align-items:center;gap:6px;padding-left:" + (depth * 14) + "px";
+        d.innerHTML = "<span style=\"flex:1\">" + (depth ? "└ " : "") + escapeHtml(node.name) + "</span>"
+          + "<button class=\"secondary\" title=\"加子级\" onclick=\"addSubCategory(\"" + node.id + "\")\">＋</button>"
+          + "<button class=\"secondary\" title=\"重命名\" onclick=\"renameCategory(\"" + node.id + "\")\">✎</button>"
+          + "<button class=\"secondary\" style=\"color:#dc2626\" title=\"删除\" onclick=\"removeCategory(\"" + node.id + "\")\">×</button>";
+        box.appendChild(d);
+        for (const ch of node.children || []) renderNode(ch, depth + 1);
+      };
+      for (const n of kwState.catTree) renderNode(n, 0);
     }
     function kwRefreshFilterSelects() {
-      const c = kwState.cats;
-      fillSelect($("kwL2"), kwState.filter.l1 ? (c.l2[kwState.filter.l1] || []) : [], "二级分类(全部)");
-      fillSelect($("kwL3"), kwState.filter.l1 && kwState.filter.l2 ? (c.l3[kwState.filter.l1 + "/" + kwState.filter.l2] || []) : [], "三级分类(全部)");
+      // 筛选下拉:保留旧逻辑(categories 接口),补树路径
+      fillSelect($("kwL2"), kwState.filter.l1 ? (kwState.cats.l2[kwState.filter.l1] || []) : [], "二级分类(全部)");
+      fillSelect($("kwL3"), kwState.filter.l1 && kwState.filter.l2 ? (kwState.cats.l3[kwState.filter.l1 + "/" + kwState.filter.l2] || []) : [], "三级分类(全部)");
     }
     function kwRefreshAddSelects() {
-      const c = kwState.cats;
+      // 新增关键词下拉:从分类树填充三级
       const l1 = $("kwAddL1").value, l2 = $("kwAddL2").value;
-      fillSelect($("kwAddL2"), l1 ? (c.l2[l1] || []) : [], "二级");
-      fillSelect($("kwAddL3"), l1 && l2 ? (c.l3[l1 + "/" + l2] || []) : [], "三级");
+      const tree = kwState.catTree || [];
+      fillSelect($("kwAddL1"), tree.map((n) => n.name), "一级");
+      const node1 = tree.find((n) => n.name === l1);
+      fillSelect($("kwAddL2"), node1 ? (node1.children || []).map((n) => n.name) : [], "二级");
+      const node2 = node1 && (node1.children || []).find((n) => n.name === l2);
+      fillSelect($("kwAddL3"), node2 ? (node2.children || []).map((n) => n.name) : [], "三级");
     }
-    function kwFilterChanged(level) {
+    async function addCategory() {
+      const name = prompt("新建一级分类名称:"); if (!name || !name.trim()) return;
+      await api("/api/v1/keyword-categories", { method: "POST", body: JSON.stringify({ name: name.trim() }), headers: { "Content-Type": "application/json" } });
+      loadKwCats(); loadKeywords();
+    }
+    async function addSubCategory(parentId) {
+      const name = prompt("新建子分类名称:"); if (!name || !name.trim()) return;
+      await api("/api/v1/keyword-categories", { method: "POST", body: JSON.stringify({ name: name.trim(), parentId }), headers: { "Content-Type": "application/json" } });
+      loadKwCats();
+    }
+    async function renameCategory(id) {
+      const name = prompt("重命名分类:"); if (!name || !name.trim()) return;
+      await api("/api/v1/keyword-categories/" + id, { method: "PUT", body: JSON.stringify({ name: name.trim() }), headers: { "Content-Type": "application/json" } });
+      loadKwCats(); loadKeywords();
+    }
+    async function removeCategory(id) {
+      if (!confirm("确认删除该分类(含子级)?关键词将失去该分类标记")) return;
+      await api("/api/v1/keyword-categories/" + id, { method: "DELETE" });
+      loadKwCats(); loadKeywords();
+    }    function kwFilterChanged(level) {
       if (level === 1) { kwState.filter.l1 = $("kwL1").value; kwState.filter.l2 = ""; kwState.filter.l3 = ""; }
       else if (level === 2) { kwState.filter.l2 = $("kwL2").value; kwState.filter.l3 = ""; }
       else { kwState.filter.l3 = $("kwL3").value; }
@@ -2352,7 +2401,7 @@
         jobsState.editing = null; loadJobsData();
       } catch (e) { alert("保存失败:" + e.message); }
     }
-    $("headerKeywordsBtn").addEventListener("click", () => { $("keywordsModal").style.display = "flex"; loadKeywords(); });
+    $("headerKeywordsBtn").addEventListener("click", () => { $("keywordsModal").style.display = "flex"; loadKwCats(); loadKeywords(); });
     $("headerJobsBtn").addEventListener("click", openJobsModal);
     $("jobsModal").addEventListener("click", (e) => { if (e.target === $("jobsModal")) closeJobsModal(); });
     // ── 表格手动翻页:直接执行工具翻页,只替换表格原文,不经过大模型 ──

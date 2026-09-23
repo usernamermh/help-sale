@@ -449,3 +449,16 @@ CREATE TABLE IF NOT EXISTS keywords (
 	UNIQUE (tenant_id, keyword)
 );
 CREATE INDEX IF NOT EXISTS idx_keywords_tenant ON keywords (tenant_id, keyword);
+
+-- v32:独立分类目录树(一级/二级/三级,parent_id 关联,支持增删改)
+CREATE TABLE IF NOT EXISTS keyword_categories (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	parent_id TEXT REFERENCES keyword_categories(id) ON DELETE CASCADE,
+	name TEXT NOT NULL,
+	level INTEGER NOT NULL DEFAULT 1,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	UNIQUE (tenant_id, parent_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_kc_parent ON keyword_categories (tenant_id, parent_id);

@@ -1,7 +1,7 @@
 import { Agent } from "@earendil-works/pi-agent-core";
 import { createModelRegistry } from "../../apps/api/src/pi/models.js";
 import { config } from "../../apps/api/src/env.js";
-import { listKeywordWords, upsertKeyword } from "../../apps/api/src/repositories/keywords.js";
+import { listKeywordWordsWithCategory, upsertKeyword } from "../../apps/api/src/repositories/keywords.js";
 
 interface ToolContext { db: any; tenantId: string; }
 
@@ -25,14 +25,14 @@ export async function execute(ctx: ToolContext, params: any) {
 	const max = Math.max(1, Math.min(Number(params?.maxKeywords ?? 5) || 5, 20));
 	const referenceLimit = Math.max(1, Math.min(Number(params?.referenceLimit ?? 20) || 20, 50));
 
-	// 参考词库前 N 个
-	const reference = listKeywordWords(ctx.db, ctx.tenantId, referenceLimit);
+	// 参考词库前 N 个(带分类路径)
+	const reference = listKeywordWordsWithCategory(ctx.db, ctx.tenantId, referenceLimit);
 
 	// LLM 参考词库挖掘
 	const runtime = createModelRegistry();
 	const model = runtime.models.getModel(config.modelProvider, config.modelId);
 	if (!model) throw new Error(`model not found: ${config.modelProvider}/${config.modelId}`);
-	const refText = reference.length ? reference.join("、") : "(词库为空)";
+	const refText = reference.length ? reference.map((r) => r.categoryPath ? `${r.keyword}(${r.categoryPath})` : r.keyword).join("、") : "(词库为空)";
 	const prompt = `你是关键词挖掘器。参考团队现有词库,从下面文本中挖掘最多 ${max} 个关键词。
 规则:优先贴近词库风格;可以是词库中已有的词,也可以是同主题的新词;只输出 JSON 数组,不要其他内容。
 
@@ -52,11 +52,15 @@ ${text.slice(0, 4000)}`;
 		: typeof last?.content === "string" ? last.content : "";
 	const mined = parseKeywords(rawText).slice(0, max);
 
-	// 自动去重入库(upsert:同关键词命中数+1)
+	// 自动去重入库(upsert:同关键词命中数+1);关键词格式 "名称(一级/二级/三级)" 时解析分类
 	const saved: Array<{ keyword: string; created: boolean }> = [];
-	for (const kw of mined) {
+	for (const raw of mined) {
+		const m = raw.match(/^(.+?)\\(([^)]+)\\)$/);
+		const kw = m ? m[1].trim() : raw.trim();
+		const parts = m ? m[2].split("/").map((s) => s.trim()).filter(Boolean) : [];
+		if (!kw) continue;
 		const existing = ctx.db.prepare("SELECT id FROM keywords WHERE tenant_id = ? AND keyword = ?").get(ctx.tenantId, kw);
-		upsertKeyword(ctx.db, ctx.tenantId, { keyword: kw, source: "extract_free", hitCount: 1 });
+		upsertKeyword(ctx.db, ctx.tenantId, { keyword: kw, source: "extract_free", hitCount: 1, categoryL1: parts[0], categoryL2: parts[1], categoryL3: parts[2] });
 		saved.push({ keyword: kw, created: !existing });
 	}
 

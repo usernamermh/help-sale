@@ -132,6 +132,16 @@ export function listKeywordWords(db: DatabaseSync, tenantId: string, limit: numb
 	return (db.prepare("SELECT keyword FROM keywords WHERE tenant_id = ? ORDER BY updated_at DESC, created_at DESC LIMIT ?").all(tenantId, limit) as Array<{ keyword: string }>).map((r) => r.keyword);
 }
 
+/** 取前 N 个关键词(带分类路径,抽取工具参考用)。 */
+export function listKeywordWordsWithCategory(db: DatabaseSync, tenantId: string, limit: number): Array<{ keyword: string; categoryPath: string }> {
+	return (db
+		.prepare(
+			"SELECT keyword, category_l1, category_l2, category_l3 FROM keywords WHERE tenant_id = ? ORDER BY updated_at DESC, created_at DESC LIMIT ?",
+		)
+		.all(tenantId, limit) as Array<{ keyword: string; category_l1: string | null; category_l2: string | null; category_l3: string | null }>)
+		.map((r) => ({ keyword: r.keyword, categoryPath: [r.category_l1, r.category_l2, r.category_l3].filter(Boolean).join("/") }));
+}
+
 function mapRow(row: Record<string, unknown>): KeywordRecord {
 	return {
 		id: String(row.id),

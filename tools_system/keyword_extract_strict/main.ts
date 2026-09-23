@@ -91,8 +91,17 @@ ${text.slice(0, 4000)}`;
 	// 4) 校验抽取结果必须存在于候选
 	const hits = extracted.filter((kw) => candidates.includes(kw));
 
-	// 5) 命中结果回写词库(hit_count+1)
-	for (const kw of hits) upsertKeyword(ctx.db, ctx.tenantId, { keyword: kw, source: "extract_strict", hitCount: 1 });
+	// 5) 命中结果回写词库(hit_count+1);保留词库中已有的分类路径
+	for (const kw of hits) {
+		const existing = listKeywords(ctx.db, ctx.tenantId, { keyword: kw, pageSize: 1 });
+		const e = existing.items[0];
+		upsertKeyword(ctx.db, ctx.tenantId, {
+			keyword: kw, source: "extract_strict", hitCount: 1,
+			categoryL1: e?.categoryL1 ?? undefined,
+			categoryL2: e?.categoryL2 ?? undefined,
+			categoryL3: e?.categoryL3 ?? undefined,
+		});
+	}
 
 	return {
 		content: [{ type: "text", text: `切片 ${slices.length} 段,相似度预筛命中 ${matched.size} 个候选,最终抽取 ${hits.length} 个:${hits.join("、") || "无"}` }],
