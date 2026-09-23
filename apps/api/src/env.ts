@@ -74,6 +74,7 @@ export interface AppConfig {
 	silentCustomerDays: number;
 	silentWakeupEnabled: boolean;
 	wakeupTaskTime: string;
+	userKey: string;
 }
 
 export interface FileConfig {
@@ -120,6 +121,7 @@ export interface FileConfig {
 		timeoutMs?: number;
 		defaultTools?: string[];
 	};
+	userkey?: string;
 	defaults?: {
 		insightsDays?: number;
 		improvementsDays?: number;
@@ -276,6 +278,7 @@ export function loadConfig(): AppConfig {
 		silentCustomerDays: num(file.automation!.silentCustomerDays!),
 		silentWakeupEnabled: bool(file.automation!.silentWakeupEnabled!),
 		wakeupTaskTime: String(file.automation!.wakeupTaskTime!),
+		userKey: String(file.userkey!)
 	};
 }
 

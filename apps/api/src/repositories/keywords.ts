@@ -21,6 +21,7 @@ export interface KeywordQuery {
 	categoryL1?: string;
 	categoryL2?: string;
 	categoryL3?: string;
+	categoryPaths?: string[];
 	keyword?: string;
 	page?: number;
 	pageSize?: number;
@@ -67,6 +68,17 @@ export function listKeywords(db: DatabaseSync, tenantId: string, query: KeywordQ
 	if (query.categoryL1) { clauses.push("category_l1 = ?"); params.push(query.categoryL1); }
 	if (query.categoryL2) { clauses.push("category_l2 = ?"); params.push(query.categoryL2); }
 	if (query.categoryL3) { clauses.push("category_l3 = ?"); params.push(query.categoryL3); }
+	if (query.categoryPaths?.length) {
+		const ors: string[] = [];
+		const pathParams: string[] = [];
+		for (const cp of query.categoryPaths) {
+			const parts = String(cp).split("/").filter(Boolean);
+			if (parts.length >= 3) { ors.push("category_l1 = ? AND category_l2 = ? AND category_l3 = ?"); pathParams.push(parts[0], parts[1], parts[2]); }
+			else if (parts.length === 2) { ors.push("category_l1 = ? AND category_l2 = ?"); pathParams.push(parts[0], parts[1]); }
+			else if (parts.length === 1) { ors.push("category_l1 = ?"); pathParams.push(parts[0]); }
+		}
+		if (ors.length) { clauses.push("(" + ors.join(" OR ") + ")"); params.push(...pathParams); }
+	}
 	if (query.keyword) { clauses.push("keyword LIKE ?"); params.push(`%${query.keyword}%`); }
 	const where = clauses.join(" AND ");
 	const total = (db.prepare(`SELECT COUNT(*) AS n FROM keywords WHERE ${where}`).get(...params) as { n: number }).n;
