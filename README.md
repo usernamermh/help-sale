@@ -146,7 +146,7 @@ searchKnowledge 把查询先做清洗（去标点、归一化），然后按词�
     - 建议规则(写回候选)
       - 无命中 或 相似度 < 0.45 → suggest_action = "add"
       - 理由: 知识库无相似内容,建议新增
-      - 0.45 ≤ 相似度 < 0.9 → suggest_action = "update"
+      - ≤ 相似度 < 0.9 → suggest_action = "update"
         - 理由: 有相似但内容有差异,建议覆盖
         - 快照: old_title / old_content(旧版本留存)
       - 相似度 ≥ 0.9 → suggest_action = "skip"
@@ -154,8 +154,8 @@ searchKnowledge 把查询先做清洗（去标点、归一化），然后按词�
     - 每条候选带 review_note(可解释的判断说明)
 
   - 4. 审批(knowledge_candidate)
-  - 4.1 op = list → 列出 pending 候选(含建议动作)
-  - 4.2 op = approve → 按建议执行
+  - op = list → 列出 pending 候选(含建议动作)
+  - op = approve → 按建议执行
     - 建议 add → 正常入库(见 5)
     - 建议 update → 覆盖旧版本
       - deleteKnowledgeDocumentByTitle(删旧文档)
@@ -164,21 +164,21 @@ searchKnowledge 把查询先做清洗（去标点、归一化），然后按词�
       - 写入新内容(见 5)
     - 建议 skip → 不落库,直接标记 approved
     - 候选 → status = 'approved', 记录 approved_at
-  - 4.3 op = reject → 标记 rejected(不落库)
+  - op = reject → 标记 rejected(不落库)
 
   - 5. 入库(ingestDocument, 供新增/覆盖共用)
-    - 5.1 分块(splitText)
+    - 分块(splitText)
   - 默认 600 字符/块、80 字符重叠(yaml chunker 段)
   - 按空行分段落,不超 size 就合并进当前块
   - 超长段落按 600 硬切
   - 下一段从 size - overlap(520 字符)处开始 → 上下文不丢
-    - 5.2 写 knowledge_documents
+    - 写 knowledge_documents
   - 租户 / 标题 / 分类 / 整篇内容拼接
   - tenant_id 隔离
-    - 5.3 写 knowledge_chunks
+    - 写 knowledge_chunks
   - 每块一行(租户 / 文档ID / chunk_index / 内容)
   - 事务批量插入
-    - 5.4 FTS 索引同步(触发器)
+    - FTS 索引同步(触发器)
         - AFTER INSERT → 自动写入 knowledge_chunks_fts
         - AFTER DELETE → 自动删除对应索引行
         - 结果: 入库即索引, knowledge_search 立即可检索
