@@ -1355,12 +1355,18 @@
     // 看板长结果折叠:超过 200 字只显示前 200 字,可展开/收起(状态记忆,轮询刷新后保持)
     function toggleKanbanResult(btn, id, expanded) {
       const span = btn.previousElementSibling;
-      if (expanded && span) {
+      if (!span) return;
+      const full = btn.getAttribute("data-full") || "";
+      if (expanded) {
         kanbanExpanded[id] = true;
-        span.textContent = btn.getAttribute("data-full") || span.textContent;
-        btn.style.display = "none";
+        span.textContent = full;
+        btn.textContent = "收起";
+        btn.setAttribute("onclick", "toggleKanbanResult(this, '" + id + "', false)");
       } else {
         kanbanExpanded[id] = false;
+        span.textContent = full.length > 200 ? full.slice(0, 200) + "…" : full;
+        btn.textContent = "展开";
+        btn.setAttribute("onclick", "toggleKanbanResult(this, '" + id + "', true)");
       }
     }
     function renderKanbanResult(text, id, expanded) {
