@@ -5,6 +5,7 @@ export interface AgentEventRecord {
 	id: string;
 	tenantId: string;
 	conversationId: string;
+	threadId: string | null;
 	seq: number;
 	eventType: string;
 	toolName: string | null;
@@ -14,7 +15,7 @@ export interface AgentEventRecord {
 
 export async function appendAgentEvent(
 	db: DatabaseSync,
-	input: { tenantId: string; conversationId: string; eventType: string; toolName?: string; payloadJson?: string },
+	input: { tenantId: string; conversationId: string; threadId?: string; eventType: string; toolName?: string; payloadJson?: string },
 ): Promise<void> {
 	const row = db
 		.prepare(
@@ -23,8 +24,8 @@ export async function appendAgentEvent(
 		.get(input.tenantId, input.conversationId) as { seq: number };
 	const id = randomUUID();
 	db.prepare(
-		"INSERT INTO agent_events (id, tenant_id, conversation_id, seq, event_type, tool_name, payload_json) VALUES (?,?,?,?,?,?,?)",
-	).run(id, input.tenantId, input.conversationId, row.seq + 1, input.eventType, input.toolName ?? null, input.payloadJson ?? null);
+		"INSERT INTO agent_events (id, tenant_id, conversation_id, thread_id, seq, event_type, tool_name, payload_json) VALUES (?,?,?,?,?,?,?,?)",
+	).run(id, input.tenantId, input.conversationId, input.threadId ?? null, row.seq + 1, input.eventType, input.toolName ?? null, input.payloadJson ?? null);
 }
 
 export function listAgentEvents(db: DatabaseSync, tenantId: string, conversationId: string): AgentEventRecord[] {
@@ -35,6 +36,7 @@ export function listAgentEvents(db: DatabaseSync, tenantId: string, conversation
 		id: String(row.id),
 		tenantId: String(row.tenant_id),
 		conversationId: String(row.conversation_id),
+		threadId: row.thread_id ? String(row.thread_id) : null,
 		seq: Number(row.seq),
 		eventType: String(row.event_type),
 		toolName: row.tool_name ? String(row.tool_name) : null,

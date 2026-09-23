@@ -484,6 +484,9 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
 	app.delete("/api/v1/agent/threads", async (request) => {
 		const removed = deleteAllThreads(deps.db, request.tenantId);
+		// 清空全部会话时,一并清理所有会话关联的运行记录(执行计划/事件时间线)
+		deps.db.prepare("DELETE FROM agent_events WHERE tenant_id = ? AND thread_id IS NOT NULL").run(request.tenantId);
+		deps.db.prepare("DELETE FROM agent_plans WHERE tenant_id = ? AND thread_id IS NOT NULL").run(request.tenantId);
 		return { removed };
 	});
 
@@ -519,7 +522,13 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	app.delete<{ Params: { id: string } }>("/api/v1/agent/threads/:id", async (request, reply) => {
 		const removed = deleteThread(deps.db, request.tenantId, request.params.id);
 		if (!removed) return reply.code(404).send({ error: "thread_not_found", message: "会话不存在" });
-		if (removed) removeKanbanByThread(deps.db, request.tenantId, request.params.id);
+		if (removed) {
+			removeKanbanByThread(deps.db, request.tenantId, request.params.id);
+			// 任务删除后不再保留该会话的任何运行记录(看板/执行计划/事件时间线/停止键)
+			deps.db.prepare("DELETE FROM agent_events WHERE tenant_id = ? AND thread_id = ?").run(request.tenantId, request.params.id);
+			deps.db.prepare("DELETE FROM agent_plans WHERE tenant_id = ? AND thread_id = ?").run(request.tenantId, request.params.id);
+			clearStopSignal(request.params.id).catch(() => undefined);
+		}
 		return { removed: true };
 	});
 
@@ -550,7 +559,14 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		return { threadId: thread.id, runId: result.runId, final: result.final, hasResponse: Boolean(result.final) };
 	});
 
-	app.get<{ Params: { id: string } }>("/api/v1/agent/threads/:id/summary", async (request, reply) => {
+		app.post<{ Params: { id: string } }>("/api/v1/agent/threads/:id/stop", async (request, reply) => {
+		const thread = getThread(deps.db, request.tenantId, request.params.id);
+		if (!thread) return reply.code(404).send({ error: "thread_not_found", message: "会话不存在" });
+		await setStopSignal(thread.id);
+		return { stopped: true };
+	});
+
+app.get<{ Params: { id: string } }>("/api/v1/agent/threads/:id/summary", async (request, reply) => {
 		const thread = getThread(deps.db, request.tenantId, request.params.id);
 		if (!thread) return reply.code(404).send({ error: "thread_not_found", message: "会话不存在" });
 		let summary = getThreadSummary(deps.db, request.tenantId, thread.id);

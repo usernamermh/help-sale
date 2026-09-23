@@ -55,7 +55,17 @@ async function runSubTask(deps: SubagentRunnerDeps, card: KanbanCard): Promise<s
 		streamFn,
 		initialState: { systemPrompt: subagentSystemPrompt(card, tools.map((t) => t.name)), tools: tools as never, model, messages: [] },
 	});
-	await agent.prompt(card.goal ?? card.title);
+	// 执行中定时检查停止键:用户点击停止后,正在执行的子代理立即中止(不再等待模型完成)
+	const stopTimer = setInterval(() => {
+		isStopped(card.threadId)
+			.then((stopped) => { if (stopped) agent.abort(); })
+			.catch(() => undefined);
+	}, 2000);
+	try {
+		await agent.prompt(card.goal ?? card.title);
+	} finally {
+		clearInterval(stopTimer);
+	}
 	return extractAnswer(agent.state.messages);
 }
 

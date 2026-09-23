@@ -2065,12 +2065,23 @@
       // 多代理模式:流已结束(仅提交),轮询看板直到子任务全部完成,再调用汇总生成最终答复
       if (multiState) {
         const deadline = Date.now() + 300000;
+        let stoppedByUser = false;
         while (true) {
+          if (signal.aborted) {
+            stoppedByUser = true;
+            try { await api("/api/v1/agent/threads/" + currentThreadId + "/stop", { method: "POST" }); } catch { }
+            break;
+          }
           await new Promise((r) => setTimeout(r, 2000));
           const k = await api("/api/v1/kanban?threadId=" + encodeURIComponent(currentThreadId));
           const cards = k.cards || [];
           const done = cards.length > 0 && cards.every((c) => c.status === "done" || c.status === "error");
           if (done || Date.now() > deadline) break;
+        if (stoppedByUser) {
+          wait.body.textContent = "已停止本轮任务。";
+          multiState = null;
+          return;
+        }
         }
         const r = await api("/api/v1/agent/threads/" + currentThreadId + "/multi-summary", { method: "POST", body: JSON.stringify({ runId: multiState.runId }), headers: { "Content-Type": "application/json" } });
         const answer = r.final && r.final.answer ? r.final.answer : "（未生成答复）";

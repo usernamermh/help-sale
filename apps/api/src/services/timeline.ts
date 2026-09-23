@@ -17,7 +17,7 @@ interface PendingEvent {
 /** 采集一次 agent 运行的事件序列(经客户端事件适配器),运行结束后一次性落库。 */
 export function createTimelineRecorder(
 	db: DatabaseSync,
-	input: { tenantId: string; conversationId: string },
+	input: { tenantId: string; conversationId: string; threadId?: string },
 ): TimelineRecorder {
 	const pending: PendingEvent[] = [];
 	return {
@@ -36,6 +36,7 @@ export function createTimelineRecorder(
 				await appendAgentEvent(db, {
 					tenantId: input.tenantId,
 					conversationId: input.conversationId,
+					threadId: input.threadId,
 					...item,
 				}).catch(() => undefined);
 			}

@@ -232,7 +232,7 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 	
 	// 订阅事件：落库 + 收集工具 + 转发前端
 	const executedTools: string[] = [];
-	const recorder = createTimelineRecorder(db, { tenantId, conversationId: runId });
+	const recorder = createTimelineRecorder(db, { tenantId, conversationId: runId, threadId: input.threadId });
 	agent.subscribe((event) => {
 		recorder.listen(event);  // 把事件写进 agent_events 表(可回放)
 		if (input.collectExecutedTools) {
@@ -493,7 +493,7 @@ export async function runSalesAgentWithPlan(deps: SalesAgentDeps, input: SalesAg
 	const runId = randomUUID();
 	if (input.signal?.aborted) throw new AgentCancelledError("agent run cancelled by client");
 	const plan = await runPlanPhase(deps, { goal: input.goal, signal: input.signal });
-	recordAgentPlan(deps.db, { runId, tenantId: deps.tenantId, goal: input.goal, plan });
+	recordAgentPlan(deps.db, { runId, tenantId: deps.tenantId, threadId: input.threadId, goal: input.goal, plan });
 	if (input.onProgress) input.onProgress({ type: "plan", toolName: "emit_plan", label: "执行计划", payload: plan });
 
 	// 多代理模式:主代理提交子任务到看板后立即返回,子代理由后台消费者异步并行执行,前端轮询看板后调用汇总

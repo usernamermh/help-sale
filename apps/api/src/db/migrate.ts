@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 32;
+export const MIGRATION_VERSION = 33;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -220,6 +220,15 @@ export function migrate(db: DatabaseSync): void {
 			UNIQUE (tenant_id, parent_id, name)
 		);`);
 		db.exec(`CREATE INDEX IF NOT EXISTS idx_kc_parent ON keyword_categories (tenant_id, parent_id);`);
+	}
+	// v33:agent_events / agent_plans 增加 thread_id(删除会话时级联清理该会话的运行记录)
+	if (current.user_version < 33) {
+		const addCol = (table: string, col: string, ddl: string) => {
+			const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+			if (!cols.some((c) => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl};`);
+		};
+		addCol("agent_events", "thread_id", "TEXT");
+		addCol("agent_plans", "thread_id", "TEXT");
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }

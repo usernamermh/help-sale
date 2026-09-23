@@ -5,6 +5,7 @@ export interface AgentPlan {
 	id: string;
 	runId: string;
 	tenantId: string;
+	threadId: string | null;
 	goal: string;
 	planJson: string;
 	status: "planned" | "executed" | "verified" | "failed";
@@ -27,12 +28,12 @@ export interface PlanDetails {
 
 export function recordAgentPlan(
 	db: DatabaseSync,
-	input: { runId: string; tenantId: string; goal: string; plan: PlanDetails; status?: AgentPlan["status"] },
+	input: { runId: string; tenantId: string; threadId?: string; goal: string; plan: PlanDetails; status?: AgentPlan["status"] },
 ): AgentPlan {
 	const id = randomUUID();
 	db.prepare(
-		"INSERT INTO agent_plans (id, run_id, tenant_id, goal, plan_json, status) VALUES (?,?,?,?,?,?)",
-	).run(id, input.runId, input.tenantId, input.goal, JSON.stringify(input.plan), input.status ?? "planned");
+		"INSERT INTO agent_plans (id, run_id, tenant_id, thread_id, goal, plan_json, status) VALUES (?,?,?,?,?,?,?)",
+	).run(id, input.runId, input.tenantId, input.threadId ?? null, input.goal, JSON.stringify(input.plan), input.status ?? "planned");
 	return db.prepare("SELECT * FROM agent_plans WHERE id = ?").get(id) as unknown as AgentPlan;
 }
 
@@ -62,6 +63,7 @@ function mapRow(row: Record<string, unknown>): AgentPlan {
 		id: String(row.id),
 		runId: String(row.run_id),
 		tenantId: String(row.tenant_id),
+		threadId: row.thread_id ? String(row.thread_id) : null,
 		goal: String(row.goal),
 		planJson: String(row.plan_json),
 		status: String(row.status) as AgentPlan["status"],
