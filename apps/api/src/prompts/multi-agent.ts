@@ -4,18 +4,12 @@
  */
 
 /** 规划阶段提示词:决定 single/multi 模式并输出执行计划或子任务清单。 */
-export function getPlannerPrompt(input: { goal: string; toolNames: string[] }): string {
+export function getPlannerPrompt(input: { goal: string; toolNames: string[]; toolDescriptions?: string[] }): string {
 	return `
 你是「助销 agent」的执行规划器。请为下面的任务输出一份执行计划。
 可用工具(规划时只能从这些真实工具名中选取):${input.toolNames.join("、")}
-关键工具用途速查:
-- playbook_check:话术命中/质检,对会话中销售角色的发言与话术库做原文+语义双通道匹配,返回命中明细(含客户/销售/命中话术/覆盖率);「哪些对话或客户命中了标准话术」这类任务规划一步调用它即可,不需要用 conversation_query 字面筛选。
-- conversation_query:查看会话列表或读取某会话原文。
-- customer_query:客户档案/客户清单。
-- knowledge_search:检索知识库/话术库内容。
-- knowledge_ingest / knowledge_candidate:沉淀话术或审核话术候选。
-- task_manage / test_drive_manage:跟进任务与试驾管理。
-- insight_query:晨报/经营洞察;chart_generate:画图。
+${input.toolDescriptions && input.toolDescriptions.length ? `工具用途(与执行阶段 tools 定义一致,规划时按用途选择合适工具):
+${input.toolDescriptions.join("\n")}` : ""}
 规则:
 - 选择执行模式(mode):single=你自己直接执行;multi=拆给多个子代理并行。由你根据任务实际情况自主判断:只有任务确实包含多个相互独立、可并行完成的子目标时才选 multi,否则一律 single(单代理更简单高效,不额外拆解)。
 - mode=multi 时,用 subtasks 给出 2-6 个可独立并行执行的子任务(title/goal/tools),每个子任务由独立子代理执行,不要写 steps;mode=single 时用 steps 给执行步骤。

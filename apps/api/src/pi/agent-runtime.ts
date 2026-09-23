@@ -301,9 +301,11 @@ export async function runPlanPhase(deps: SalesAgentDeps, input: { goal: string; 
 	const streamFn = deps.streamFn ?? runtime.streamFn;
 	const model = requiredModel(runtime);
 
-	const toolNames = (await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store })).map((t) => t.name);
-	const systemPrompt = getPlannerPrompt({ goal: input.goal, toolNames });
-
+	const salesTools = await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store });
+	const toolNames = salesTools.map((t) => t.name);
+	// 规划器能看到每个工具的用途(与执行阶段 tools 定义同源),避免只凭名字猜测
+	const toolDescriptions = salesTools.map((t) => t.name + ": " + (t.description ?? ""));
+	const systemPrompt = getPlannerPrompt({ goal: input.goal, toolNames, toolDescriptions });
 	const agent = new Agent({
 		sessionId: `plan-${randomUUID()}`,
 		streamFn,
