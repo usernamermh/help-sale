@@ -37,14 +37,23 @@ function getWorker(): Worker {
 }
 
 /** 用本地 BGE 模型把文本批量转为 L2 归一化向量(mean pooling);在 Worker 线程推理,不阻塞主线程事件循环。 */
+/** 用本地 BGE 模型把文本批量转为 L2 归一化向量(mean pooling);在 Worker 线程推理,不阻塞主线程。 */
+/** 内部分批(每批 100 条)推理,控制 onnxruntime 峰值内存(fp32 大批次推理会占数 GB)。 */
 export async function embedTexts(texts: string[]): Promise<number[][]> {
 	const clean = texts.map((t) => String(t ?? "")).filter((t) => t.trim().length > 0);
 	if (clean.length === 0) return [];
-	return new Promise<number[][]>((resolve, reject) => {
-		const id = ++seq;
-		pending.set(id, { resolve, reject });
-		getWorker().postMessage({ id, texts: clean });
-	});
+	const BATCH = 100;
+	const out: number[][] = [];
+	for (let i = 0; i < clean.length; i += BATCH) {
+		const batch = clean.slice(i, i + BATCH);
+		const vecs = await new Promise<number[][]>((resolve, reject) => {
+			const id = ++seq;
+			pending.set(id, { resolve, reject });
+			getWorker().postMessage({ id, texts: batch });
+		});
+		out.push(...vecs);
+	}
+	return out;
 }
 
 export async function embedTextsSafe(texts: string[]): Promise<number[][]> {
