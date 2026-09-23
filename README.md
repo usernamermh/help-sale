@@ -8,22 +8,45 @@
 
 # 界面截图
 
+### 简单查询
+基础的会话/客户/车型查询能力，结果以表格呈现并支持翻页。
+
 ![简单查询](docs/images/简单查询.jpg)
+
+### 对话原文抽取
+按抽取标准从对话中保真定位并高亮命中片段。
 
 ![对话原文抽取](docs/images/对话原文抽取.jpg)
 
+### 标准话术检测
+把销售发言与标准话术做原文/语义双通道匹配，输出命中明细与覆盖率。
+
 ![标准话术检测](docs/images/标准话术检测.jpg)
+
+### 关键词管理
+三级分类目录 + 勾选筛选 + 关键词增删改查。
 
 ![关键词管理](docs/images/关键词管理.jpg)
 
+### 绘图和表格
+模型直接生成图表，表格由前端控件原样渲染。
+
 ![绘图和表格](docs/images/绘图和表格.jpg)
+
+### 定时任务
+定时任务管理：内置任务与自定义任务，可查看执行记录与结果。
 
 ![定时任务](docs/images/定时任务.jpg)
 
+### 晨报
+每日晨报与经营趋势：待办/到期任务、分析量、意图分布、车型偏好。
+
 ![晨报](docs/images/晨报.jpg)
 
-![multi agent模式](docs/images/multi agent模式.jpg)
+### multi agent 模式
+多代理并行分析：主代理拆分任务，子代理并行执行，看板协作。
 
+![multi agent模式](docs/images/multi_agent模式.jpg)
 # 技术栈
 
 - Node.js >= 24(`node:sqlite`) + TypeScript + Fastify + Vitest
@@ -65,12 +88,12 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 ### 业务级工具
 
 #### 客户与查询
-- [conversation_query] — 会话列表/对话原文（翻页）
-- [customer_query] — 客户清单/档案/历史/标签（支持按姓名解析真实客户）
-- [vehicle_query] — 车型检索（预算/座位/能源/级别/关键词）
+- **conversation_query**：会话列表/对话原文（翻页）
+- **customer_query**：客户清单/档案/历史/标签（支持按姓名解析真实客户）
+- **vehicle_query**：车型检索（预算/座位/能源/级别/关键词）
 
 #### 话术与质检
-- [knowledge_search] — 话术/知识库检索（FTS5 中文检索）
+- **knowledge_search**：话术/知识库检索（FTS5 中文检索）
 1. 数据入库（前置环节，决定检索质量）
 知识不是直接整篇存进去的，入库时先分块：
 - knowledge_ingest 把话术/政策/竞品资料交给 chunker.splitText 按段落切分（默认 600 字符/块、80 字符重叠，配置在 yaml chunker 段）；
@@ -94,14 +117,14 @@ searchKnowledge 把查询先做清洗（去标点、归一化），然后按词�
 - 全部无命中 → 整句 LIKE 回退：FTS 没结果时，把整个清洗后的查询做一次 LIKE 兜底。
 多词查询时对每个词分别检索，结果按 chunk 去重合并，再截断到 limit（默认 yaml knowledge.searchLimit）。
 
-- [knowledge_ingest] / [knowledge_candidate] — 话术沉淀（批量入库、自动分块去重）
+- **knowledge_ingest** / **knowledge_candidate**：话术沉淀（批量入库、自动分块去重）
 话术沉淀
 
   - 1. 触发来源
   - 主 agent 主动发现(任务中觉得值得沉淀)
-    - 调用 knowledge_ingest(entries=[{title, content}, ...], category)
+    - 调用 knowledge_ingest(entries=**{title, content}, ...**, category)
   - 会话分析自动生成(分析后建议回复 → 自动候选)
-  - HTTP 上传(前端/外部导入, /api/v1/knowledge[/batch])
+  - HTTP 上传(前端/外部导入, /api/v1/knowledge**/batch**)
   - 三条路最终都进入「候选 → 二次确认 → 审批」链路
 
   - 2. 生成沉淀候选(createCandidate)
@@ -161,7 +184,7 @@ searchKnowledge 把查询先做清洗（去标点、归一化），然后按词�
         - AFTER DELETE → 自动删除对应索引行
         - 结果: 入库即索引, knowledge_search 立即可检索
 
-- [playbook_check] — 话术命中检测（原文+语义双通道，默认匹配全部类别）
+- **playbook_check**：话术命中检测（原文+语义双通道，默认匹配全部类别）
 playbook_check 原理
 
   - 输入: 销售姓名/ID + 时间范围 + 可选分类
@@ -191,7 +214,7 @@ playbook_check 原理
   - 5. 返回: 摘要 + 明细表格(rawTable, 前端原样渲染)
 
 #### 任务与销售流程
-- [task_manage] — 跟进任务（创建/列表/完成，到期提醒）
+- **task_manage**：跟进任务（创建/列表/完成，到期提醒）
 跟进任务(task_manage)
 
   - 任务从哪来(四个来源)
@@ -229,7 +252,7 @@ playbook_check 原理
     - 状态 → done + 记录 completed_at
     - 从提醒队列移除(防止已完成的再提醒)
 
-- [test_drive_manage] — 试驾管理（登记/完成/取消，自动生成 24h/3天/7天回访）
+- **test_drive_manage**：试驾管理（登记/完成/取消，自动生成 24h/3天/7天回访）
 试驾管理(test_drive_manage)
 
   - 状态机: scheduled(已登记) → completed(已完成) / cancelled(已取消)
@@ -262,7 +285,7 @@ playbook_check 原理
     - 按预约时间排序
 
 #### 经营洞察
-- [insight_query] — 每日晨报/经营趋势（分析量、意图、任务完成率、车型偏好）
+- **insight_query**：每日晨报/经营趋势（分析量、意图、任务完成率、车型偏好）
 insight_query(type = morning / trend)
 
   - ① 每日晨报(type=morning, 默认)
@@ -295,21 +318,21 @@ insight_query(type = morning / trend)
 ### 系统级工具
 
 #### 多代理协作
-- [subagents] — 子代理任务（并行执行、看板通信、禁止再派生）
-- [kanban] — 子agent协作看板（SQLite 存储，按会话隔离）
+- **subagents**：子代理任务（并行执行、看板通信、禁止再派生）
+- **kanban**：子agent协作看板（SQLite 存储，按会话隔离）
 
 #### 文件与数据
-- [file_read] / file_write_new — 任意路径读文件 / 只写新文件
-- [txt] / excel / ppt — 仓库内文本/Excel/PPT 读取
-- [sql] — 业务库操作（默认只读，危险语句拦截+审计）
-- [redis] — Redis 白名单操作
+- **file_read** / **file_write_new**：任意路径读文件 / 只写新文件
+- **txt** / **excel** / **ppt**：仓库内文本/Excel/PPT 读取
+- **sql**：业务库操作（默认只读，危险语句拦截+审计）
+- **redis**：Redis 白名单操作
 
 #### 算法与呈现
-- [embedding] / [similarity] / [cluster] — 文本向量、语义相似度、聚类
-- [keyword_extract_free] / [keyword_extract_strict] — 标签抽取/匹配
-- [table_generate] / [chart_generate] — 表格/流程图/统计图
-- [computer] / [date_tool] / [browser] — 计算、日期转换、HTTP 抓取
-- [update_memory] — 系统记忆更新（memory.md）
+- **embedding** / **similarity** / **cluster**：文本向量、语义相似度、聚类
+- **keyword_extract_free** / **keyword_extract_strict**：标签抽取/匹配
+- **table_generate** / **chart_generate**：表格/流程图/统计图
+- **computer** / **date_tool** / **browser**：计算、日期转换、HTTP 抓取
+- **update_memory**：系统记忆更新（memory.md）
 update_memory(section, content)
 
   - 输入: 小节(section) + 内容(content)
