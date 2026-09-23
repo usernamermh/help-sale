@@ -2179,7 +2179,7 @@
     let kwState = { page: 1, pageSize: 10, total: 0, totalPages: 1, catTree: [], catFlat: [], filterPaths: new Set(), editingCat: null };
     function fillSelect(sel, items, placeholder) {
       const cur = sel.value;
-      sel.innerHTML = "<option value=\"\">" + placeholder + "</option>" + items.map((v) => "<option value=\"" + escapeHtml(v) + "\"" + (v === cur ? " selected" : "") + ">" + escapeHtml(v) + "</option>").join("");
+      sel.innerHTML = "<option value=\"\" disabled>" + placeholder + "</option>" + items.map((v) => "<option value=\"" + escapeHtml(v) + "\"" + (v === cur ? " selected" : "") + ">" + escapeHtml(v) + "</option>").join("");
     }
     function flattenTree(nodes, out) {
       out = out || [];
