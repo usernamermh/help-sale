@@ -1,4 +1,4 @@
-import { cleanText, cosineSim } from "../../tools_system/_shared/text-vec.js";
+import { cleanText } from "../../tools_system/_shared/text-vec.js";
 import { embedTextsSafe } from "../../tools_system/_shared/bge-embed.js";
 
 interface ToolContext { db: any; tenantId: string; }
@@ -86,52 +86,82 @@ export async function execute(ctx: ToolContext, params: any) {
 
 	// 4) 双通道匹配
 	const phraseCleans = phrases.map((p) => cleanText(p.content));
-	const phraseVecs = await embedTextsSafe(phrases.map((ph) => ph.content));
+	// 话术向量批量一次(L2 归一化,余弦=点积);Float32Array 加速同步点积
+	const phraseF32 = (await embedTextsSafe(phrases.map((ph) => ph.content))).map((v) => Float32Array.from(v));
+	const dotF32 = (a: Float32Array, b: Float32Array): number => {
+		let d = 0;
+		for (let i = 0; i < a.length; i++) d += a[i] * b[i];
+		return d;
+	};
 	const hits: HitRow[] = [];
-	for (const conv of conversations) {
-		for (const sentence of conv.sentences) {
-			const clean = cleanText(sentence);
+	const pushHit = (conv: (typeof conversations)[number], sentence: string, matched: { pi: number; type: "exact" | "semantic"; score: number }) => {
+		const p = phrases[matched.pi];
+		hits.push({
+			conversationId: conv.id,
+			customerKey: conv.customerKey,
+			customerName: conv.customerName,
+			salesName: conv.salesName,
+			date: conv.date,
+			sentence,
+			phraseId: p.id,
+			phrase: p.content,
+			matchType: matched.type,
+			score: matched.score,
+		});
+	};
+
+	// 通道 A:原文命中(句级,纯字符串比较,不消耗 embedding)
+	const exactHitSet = new Set<string>(); // convIdx:sentIdx
+	for (let ci = 0; ci < conversations.length; ci++) {
+		const conv = conversations[ci];
+		for (let si = 0; si < conv.sentences.length; si++) {
+			const clean = cleanText(conv.sentences[si]);
 			if (!clean) continue;
-			let matched: { pi: number; type: "exact" | "semantic"; score: number } | null = null;
-			// 通道 A:原文命中(归一化后句子包含话术原文,话术长度≥4)
 			for (let i = 0; i < phrases.length; i++) {
 				if (phraseCleans[i].length >= 4 && clean.includes(phraseCleans[i])) {
-					matched = { pi: i, type: "exact", score: 1 };
+					pushHit(conv, conv.sentences[si], { pi: i, type: "exact", score: 1 });
+					exactHitSet.add(`${ci}:${si}`);
 					break;
 				}
-			}
-			// 通道 B:语义命中(余弦 top-1 ≥ 阈值)
-			if (!matched) {
-				const sv = (await embedTextsSafe([sentence]))[0];
-				let best = -1;
-				let bestScore = 0;
-				for (let i = 0; i < phraseVecs.length; i++) {
-					const s = cosineSim(sv, phraseVecs[i]);
-					if (s > bestScore) {
-						bestScore = s;
-						best = i;
-					}
-				}
-				if (best >= 0 && bestScore >= threshold) matched = { pi: best, type: "semantic", score: Number(bestScore.toFixed(4)) };
-			}
-			if (matched) {
-				const p = phrases[matched.pi];
-				hits.push({
-					conversationId: conv.id,
-					customerKey: conv.customerKey,
-					customerName: conv.customerName,
-					salesName: conv.salesName,
-					date: conv.date,
-					sentence,
-					phraseId: p.id,
-					phrase: p.content,
-					matchType: matched.type,
-					score: matched.score,
-				});
 			}
 		}
 	}
 
+	// 通道 B:语义命中(同一会话内每 20 句一组,每组一次 embedding,组向量 vs 话术向量;同步点积分批让出事件循环)
+	const GROUP_SIZE = 20;
+	const groups: Array<{ convIdx: number; sentences: string[] }> = [];
+	for (let ci = 0; ci < conversations.length; ci++) {
+		const conv = conversations[ci];
+		const unmat = conv.sentences
+			.map((sentence, si) => ({ sentence, si }))
+			.filter(({ si }) => !exactHitSet.has(`${ci}:${si}`))
+			.map(({ sentence }) => sentence)
+			.filter((sentence) => cleanText(sentence).length > 0);
+		for (let k = 0; k < unmat.length; k += GROUP_SIZE) {
+			groups.push({ convIdx: ci, sentences: unmat.slice(k, k + GROUP_SIZE) });
+		}
+	}
+	const groupVecs = groups.length > 0 ? await embedTextsSafe(groups.map((g) => g.sentences.join(" "))) : [];
+	const groupF32 = groupVecs.map((v) => Float32Array.from(v));
+	for (let k = 0; k < groups.length; k++) {
+		const g = groups[k];
+		const conv = conversations[g.convIdx];
+		let best = -1;
+		let bestScore = 0;
+		for (let i = 0; i < phraseF32.length; i++) {
+			const sc = dotF32(groupF32[k], phraseF32[i]);
+			if (sc > bestScore) {
+				bestScore = sc;
+				best = i;
+			}
+		}
+		if (best >= 0 && bestScore >= threshold) {
+			const snippet = g.sentences.join(" / ").slice(0, 120);
+			pushHit(conv, snippet, { pi: best, type: "semantic", score: Number(bestScore.toFixed(4)) });
+		}
+		// 每 10 组让出事件循环一次,避免同步点积长时间占住主线程(页面/看板请求不被卡住)
+		if (k % 10 === 9) await new Promise((r) => setImmediate(r));
+	}
 	// 5) 聚合统计
 	const usedPhraseIds = new Set(hits.map((h) => h.phraseId));
 	const stats = {
