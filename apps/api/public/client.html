@@ -1818,6 +1818,17 @@
         loadThreads();
       } catch (e) { alert("删除失败:" + e.message); }
     } let running = false; let currentThreadId = null; let deltaBuf = ""; let abortCtrl = null; let kanbanTimer = null; let multiState = null;
+    function stripMdTables(t) {
+      const lines = String(t == null ? "" : t).split("\n");
+      const out = [];
+      let inFence = false;
+      for (const line of lines) {
+        if (/^\s*```/.test(line)) { inFence = !inFence; out.push(line); continue; }
+        if (!inFence && line.trim().startsWith("|")) continue;
+        out.push(line);
+      }
+      return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    }
     const PAGE_TOOLS = ["customer_query", "conversation_query", "vehicle_query", "excel", "table_generate", "playbook_check"];
     // ── 新会话欢迎区:默认定时任务结果按钮,点击展示结构化结果 ──
     let welcomeResults = null;
@@ -2127,11 +2138,11 @@
         wait.body.textContent = (evt.label || evt.toolName || "工具") + " 处理中…";
       } else if (evt.type === "text_delta") {
         deltaBuf += (evt.payload && evt.payload.text) || "";
-        wait.body.innerHTML = '<div class="md">' + renderMarkdown(deltaBuf) + '</div>';
+        wait.body.innerHTML = '<div class="md">' + renderMarkdown(stripMdTables(deltaBuf)) + '</div>';
         if (window.mermaid) renderMermaidBlocks(wait.body);
       } else if (evt.type === "delta") {
         deltaBuf += evt.text || "";
-        wait.body.innerHTML = '<div class="md">' + renderMarkdown(deltaBuf) + '</div>';
+        wait.body.innerHTML = '<div class="md">' + renderMarkdown(stripMdTables(deltaBuf)) + '</div>';
         if (window.mermaid) renderMermaidBlocks(wait.body);
       } else if (evt.type === "final") {
         if (multiState && evt.runId) multiState.runId = evt.runId;
