@@ -4,7 +4,7 @@ import { embedTextsSafe } from "../../tools_system/_shared/bge-embed.js";
 interface ToolContext { db: any; tenantId: string; }
 
 interface Phrase { id: string; docId: string; docTitle: string; content: string; }
-interface HitRow { conversationId: string; salesName: string | null; date: string | null; sentence: string; phraseId: string; phrase: string; matchType: "exact" | "semantic"; score: number; }
+interface HitRow { conversationId: string; customerKey: string | null; customerName: string | null; salesName: string | null; date: string | null; sentence: string; phraseId: string; phrase: string; matchType: "exact" | "semantic"; score: number; }
 
 /**
  * 话术命中质检:把某销售最近 N 条对话(录音转写)的销售发言,对照话术库(标准话术)做命中检测。
@@ -54,13 +54,15 @@ export async function execute(ctx: ToolContext, params: any) {
 	const since = new Date(Date.now() - days * 86400000).toISOString();
 	const convoRows = db
 		.prepare(
-			`SELECT c.id, c.sales_name, c.sales_id, c.updated_at, c.message_count
+			`SELECT c.id, c.sales_name, c.sales_id, c.updated_at, c.message_count,
+			        cus.key AS customer_key, cus.name AS customer_name
 			 FROM conversations c
+			 LEFT JOIN customers cus ON cus.id = c.customer_id
 			 WHERE c.tenant_id = ? AND c.updated_at >= ?
 			   AND (? = '' OR c.sales_name = ? OR c.sales_id = ?)
 			 ORDER BY c.updated_at DESC LIMIT ?`,
 		)
-		.all(tenantId, since, salesName, salesName, salesId, limit) as Array<{ id: string; sales_name: string | null; sales_id: string | null; updated_at: string | null; message_count: number | null }>;
+		.all(tenantId, since, salesName, salesName, salesId, limit) as Array<{ id: string; sales_name: string | null; sales_id: string | null; updated_at: string | null; message_count: number | null; customer_key: string | null; customer_name: string | null }>;
 	if (convoRows.length === 0) {
 		return { content: [{ type: "text", text: "未找到符合条件的对话记录(请检查销售姓名/ID 或时间范围)。" }], details: { phrases: phrases.length, conversations: 0, hits: [], stats: null } };
 	}
@@ -74,6 +76,8 @@ export async function execute(ctx: ToolContext, params: any) {
 			.all(tenantId, c.id) as Array<{ content: string | null; spoken_at: string | null }>;
 		return {
 			id: String(c.id),
+			customerKey: c.customer_key ? String(c.customer_key) : null,
+			customerName: c.customer_name ? String(c.customer_name) : null,
 			salesName: c.sales_name ? String(c.sales_name) : null,
 			date: c.updated_at ? String(c.updated_at) : null,
 			sentences: msgs.map((m) => String(m.content ?? "").trim()).filter((s) => s.length > 0),
@@ -114,6 +118,8 @@ export async function execute(ctx: ToolContext, params: any) {
 				const p = phrases[matched.pi];
 				hits.push({
 					conversationId: conv.id,
+					customerKey: conv.customerKey,
+					customerName: conv.customerName,
 					salesName: conv.salesName,
 					date: conv.date,
 					sentence,
@@ -140,11 +146,11 @@ export async function execute(ctx: ToolContext, params: any) {
 	};
 	const rows = hits
 		.slice(0, 50)
-		.map((h) => `| ${h.date ? String(h.date).slice(0, 10) : "—"} | ${h.salesName ?? "—"} | ${h.phrase.replace(/\|/g, "｜")} | ${h.matchType === "exact" ? "原文" : "语义"} | ${h.score} |`);
+		.map((h) => `| ${h.date ? String(h.date).slice(0, 10) : "—"} | ${h.customerName ?? h.customerKey ?? "—"} | ${h.salesName ?? "—"} | ${h.phrase.replace(/\|/g, "｜")} | ${h.matchType === "exact" ? "原文" : "语义"} | ${h.score} |`);
 	const rawTable =
 		rows.length === 0
 			? ""
-			: "| 会话日期 | 销售 | 命中话术 | 命中方式 | 相似度 |\n| --- | --- | --- | --- | --- |\n" + rows.join("\n") + (hits.length > 50 ? `\n(仅展示前 50 条,共 ${hits.length} 条命中)` : "");
+			: "| 会话日期 | 客户 | 销售 | 命中话术 | 命中方式 | 相似度 |\n| --- | --- | --- | --- | --- | --- |\n" + rows.join("\n") + (hits.length > 50 ? `\n(仅展示前 50 条,共 ${hits.length} 条命中)` : "");
 	const summary =
 		`完成话术命中质检:检查 ${stats.conversations} 条对话、${stats.sentences} 句销售发言,对照 ${stats.phrases} 条标准话术。命中 ${stats.hitSentences} 句(原文 ${stats.exactHits} / 语义 ${stats.semanticHits}),覆盖 ${stats.phrasesUsed} 条话术(覆盖率 ${stats.coverageRate}%)` +
 		(stats.hitSentences === 0 ? ",未发现明显使用标准话术的发言。" : ",明细见下表。");
