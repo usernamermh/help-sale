@@ -1244,12 +1244,6 @@
       </div>
     </div>
   </div>
-  window.addEventListener("error", function (e) {
-    var d = document.getElementById("jsErrorBadge");
-    if (!d) { d = document.createElement("div"); d.id = "jsErrorBadge"; d.style.cssText = "position:fixed;top:8px;right:8px;z-index:9999;background:#dc2626;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;max-width:60vw;white-space:pre-wrap"; document.body.appendChild(d); }
-    d.textContent = "JS错误: " + (e.message || "unknown") + " @ " + (e.filename || "") + ":" + (e.lineno || "?");
-  });
-</script>
 <script>const $ = (id) => document.getElementById(id);
     function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
     let trPager = null;
