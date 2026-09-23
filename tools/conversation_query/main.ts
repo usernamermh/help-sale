@@ -8,7 +8,7 @@ const PAGE_SIZE = 10;
 function conversationTable(rows: any[]): string {
 	const lines = ["| 会话ID | 客户 | 销售 | 消息数 | 时间 |", "| --- | --- | --- | --- | --- |"];
 	for (const r of rows) {
-		lines.push(`| ${String(r.id).slice(0, 10)}… | ${r.customerName ?? r.customerKey ?? "未知客户"} | ${r.salesName ?? "—"} | ${r.messageCount ?? 0} | ${String(r.createdAt ?? "").slice(0, 16)} |`);
+		lines.push(`| ${String(r.id)} | ${r.customerName ?? r.customerKey ?? "未知客户"} | ${r.salesName ?? "—"} | ${r.messageCount ?? 0} | ${String(r.createdAt ?? "").slice(0, 16)} |`);
 	}
 	return lines.join("\n");
 }
@@ -45,7 +45,7 @@ export function execute(ctx: ToolContext, params: any) {
 	const lines = messages.map((m: any) => `${m.spokenAt ?? ""}\t[${m.speakerRole === "customer" ? "客户" : m.speakerRole === "sales" ? "销售" : "其他"}${m.speakerName ? `:${m.speakerName}` : ""}]\t${m.content}`).join("\n");
 	const footer = totalPages > 1 ? `(第 ${p}/${totalPages} 页 · 共 ${all.length} 条;用户要求查看更多时再传 page=${p + 1})` : "";
 	return {
-		content: [{ type: "text", text: `会话 ${meta.id.slice(0, 10)}… 原文 ${footer}:\n${lines}` }],
+		content: [{ type: "text", text: `会话 ${meta.id} 原文 ${footer}:\n${lines}` }],
 		details: { conversationId: meta.id, messages, page: p, pageSize: PAGE_SIZE, totalMessages: all.length, totalPages, hasMore: p < totalPages },
 	};
 }
