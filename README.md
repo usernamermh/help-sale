@@ -100,7 +100,7 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 - 每个块写入 knowledge_chunks 表（带 tenant_id 租户隔离、document_id 归属、chunk_index 顺序）；
 - 同时 SQLite FTS5 触发器自动同步到全文索引 knowledge_chunks_fts——用的是 trigram 分词器
 
-trigram 是 SQLite FTS5 全文索引提供的一种分词方式，核心思路：把文本按每 3 个连续字符切成一串子串来建索引，检索时同样切查询词，匹配子串。
+- trigram 是 SQLite FTS5 全文索引提供的一种分词方式，核心思路：把文本按每 3 个连续字符切成一串子串来建索引，检索时同样切查询词，匹配子串。
 具体到中文，比如「汉EV冠军版」这个知识块，会被切成连续的 3 字符子串：
 汉EV → EV冠 → V冠军 → 冠军版
 每个子串都进索引。用户搜「冠军版」时，查询也被切成 冠军版，与索引里的 trigram 直接命中——不需要先做中文分词，也不依赖词库，所以对中文关键词（尤其是品牌名、话术短语）特别友好。
@@ -120,39 +120,38 @@ searchKnowledge 把查询先做清洗（去标点、归一化），然后按词�
 - **knowledge_ingest** / **knowledge_candidate**：话术沉淀（批量入库、自动分块去重）
 话术沉淀
 
-  - 1. 触发来源
-  - 主 agent 主动发现(任务中觉得值得沉淀)
-    - 调用 knowledge_ingest(entries=**{title, content}, ...**, category)
-  - 会话分析自动生成(分析后建议回复 → 自动候选)
-  - HTTP 上传(前端/外部导入, /api/v1/knowledge**/batch**)
-  - 三条路最终都进入「候选 → 二次确认 → 审批」链路
+  - 触发来源
+    - 主 agent 主动发现(任务中觉得值得沉淀)，调用 knowledge_ingest(entries=[{title, content}, ...], category)
+    - 会话分析自动生成(分析后建议回复 → 自动候选)
+    - HTTP 上传(前端/外部导入, /api/v1/knowledge[/batch])
+    - 三条路最终都进入「候选 → 二次确认 → 审批」链路
 
-  - 2. 生成沉淀候选(createCandidate)
-  - 写入 knowledge_candidates 表
-    - draft_title / draft_content(标题与内容)
-    - intent / analysis_id(分类与来源)
-    - status = 'pending'(待确认)
-  - 返回候选 ID → 前端/模型可见「待确认」条目
+  - 生成沉淀候选(createCandidate)
+    - 写入 knowledge_candidates 表
+      - draft_title / draft_content(标题与内容)
+      - intent / analysis_id(分类与来源)
+      - status = 'pending'(待确认)
+    - 返回候选 ID → 前端/模型可见「待确认」条目
 
-  - 3. 后台二次确认(reviewCandidate)
-  - 3.1 检索相关文档
-    - 用「标题 + 内容前200字」调 knowledge_search
-    - FTS5 trigram 全文检索(长词) / LIKE 回退(短词)
-    - 取前 5 条命中文档
-  - 3.2 语义相似度对比
-    - 候选内容 → embedding 向量
-    - 命中文档的分块 → embedding 向量
-    - 逐块余弦相似度 → 取最高分
-    - 记录 matched_title / similarity_score
-  - 3.3 建议规则(写回候选)
-    - 无命中 或 相似度 < 0.45 → suggest_action = "add"
+  - 后台二次确认(reviewCandidate)
+    - 检索相关文档
+      - 用「标题 + 内容前200字」调 knowledge_search
+      - FTS5 trigram 全文检索(长词) / LIKE 回退(短词)
+      - 取前 5 条命中文档
+    - 语义相似度对比
+      - 候选内容 → embedding 向量
+      - 命中文档的分块 → embedding 向量
+      - 逐块余弦相似度 → 取最高分
+      - 记录 matched_title / similarity_score
+    - 建议规则(写回候选)
+      - 无命中 或 相似度 < 0.45 → suggest_action = "add"
       - 理由: 知识库无相似内容,建议新增
-    - 0.45 ≤ 相似度 < 0.9 → suggest_action = "update"
-      - 理由: 有相似但内容有差异,建议覆盖
-      - 快照: old_title / old_content(旧版本留存)
-    - 相似度 ≥ 0.9 → suggest_action = "skip"
-    - 理由: 内容基本一致,建议跳过
-  - 每条候选带 review_note(可解释的判断说明)
+      - 0.45 ≤ 相似度 < 0.9 → suggest_action = "update"
+        - 理由: 有相似但内容有差异,建议覆盖
+        - 快照: old_title / old_content(旧版本留存)
+      - 相似度 ≥ 0.9 → suggest_action = "skip"
+      - 理由: 内容基本一致,建议跳过
+    - 每条候选带 review_note(可解释的判断说明)
 
   - 4. 审批(knowledge_candidate)
   - 4.1 op = list → 列出 pending 候选(含建议动作)
