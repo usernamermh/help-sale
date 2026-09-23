@@ -1290,8 +1290,14 @@
     function showKanbanPanel() { $("kanbanPanel").style.display = "flex"; $("headerKanbanBtn").classList.add("active"); loadKanban(); syncRightCol(); }
     async function loadKanban() {
       const box = $("kanbanList");
+      // 未打开任何会话:看板为空(按会话隔离,不展示其他会话的历史卡片)
+      if (!currentThreadId) {
+        $("kanbanMeta").textContent = "共 0 张卡片";
+        box.innerHTML = "<div class=\"mini\">请先选择或创建一个会话</div>";
+        return;
+      }
       try {
-        const r = await api("/api/v1/kanban" + (currentThreadId ? "?threadId=" + encodeURIComponent(currentThreadId) : ""));
+        const r = await api("/api/v1/kanban?threadId=" + encodeURIComponent(currentThreadId));
         const cards = r.cards || [];
         $("kanbanMeta").textContent = "共 " + cards.length + " 张卡片";
         if (!cards.length) { box.innerHTML = "<div class=\"mini\">看板为空</div>"; return; }
