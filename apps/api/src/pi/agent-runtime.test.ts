@@ -209,7 +209,14 @@ describe("客户端中断", () => {
 	it("运行中触发 signal:runSalesAgent 抛 AgentCancelledError", async () => {
 		const fa = fauxProvider();
 		fa.setResponses([fauxAssistantMessage([fauxToolCall("emit_final", { answer: "正常答复" })])]);
-		const streamFn: StreamFn = async (model, context, options) => fa.provider.stream(model as never, context, options);
+		// 流式调用先挂起等待 abort,确保 signal 一定在 agent 执行中触发(避免快机器上 agent 提前完成导致 flaky)
+		const streamFn: StreamFn = async (model, context, options) => {
+			await new Promise<void>((resolve) => {
+				const t = setTimeout(resolve, 200);
+				options.signal?.addEventListener("abort", () => { clearTimeout(t); resolve(); }, { once: true });
+			});
+			return fa.provider.stream(model as never, context, options);
+		};
 		const controller = new AbortController();
 		const pending = runSalesAgent({ db, tenantId: "t1", store, streamFn }, { goal: "运行中中断", signal: controller.signal });
 		// 给 agent 一个 tick 的机会进入运行态后再中止
