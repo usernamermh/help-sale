@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import type { DatabaseSync } from "node:sqlite";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { loadExternalAgentTools, TOOL_ROOTS } from "../services/external-tools.js";
+import { listWorkflows, type WorkflowRecord } from "../repositories/agent-capabilities.js";
+import { runWorkflowEngine } from "../services/workflow-runner.js";
 import type { SessionStore } from "./sessions.js";
 
 export interface SalesAgentToolDeps {
@@ -85,7 +87,45 @@ export function systemFinalTool(): AgentTool<any, any> {
  * 从 tools / tools_system 目录动态加载全部业务工具(契约:readme.json + main.ts 导出 execute(ctx, params)),
  * 附加系统收口工具 emit_final。目录内新增/修改工具后重启服务即生效。
  */
+/** 从工作流步骤参数中提取 {{param.x}} 占位符,生成工具参数 schema。 */
+function workflowParamSchema(steps: unknown[]): Record<string, unknown> {
+	const props: Record<string, { type: string; description: string }> = {};
+	const walk = (v: unknown) => {
+		if (typeof v === "string") {
+			const re = /\{\{param\.([^}]+)\}\}/g;
+			let m: RegExpExecArray | null;
+			while ((m = re.exec(v))) props[m[1]] = { type: "string", description: m[1] };
+		} else if (Array.isArray(v)) { v.forEach(walk); }
+		else if (v && typeof v === "object") { Object.values(v).forEach(walk); }
+	};
+	for (const st of steps || []) walk((st as { params?: unknown }).params ?? {});
+	return { type: "object", properties: props, required: Object.keys(props) };
+}
+
+/** 把已启用的工作流注册为可调用工具:模型通过 tools 字段看到并直接执行。 */
+function workflowTool(wf: WorkflowRecord, db: DatabaseSync, tenantId: string): AgentTool<any, any> {
+	const schema = workflowParamSchema(Array.isArray(wf.steps) ? wf.steps : []);
+	const paramNames = Object.keys((schema.properties as Record<string, unknown>) ?? {});
+	return {
+		name: "workflow_" + wf.id.replace(/-/g, "").slice(0, 12),
+		label: "工作流:" + wf.name,
+		description: `执行已沉淀的工作流「${wf.name}」:${wf.description || wf.name}${paramNames.length ? " 可传参数:" + paramNames.join("/") : ""}。调用后会按步骤执行并返回每步结果。`,
+		parameters: Type.Object(schema.properties as never, { description: wf.name + " 的工作流参数" }),
+		async execute(_id, params: any) {
+			const outcome = await runWorkflowEngine({ db, tenantId, workflow: wf, params: params ?? {} });
+			const lines = outcome.steps.map((st) => `${st.ok ? "OK" : "FAIL"} ${st.name}(${st.tool}): ${st.summary || st.error || ""}`);
+			return {
+				content: [{ type: "text" as const, text: `工作流「${wf.name}」执行${outcome.run.status}:
+${lines.join("\n")}` }],
+				details: { run: outcome.run, steps: outcome.steps },
+			};
+		},
+	};
+}
+
 export async function createSalesAgentTools(deps: SalesAgentToolDeps): Promise<Array<AgentTool<any, any>>> {
 	const external = await loadExternalAgentTools(TOOL_PATHS, { db: deps.db, tenantId: deps.tenantId });
-	return [...external, systemFinalTool()];
+	const workflows = listWorkflows(deps.db, deps.tenantId).filter((w) => w.status === "enabled");
+	const workflowTools = workflows.map((w) => workflowTool(w, deps.db, deps.tenantId));
+	return [...external, ...workflowTools, systemFinalTool()];
 }
