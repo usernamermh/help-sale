@@ -1270,6 +1270,8 @@
           <div style="display:flex;align-items:center;gap:6px;padding:6px 0">
             <span style="font-weight:600;font-size:13px">工作流列表</span>
             <button class="secondary" style="margin-left:auto" onclick="workflowForm()">＋ 新建</button>
+<button class="secondary" style="margin-left:auto" onclick="workflowMine()">🔍 自动挖掘</button>
+
           </div>
           <div id="workflowList" style="flex:1;overflow:auto">加载中…</div>
         </div>
@@ -2490,6 +2492,22 @@
           box.appendChild(d);
         }
       } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
+    }
+    async function workflowMine() {
+      if (!confirm("从历史对话的工具调用轨迹中自动挖掘工作流草稿?可能耗时几十秒。")) return;
+      const box = $("workflowDetail");
+      box.innerHTML = '<div class="mini">正在分析历史执行轨迹,提炼可复用工作流…</div>';
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(new Error("挖掘超时(120s)")), 120000);
+      try {
+        const res = await fetch("/api/v1/workflows/mine", { method: "POST", headers: { "Content-Type": "application/json", "x-tenant-id": "t_demo" }, body: JSON.stringify({}), signal: ctrl.signal });
+        const j = await res.json();
+        if (!res.ok) throw new Error(j.error || ("HTTP " + res.status));
+        const mined = j.mined || [];
+        box.innerHTML = mined.length ? '<div class="md"><b>挖掘完成,共发现 ' + j.totalChains + ' 条高频串联,生成 ' + mined.length + ' 个草稿:</b>' + mined.map((m) => '<div style="border:1px solid var(--line);border-radius:8px;padding:6px;margin-top:6px"><b>' + escapeHtml(m.workflow.name) + '</b> <span class="badge">草稿·出现 ' + m.count + ' 次</span><div class="mini">' + escapeHtml(m.workflow.description || "") + '</div><div class="mini">' + escapeHtml(m.minedFrom.join(" → ")) + '</div></div>').join("") + '</div>' : '<div class="mini">未发现高频可复用串联(至少需要同一工具序列出现 2 次)</div>';
+        loadWorkflows();
+      } catch (e) { box.innerHTML = "挖掘失败:" + escapeHtml(e.message); }
+      finally { clearTimeout(timer); }
     }
     function workflowDetail(id) {
       const w = wfState.list.find((x) => x.id === id); if (!w) return;

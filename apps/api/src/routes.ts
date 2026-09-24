@@ -42,6 +42,7 @@ import { CAPABILITIES, getCapabilityDef } from "./pi/capabilities.js";
 import { createWorkflow, getWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled, updateWorkflow, deleteWorkflow } from "./repositories/agent-capabilities.js";
 import { listWorkflowRuns } from "./repositories/workflow-runs.js";
 import { runWorkflowEngine } from "./services/workflow-runner.js";
+import { mineToolChains, refineChainToWorkflow } from "./services/workflow-miner.js";
 import { queryConsoleLogs } from "./services/console-logs.js";
 import { executeToolPage } from "./services/tool-pagination.js";
 import { setFunnelStage, getFunnelStats, listSilentCustomers } from "./repositories/funnel.js";
@@ -1267,6 +1268,30 @@ app.get<{ Params: { id: string } }>("/api/v1/agent/threads/:id/summary", async (
 	});
 
 	// ── 工作流:可复用的多步骤流程(固定步骤 + 参数占位,支持微调版本) ──
+	// 自动挖掘:从历史 agent 工具调用轨迹中发现高频步骤串联,LLM 提炼为工作流草稿
+	app.post("/api/v1/workflows/mine", async (request, reply) => {
+		try {
+			const chains = mineToolChains(deps.db, request.tenantId, 14);
+			const created: Array<{ workflow: unknown; minedFrom: string[]; count: number }> = [];
+			for (const c of chains.slice(0, 3)) {
+				try {
+					const refined = await refineChainToWorkflow(c);
+					const wf = createWorkflow(deps.db, request.tenantId, {
+						name: refined.name,
+						description: refined.description,
+						steps: refined.steps,
+						status: "draft",
+					});
+					created.push({ workflow: wf, minedFrom: c.chain, count: c.count });
+				} catch (error) {
+					console.warn("[workflows/mine] 提炼失败:", error instanceof Error ? error.message : String(error));
+				}
+			}
+			return { mined: created, totalChains: chains.length };
+		} catch (error) {
+			return reply.code(500).send({ error: error instanceof Error ? error.message : String(error) });
+		}
+	});
 	app.get("/api/v1/workflows", async (request) => {
 		return { workflows: listWorkflows(deps.db, request.tenantId) };
 	});

@@ -43,6 +43,7 @@ export interface CreateWorkflowInput {
 	description?: string;
 	steps?: unknown[];
 	enabled?: boolean;
+	status?: string;
 }
 
 export function createWorkflow(db: DatabaseSync, tenantId: string, input: CreateWorkflowInput): WorkflowRecord {
@@ -55,7 +56,7 @@ export function createWorkflow(db: DatabaseSync, tenantId: string, input: Create
 		JSON.stringify(input.steps ?? []),
 		input.enabled === false ? 0 : 1,
 		1,
-		"enabled",
+		input.status ?? (input.enabled === false ? "disabled" : "enabled"),
 	);
 	return getWorkflow(db, tenantId, id)!;
 }
