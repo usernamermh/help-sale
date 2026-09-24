@@ -83,43 +83,6 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 - **Redis**(连接信息在 help-sale.config.yaml redis 段，按部署环境填入凭据):跟进任务到期提醒队列，前端可查询已到期待办并显示「已到期」标记，完成即出队。
 - 连接信息与开关都在 help-sale.config.yaml(mysql/redis 段),按部署环境填入凭据;`enabled: false` 关闭(Redis 自动退化为内存队列)。
 
-# 记忆架构
-
-平台采用三层记忆：短期（当前轮次+最近消息）、中期（会话摘要）、长期（memory.md + 知识库 + 客户档案）。
-
-- 三层记忆
-  - 短期：当前轮次 + 最近消息原文，随请求传递
-  - 中期：会话摘要（thread_summaries 表），会话超 30 条时压缩早期内容
-  - 长期：memory.md（偏好/经验）+ 知识库 + 客户档案，每次构建系统提示词时读取
-
-- memory.md（长期记忆核心）
-  - 文件位置：配置 memoryFile（默认 apps/api/data/memory.md）
-  - 五个小节：用户记忆 / 系统记忆 / 工具经验 / 规则改进 / 模型端点
-  - 生效方式：构建 Agent 系统提示词时 loadMemoryText 读取 memory.md，拼进【系统记忆】段，模型每轮可见
-  - 设计边界：只存偏好与经验，业务数据（客户/会话/订单）一律走数据库
-
-- update_memory 工具（写入入口）
-  - 参数：section + content（单条 ≤ 2000 字符）
-  - 校验小节：normalizeSection 检查是否命中白名单，否则抛错
-  - 幂等去重：相同内容行不重复追加
-  - 定位小节标题后插入，写回文件
-  - 触发时机（模型主动）
-    - 用户表达偏好（如「报告都用表格」）→ 写入用户记忆
-    - 确认工具技巧有效 → 写入工具经验
-    - 确认模型端点行为 → 写入模型端点
-    - 反思任务提炼规则 → 写入规则改进
-
-- 会话摘要（中期记忆）
-  - 每次会话运行结束用规则算法生成摘要（前 8 个用户目标 + 最近 3 条结论），存 thread_summaries 表，不依赖模型
-  - 历史消息超过 30 条时，compressHistory 把早期内容压缩为【历史摘要】注入对话，保留最近 30 条原文
-  - 导出会话 JSON 时附带摘要
-
-- 反思闭环（自动写入长期记忆）
-  - 采集：话术评估低分（<70）与 Agent 运行失败自动进入 reflection_cases
-  - 聚合：每周一 09:30「反思改进」定时任务汇总近 7 天案例（按主题聚类、统计次数）
-  - 写入：applyReflectionToMemory 把建议写入 memory.md「规则改进」小节（去重、限量）
-  - 手动入口：POST /api/v1/reflections/apply，前端「反思改进」卡片可手动触发同样逻辑
-
 ## 工具实现
 
 ### 业务级工具
@@ -280,6 +243,11 @@ npm run dev                                     # 监听 help-sale.config.yaml �
 - **table_generate** / **chart_generate**：表格/流程图/统计图（结果由前端直接渲染）
 - **computer** / **date_tool** / **browser**：计算、日期转换、HTTP 抓取
 - **update_memory**：系统记忆更新（memory.md）
+  记忆是 Agent 的长期上下文，采用三层架构：
+  - 短期记忆：当前轮次 + 最近消息原文，随请求传递
+  - 中期记忆：会话摘要（thread_summaries 表），会话超 30 条时压缩早期内容
+  - 长期记忆：memory.md（偏好/经验）+ 知识库 + 客户档案，每次构建系统提示词时读取
+  update_memory 负责长期记忆（memory.md）的写入：
   - 输入：小节（section）+ 内容（content）
     - section 白名单：用户记忆 / 系统记忆 / 工具经验 / 规则改进 / 模型端点
     - content 限制：单条 ≤ 2000 字符
@@ -288,8 +256,13 @@ npm run dev                                     # 监听 help-sale.config.yaml �
   - 幂等去重：内容清洗（压缩空白 → 拼成「- 内容」一行），若该行已存在则直接返回，不重复追加
   - 定位小节并插入：找到「## 目标小节」标记，在标题行后插入新行，写回文件
   - 生效方式：下次构建系统提示词时生效——getSalesAgentSystemPrompt → loadMemoryText 读取 memory.md → 拼进【系统记忆】段
+  - 设计边界：memory.md 只存偏好与经验，业务数据（客户/会话/订单）一律走数据库
   - 触发路径
     - 模型主动调用：发现用户偏好（如「报告都用表格」→ 用户记忆）、沉淀工具经验、记录模型端点、反思规则改进
     - 反思闭环自动触发：每周一 09:30「反思改进」定时任务聚合 reflection_cases → applyReflectionToMemory → 写入「规则改进」小节
     - 手动入口：POST /api/v1/reflections/apply，前端「反思改进」卡片可手动应用同样的逻辑
+  中期记忆（会话摘要）补充：
+  - 每次会话运行结束用规则算法生成摘要（前 8 个用户目标 + 最近 3 条结论），存 thread_summaries 表，不依赖模型
+  - 历史消息超过 30 条时，compressHistory 把早期内容压缩为【历史摘要】注入对话，保留最近 30 条原文
+  - 导出会话 JSON 时附带摘要
 
