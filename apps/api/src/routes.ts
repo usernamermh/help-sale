@@ -39,7 +39,9 @@ import { listKeywordCategories, listKeywords, getKeyword, upsertKeyword, updateK
 import { buildCategoryTree, createCategory, deleteCategory, renameCategory } from "./repositories/keyword-categories.js";
 import { setStopSignal, clearStopSignal } from "./services/stop-signal.js";
 import { CAPABILITIES, getCapabilityDef } from "./pi/capabilities.js";
-import { createWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled } from "./repositories/agent-capabilities.js";
+import { createWorkflow, getWorkflow, listCapabilityStates, listWorkflows, setCapabilityEnabled, updateWorkflow, deleteWorkflow } from "./repositories/agent-capabilities.js";
+import { listWorkflowRuns } from "./repositories/workflow-runs.js";
+import { runWorkflowEngine } from "./services/workflow-runner.js";
 import { queryConsoleLogs } from "./services/console-logs.js";
 import { executeToolPage } from "./services/tool-pagination.js";
 import { setFunnelStage, getFunnelStats, listSilentCustomers } from "./repositories/funnel.js";
@@ -1262,6 +1264,42 @@ app.get<{ Params: { id: string } }>("/api/v1/agent/threads/:id/summary", async (
 		const ok = deleteKeyword(deps.db, request.tenantId, request.params.id);
 		if (!ok) return reply.code(404).send({ error: "keyword_not_found" });
 		return { removed: true };
+	});
+
+	// ── 工作流:可复用的多步骤流程(固定步骤 + 参数占位,支持微调版本) ──
+	app.get("/api/v1/workflows", async (request) => {
+		return { workflows: listWorkflows(deps.db, request.tenantId) };
+	});
+	app.post("/api/v1/workflows", async (request, reply) => {
+		const body = (request.body ?? {}) as { name?: string; description?: string; steps?: unknown[]; enabled?: boolean };
+		if (!body.name?.trim() || !Array.isArray(body.steps)) return reply.code(400).send({ error: "name 与 steps(步骤数组)必填" });
+		const wf = createWorkflow(deps.db, request.tenantId, { name: body.name, description: body.description, steps: body.steps, enabled: body.enabled });
+		return { workflow: wf };
+	});
+	app.put<{ Params: { id: string } }>("/api/v1/workflows/:id", async (request, reply) => {
+		const body = (request.body ?? {}) as { name?: string; description?: string; steps?: unknown[]; enabled?: boolean };
+		if (!body.name?.trim() || !Array.isArray(body.steps)) return reply.code(400).send({ error: "name 与 steps(步骤数组)必填" });
+		const wf = updateWorkflow(deps.db, request.tenantId, request.params.id, { name: body.name, description: body.description, steps: body.steps, enabled: body.enabled });
+		if (!wf) return reply.code(404).send({ error: "workflow_not_found" });
+		return { workflow: wf };
+	});
+	app.delete<{ Params: { id: string } }>("/api/v1/workflows/:id", async (request, reply) => {
+		const ok = deleteWorkflow(deps.db, request.tenantId, request.params.id);
+		if (!ok) return reply.code(404).send({ error: "workflow_not_found" });
+		return { removed: true };
+	});
+	app.post<{ Params: { id: string }; Body: { params?: Record<string, unknown> } }>("/api/v1/workflows/:id/run", async (request, reply) => {
+		const wf = getWorkflow(deps.db, request.tenantId, request.params.id);
+		if (!wf) return reply.code(404).send({ error: "workflow_not_found" });
+		try {
+			const outcome = await runWorkflowEngine({ db: deps.db, tenantId: request.tenantId, workflow: wf, params: request.body?.params ?? {} });
+			return { run: outcome.run, steps: outcome.steps };
+		} catch (error) {
+			return reply.code(500).send({ error: error instanceof Error ? error.message : String(error) });
+		}
+	});
+	app.get<{ Params: { id: string } }>("/api/v1/workflows/:id/runs", async (request) => {
+		return { runs: listWorkflowRuns(deps.db, request.tenantId, request.params.id) };
 	});
 
 	// ── 反思与自我改进:案例摘要与应用到记忆 ──

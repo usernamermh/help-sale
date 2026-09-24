@@ -1173,6 +1173,7 @@
         <button id="headerJobsBtn" class="hdr-btn" title="查看定时任务" onclick="openJobsModal()"><svg viewBox="0 0 24 24">
           <path d="M12 8v4l3 3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
         </svg>定时任务</button><a href="/console">进入编排端</a></span>
+        <button id="headerWorkflowsBtn" class="hdr-btn" title="工作流管理" onclick="openWorkflowsModal()"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10" /></svg>工作流</button>
   </header>
   <div class="client-layout">
     <aside class="side" id="side">
@@ -1257,6 +1258,23 @@
             <span id="kwPageInfo">第 1/1 页 · 共 0 条</span>
             <button class="pager-btn" onclick="kwPage(1)">下一页</button>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="workflowsModal" class="modal-mask" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head"><span>🔁 工作流</span><button class="modal-close" onclick="closeWorkflowsModal()">关闭</button></div>
+      <div style="display:flex;flex:1;min-height:0;gap:12px">
+        <div style="width:320px;flex-shrink:0;border-right:1px solid var(--line);padding-right:10px;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 0">
+            <span style="font-weight:600;font-size:13px">工作流列表</span>
+            <button class="secondary" style="margin-left:auto" onclick="workflowForm()">＋ 新建</button>
+          </div>
+          <div id="workflowList" style="flex:1;overflow:auto">加载中…</div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div id="workflowDetail" style="flex:1;overflow:auto;font-size:13px">请选择左侧工作流，或新建一个</div>
         </div>
       </div>
     </div>
@@ -2449,6 +2467,80 @@
       if (!confirm("确认删除该关键词?")) return;
       await api("/api/v1/keywords/" + id, { method: "DELETE" });
       loadKwCats(); loadKeywords();
+    }
+    function openWorkflowsModal() { $("workflowsModal").style.display = "flex"; loadWorkflows(); }
+    function closeWorkflowsModal() { $("workflowsModal").style.display = "none"; }
+    let wfState = { list: [] };
+    async function loadWorkflows() {
+      const box = $("workflowList");
+      try {
+        const r = await api("/api/v1/workflows");
+        wfState.list = r.workflows || [];
+        box.innerHTML = wfState.list.length ? "" : '<div class="mini">暂无工作流,点击「＋ 新建」创建</div>';
+        for (const w of wfState.list) {
+          const d = document.createElement("div");
+          d.style.cssText = "padding:8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px";
+          d.innerHTML = '<b>' + escapeHtml(w.name) + '</b> <span class="badge">v' + w.version + ' · ' + (w.enabled ? "启用" : "停用") + '</span>'
+            + '<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'
+            + '<button class="secondary" onclick="workflowRun(\'' + w.id + '\')">运行</button>'
+            + '<button class="secondary" onclick="workflowForm(\'' + w.id + '\')">编辑</button>'
+            + '<button class="secondary" onclick="workflowRuns(\'' + w.id + '\')">记录</button>'
+            + '<button class="secondary" style="color:#dc2626" onclick="workflowDel(\'' + w.id + '\')">删除</button></div>';
+          d.addEventListener("click", (e) => { if (e.target && e.target.tagName !== "BUTTON") workflowDetail(w.id); });
+          box.appendChild(d);
+        }
+      } catch (e) { box.innerHTML = "加载失败:" + escapeHtml(e.message); }
+    }
+    function workflowDetail(id) {
+      const w = wfState.list.find((x) => x.id === id); if (!w) return;
+      $("workflowDetail").innerHTML = '<div class="md"><b>' + escapeHtml(w.name) + '</b><div class="mini">' + escapeHtml(w.description || "") + '</div>'
+        + '<pre style="white-space:pre-wrap;background:#f8fafc;padding:10px;border-radius:8px;font-size:12px">' + escapeHtml(JSON.stringify(w.steps, null, 2)) + '</pre></div>';
+    }
+    function workflowForm(id) {
+      const w = id ? wfState.list.find((x) => x.id === id) : null;
+      const name = prompt("工作流名称:", w ? w.name : "");
+      if (!name) return;
+      const desc = prompt("描述(可空):", w ? w.description || "" : "");
+      const stepsText = prompt("步骤定义(JSON 数组):", w ? JSON.stringify(w.steps, null, 2) : '[{"name":"步骤1","tool":"playbook_check","params":{"salesName":"{{param.sales}}","days":30},"outputVar":"hits"}]');
+      if (!stepsText) return;
+      let steps; try { steps = JSON.parse(stepsText); } catch (e) { alert("步骤 JSON 解析失败:" + e.message); return; }
+      (async () => {
+        try {
+          if (w) await api("/api/v1/workflows/" + w.id, { method: "PUT", body: JSON.stringify({ name, description: desc, steps, enabled: w.enabled }), headers: { "Content-Type": "application/json" } });
+          else await api("/api/v1/workflows", { method: "POST", body: JSON.stringify({ name, description: desc, steps }), headers: { "Content-Type": "application/json" } });
+          loadWorkflows();
+        } catch (e) { alert("保存失败:" + e.message); }
+      })();
+    }
+    function workflowRun(id) {
+      const w = wfState.list.find((x) => x.id === id); if (!w) return;
+      const paramsText = prompt("运行参数(JSON 对象,可空,如 {\"sales\":\"卢峰霞\"}):", "{}");
+      if (paramsText === null) return;
+      let params; try { params = JSON.parse(paramsText || "{}"); } catch (e) { alert("参数 JSON 解析失败:" + e.message); return; }
+      $("workflowDetail").innerHTML = '<div class="mini">运行中…</div>';
+      (async () => {
+        try {
+          const r = await api("/api/v1/workflows/" + id + "/run", { method: "POST", body: JSON.stringify({ params }), headers: { "Content-Type": "application/json" } });
+          const steps = (r.steps || []).map((x) => (x.ok ? "✅ " : "❌ ") + x.name + "(" + x.tool + ")" + (x.summary ? " · " + x.summary : "") + (x.error ? " · " + x.error : "")).join("\n");
+          $("workflowDetail").innerHTML = '<div class="md"><b>运行结果(' + (r.run && r.run.status) + '):</b><pre style="white-space:pre-wrap;background:#f8fafc;padding:10px;border-radius:8px;font-size:12px">' + escapeHtml(steps) + '</pre></div>';
+          loadWorkflows();
+        } catch (e) { $("workflowDetail").innerHTML = "运行失败:" + escapeHtml(e.message); }
+      })();
+    }
+    function workflowRuns(id) {
+      (async () => {
+        try {
+          const r = await api("/api/v1/workflows/" + id + "/runs");
+          const runs = r.runs || [];
+          $("workflowDetail").innerHTML = runs.length ? '<div class="md"><b>执行记录:</b>' + runs.map((x) => '<div style="border:1px solid var(--line);border-radius:8px;padding:6px;margin-top:6px">' + escapeHtml(x.status) + " · " + escapeHtml(x.createdAt) + (x.error ? " · " + escapeHtml(x.error) : "") + "</div>").join("") + "</div>" : '<div class="mini">暂无执行记录</div>';
+        } catch (e) { $("workflowDetail").innerHTML = "加载记录失败:" + escapeHtml(e.message); }
+      })();
+    }
+    function workflowDel(id) {
+      if (!confirm("确认删除该工作流?")) return;
+      (async () => {
+        try { await api("/api/v1/workflows/" + id, { method: "DELETE" }); loadWorkflows(); $("workflowDetail").innerHTML = "请选择左侧工作流"; } catch (e) { alert("删除失败:" + e.message); }
+      })();
     }
     async function loadJobsData() {
       let runs = []; let customs = []; let builtin = {};

@@ -464,3 +464,19 @@ CREATE TABLE IF NOT EXISTS keyword_categories (
 	UNIQUE (tenant_id, parent_id, name)
 );
 CREATE INDEX IF NOT EXISTS idx_kc_parent ON keyword_categories (tenant_id, parent_id);
+
+-- v34:工作流(workflows 定义 + workflow_runs 执行记录)
+CREATE INDEX IF NOT EXISTS idx_wf_tenant ON workflows (tenant_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS workflow_runs (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	workflow_id TEXT NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
+	status TEXT NOT NULL DEFAULT 'running',
+	params_json TEXT,
+	result_json TEXT,
+	error TEXT,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	completed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_wfr_wf ON workflow_runs (tenant_id, workflow_id, created_at DESC);

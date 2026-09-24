@@ -32,6 +32,8 @@ export interface WorkflowRecord {
 	description: string;
 	steps: unknown[];
 	enabled: boolean;
+	version: number;
+	status: string;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -45,13 +47,15 @@ export interface CreateWorkflowInput {
 
 export function createWorkflow(db: DatabaseSync, tenantId: string, input: CreateWorkflowInput): WorkflowRecord {
 	const id = randomUUID();
-	db.prepare("INSERT INTO workflows (id, tenant_id, name, description, steps_json, enabled) VALUES (?,?,?,?,?,?)").run(
+	db.prepare("INSERT INTO workflows (id, tenant_id, name, description, steps_json, enabled, version, status) VALUES (?,?,?,?,?,?,?,?)").run(
 		id,
 		tenantId,
 		input.name,
 		input.description ?? "",
 		JSON.stringify(input.steps ?? []),
 		input.enabled === false ? 0 : 1,
+		1,
+		"enabled",
 	);
 	return getWorkflow(db, tenantId, id)!;
 }
@@ -64,6 +68,20 @@ export function getWorkflow(db: DatabaseSync, tenantId: string, id: string): Wor
 export function listWorkflows(db: DatabaseSync, tenantId: string): WorkflowRecord[] {
 	const rows = db.prepare("SELECT * FROM workflows WHERE tenant_id = ? ORDER BY updated_at DESC").all(tenantId) as Array<Record<string, unknown>>;
 	return rows.map(mapWorkflow);
+}
+
+export function updateWorkflow(db: DatabaseSync, tenantId: string, id: string, input: CreateWorkflowInput): WorkflowRecord | undefined {
+	const existing = getWorkflow(db, tenantId, id);
+	if (!existing) return undefined;
+	db.prepare(
+		"UPDATE workflows SET name = ?, description = ?, steps_json = ?, enabled = ?, version = version + 1, status = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ? AND tenant_id = ?",
+	).run(input.name, input.description ?? existing.description, JSON.stringify(input.steps ?? existing.steps), input.enabled === false ? 0 : 1, input.enabled === false ? "disabled" : "enabled", id, tenantId);
+	return getWorkflow(db, tenantId, id);
+}
+
+export function deleteWorkflow(db: DatabaseSync, tenantId: string, id: string): boolean {
+	const r = db.prepare("DELETE FROM workflows WHERE tenant_id = ? AND id = ?").run(tenantId, id);
+	return r.changes > 0;
 }
 
 function mapWorkflow(row: Record<string, unknown>): WorkflowRecord {
@@ -80,6 +98,8 @@ function mapWorkflow(row: Record<string, unknown>): WorkflowRecord {
 		description: String(row.description ?? ""),
 		steps,
 		enabled: Number(row.enabled) !== 0,
+		version: Number(row.version ?? 1),
+		status: row.status ? String(row.status) : "enabled",
 		createdAt: String(row.created_at),
 		updatedAt: String(row.updated_at),
 	};

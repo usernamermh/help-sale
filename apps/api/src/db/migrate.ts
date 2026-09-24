@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 33;
+export const MIGRATION_VERSION = 34;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -229,6 +229,27 @@ export function migrate(db: DatabaseSync): void {
 		};
 		addCol("agent_events", "thread_id", "TEXT");
 		addCol("agent_plans", "thread_id", "TEXT");
+	}
+	// v34:工作流执行记录(workflow_runs)+ 扩展 workflows 定义列(version/status,兼容既有 enabled 表)
+	if (current.user_version < 34) {
+		const addCol = (table: string, col: string, ddl: string) => {
+			const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+			if (!cols.some((c) => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl};`);
+		};
+		addCol("workflows", "version", "INTEGER NOT NULL DEFAULT 1");
+		addCol("workflows", "status", "TEXT NOT NULL DEFAULT 'enabled'");
+		db.exec(`CREATE TABLE IF NOT EXISTS workflow_runs (
+			id TEXT PRIMARY KEY,
+			tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+			workflow_id TEXT NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
+			status TEXT NOT NULL DEFAULT 'running',
+			params_json TEXT,
+			result_json TEXT,
+			error TEXT,
+			created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+			completed_at TEXT
+		);`);
+		db.exec(`CREATE INDEX IF NOT EXISTS idx_wfr_wf ON workflow_runs (tenant_id, workflow_id, created_at DESC);`);
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }
