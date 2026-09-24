@@ -213,7 +213,7 @@ describe("客户端中断", () => {
 		const streamFn: StreamFn = async (model, context, options) => {
 			await new Promise<void>((resolve) => {
 				const t = setTimeout(resolve, 200);
-				options.signal?.addEventListener("abort", () => { clearTimeout(t); resolve(); }, { once: true });
+				options?.signal?.addEventListener("abort", () => { clearTimeout(t); resolve(); }, { once: true });
 			});
 			return fa.provider.stream(model as never, context, options);
 		};
