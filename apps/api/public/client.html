@@ -2476,11 +2476,11 @@
       try {
         const r = await api("/api/v1/workflows");
         wfState.list = r.workflows || [];
-        box.innerHTML = wfState.list.length ? "" : '<div class="mini">暂无工作流,点击「＋ 新建」创建</div>';
+        box.innerHTML = wfState.list.length ? "" : '<div class="mini">暂无工作流,点击「🔍 自动挖掘」从历史轨迹沉淀</div>';
         for (const w of wfState.list) {
           const d = document.createElement("div");
           d.style.cssText = "padding:8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px";
-          d.innerHTML = '<b>' + escapeHtml(w.name) + '</b> <span class="badge">v' + w.version + ' · ''</span>'
+          d.innerHTML = '<b>' + escapeHtml(w.name) + '</b> <span class="badge">v' + w.version + '</span>'
             + '<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'
             + '<button class="secondary" onclick="workflowForm(\'' + w.id + '\')">编辑</button>'
             + '<button class="secondary" onclick="workflowRuns(\'' + w.id + '\')">记录</button>'
