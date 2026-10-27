@@ -1,0 +1,39 @@
+{
+  "name": "knowledge_ingest",
+  "label": "话术沉淀",
+  "description": "When you find sales scripts, policies or competitor material worth keeping or updating, create a knowledge candidate (nothing is written to the knowledge base directly); a backend check (retrieval + similarity, suggesting add/replace/skip) then approves it into the knowledge base.",
+  "description_language": "en",
+  "category": "话术",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "entries"
+    ],
+    "properties": {
+      "category": {
+        "type": "string",
+        "description": "knowledge category, e.g. script/policy/competitor"
+      },
+      "entries": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "list of knowledge entries"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

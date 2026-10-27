@@ -1,0 +1,29 @@
+{
+  "name": "file_write_new",
+  "label": "写入新文件",
+  "description": "Create a new file at any local path and write text into it; creation only - if the file already exists the call is rejected and existing files are never overwritten or edited.",
+  "description_language": "en",
+  "category": "文件写入",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "filePath",
+      "content"
+    ],
+    "properties": {
+      "filePath": {
+        "type": "string",
+        "description": "any absolute local path, e.g. C:/data/report.txt"
+      },
+      "content": {
+        "type": "string",
+        "description": "text content to write (utf8)"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

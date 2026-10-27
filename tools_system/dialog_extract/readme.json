@@ -1,0 +1,29 @@
+{
+  "name": "dialog_extract",
+  "label": "对话原文抽取",
+  "description": "Extract matching fragments from one conversation faithfully: the model returns only hit indexes and the tool pulls the original wording from the database (never paraphrased); returns conversationId + hitIndexes + messages and the frontend highlights the hit lines in the transcript card.",
+  "description_language": "en",
+  "category": "文本算法",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "conversationId",
+      "standard"
+    ],
+    "properties": {
+      "conversationId": {
+        "type": "string",
+        "description": "conversation id (passed internally by the agent)"
+      },
+      "standard": {
+        "type": "string",
+        "description": "extraction criteria, e.g. sentences that mention price objections, sentences where the customer shows buying intent"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

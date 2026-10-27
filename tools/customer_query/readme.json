@@ -1,0 +1,42 @@
+{
+  "name": "customer_query",
+  "label": "客户查询",
+  "description": "List customers (10 rows per page, pageable), or look up one customer's profile, past analysis and tags by customer key or name.",
+  "description_language": "en",
+  "category": "查询",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "view": {
+        "type": "string",
+        "enum": [
+          "list",
+          "profile",
+          "history",
+          "tags"
+        ],
+        "default": "list",
+        "description": "query kind"
+      },
+      "customerKey": {
+        "type": "string",
+        "description": "customer key or name (for profile/history/tags)"
+      },
+      "limit": {
+        "type": "number",
+        "maximum": 100,
+        "description": "maximum number of rows"
+      },
+      "page": {
+        "type": "number",
+        "default": 1,
+        "description": "page number, at most 10 rows per page; page 1 by default, pass this only when the user explicitly asks for more"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

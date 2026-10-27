@@ -1,0 +1,434 @@
+# ═══════════════════════ 助销 Agent 统一配置 ═══════════════════════
+# 所有运行时配置都在这个文件里;环境变量不参与覆盖(仅 CONFIG_PATH 可指定配置文件路径)
+
+# ───────────────────────── 服务监听 ─────────────────────────
+server:
+  host: 0.0.0.0
+  port: 3101
+
+# ───────────────────────── 数据存储 ─────────────────────────
+data:
+  # 数据存储模式(二者只取其一,不允许双写):
+  #   local - 本地 SQLite 单一主库(默认;MySQL 归档双写关闭)
+  #   mysql - 远程 MySQL 主库(需先完成仓库层 MySQL 迁移,当前版本启动即报错提示)
+  # 配置只从本文件读取,不支持环境变量覆盖(CONFIG_PATH 除外)
+  mode: local
+  # 库标识:本地库与远程库的统一业务标识(mysql 模式对应 mysql.database)
+  databaseId: help_sale
+  # 业务表名映射(默认值与 db/schema.sql 建表名一致;切换 mysql 模式时按远程库实际表名调整,
+  # 仓库层经 src/db/tables.ts 统一引用)
+  tables:
+    tenants: tenants
+    customers: customers
+    conversations: conversations
+    conversation_messages: conversation_messages
+    next_step_tasks: next_step_tasks
+    knowledge_documents: knowledge_documents
+    knowledge_chunks: knowledge_chunks
+    knowledge_candidates: knowledge_candidates
+    agent_events: agent_events
+    customer_tags: customer_tags
+    notification_logs: notification_logs
+    stores: stores
+    sales: sales
+    deals: deals
+    tool_call_cache: tool_call_cache
+    digests: digests
+  # 业务库与会话库所在的目录(相对仓库根)
+  dataDir: backend/data
+  # 记忆文件:系统/用户记忆以 Markdown 落盘,构建 Agent 系统提示词时拼接
+  memoryFile: backend/data/memory.md
+  # 业务 SQLite 库路径(相对仓库根),业务库 = dataDir + 文件名
+  businessDbPath: backend/data/business.db
+  # pi 会话库路径(相对仓库根)
+  sessionDbPath: backend/data/pi-sessions.db
+
+# ───────────────────────── 多租户 ─────────────────────────
+tenant:
+  # 默认租户 ID:请求未带 x-tenant-id 头时使用(MVP 固定租户)
+  defaultTenantId: t_demo
+
+# ───────────────────────── 模型接入 ─────────────────────────
+model:
+  # 模型名:网关聚合模型之一(deepseek-v4-flash-0731 默认;备选 deepseek-v4-pro-0813 / gpt-5.2 / u21-preview 弱模型端点)
+  modelId: your-model-id
+  # OpenAI 兼容端点根地址(以 /v1 结尾,不含 /chat/completions)
+  baseUrl: http://your-llm-gateway/v1
+  # API key:模型网关 key
+  apiKey: your-api-key
+  # 访问模型的 HTTP 代理(内网受限时使用;为空表示直连)
+  proxy: ""
+  # 模型上下文窗口(token 数),向端点声明容量
+  contextWindow: 80000
+  # 单次回复最大输出 token 数
+  maxTokens: 8192
+  # 额外请求参数:会统一放进请求体 body 的 extra_body 字段,
+  # 与标准 OpenAI 参数(model/messages/stream/tools…)不混杂、不平级。
+  # 示例(去掉注释并保持 2 空格缩进即生效):
+  # extraBody:
+  #   temperature: 0.7
+  #   top_p: 0.9
+  #   repetition_penalty: 1.05
+  extraBody: {}
+
+# ───────────────────────── 上下文压缩 ─────────────────────────
+# 长对话记忆:按 token 阈值增量压缩,避免"每轮重压"。
+# 触发阈值 = model.contextWindow × thresholdRatio,与模型后端实际上下文长度强相关,
+# 更换模型时请同步校准 model.contextWindow 与 maxTokens。
+context:
+  compression:
+    # 是否启用长对话上下文压缩
+    enabled: true
+    # 触发压缩的上下文占用比例(0-1):达到 contextWindow 的 70% 时压缩中间对话
+    thresholdRatio: 0.7
+    # 始终保留的开头消息条数(保护目标/系统上下文)
+    keepHead: 2
+    # 始终保留的最近消息条数(保护当前轮上下文)
+    keepTail: 20
+    # 少于该条数不压缩(避免短对话误触发)
+    minMessages: 10
+    # 规则摘要最大字符数(压缩中间对话生成的摘要上限)
+    maxSummaryChars: 1200
+# ───────────────────────── 知识库分块 ─────────────────────────
+chunker:
+  # 每个知识块的目标字符数(过长的段落会按此切分)
+  size: 600
+  # 相邻知识块之间的重叠字符数,保证跨块上下文不丢失
+  overlap: 80
+
+# ───────────────────────── 工具配置 ─────────────────────────
+tools:
+  # web_search 网络搜索(Serper Google 搜索 API)
+  webSearch:
+    # Serper API 密钥(请填写自己的密钥)
+    apiKey: your-serper-api-key
+  # 工具编目:长尾工具(MCP/工作流)数量超过 threshold 时,改为三层按需加载
+  # search_tools(工具名+一行描述) → get_tool_details(单个工具 schema) → call_tool(执行)
+  catalog:
+    # 是否启用编目
+    enabled: true
+    # 长尾工具超过多少个就转编目
+    threshold: 20
+    # search_tools 默认返回条数
+    topK: 8
+    # 单次运行里 get_tool_details 最多调用次数
+    maxInspect: 3
+    # 语义通道相似度下限(0-1):词面(BM25)+语义(BGE 向量)双通道检索,低于该值不进语义通道
+    # 语义通道相似度下限,按语言分别配置(英文同语种余弦更高,阈值要更高)
+    semanticFloorZh: 0.45
+    semanticFloorEn: 0.6
+    # 双语召回:用户问题改写为 {"zh","en"} 两条 query,按工具描述语言分别召回后 RRF 融合
+    bilingual:
+      enabled: true
+      rewriteTimeoutMs: 20000
+      perLanguageTopK: 8
+
+# ───────────────────────── MCP 客户端 ─────────────────────────
+# 接入外部 MCP Server,它们的工具会混进 agent 工具列表(名称带 mcp_{server}_ 前缀)。
+# 每个 server:name=显示名(用于前缀),url=Streamable HTTP 端点,headers=可选请求头。
+# 示例:
+# mcp:
+#   servers:
+#     - name: linear
+#       url: https://mcp.linear.app/mcp
+#       headers: {}
+mcp:
+  servers: []
+
+# ───────────────────────── 知识检索 ─────────────────────────
+knowledge:
+  # 每次发起检索默认返回的命中条数(1-10)
+  searchLimit: 5
+
+# ───────────────────────── 向量检索(Milvus 可选旁路) ─────────────────────────
+# enabled=false 时全部走本地:关键词检索用 SQLite FTS5,相似度用本地 BGE 向量(候选审批)
+# enabled=true 且 provider=milvus 时:知识分块向量写入 Milvus,playbook_check 语义命中走向量检索;
+#   Milvus 不可用会自动降级回本地实现(不阻塞主链路)
+vector:
+  # 是否启用外部向量库
+  enabled: false
+  # 后端类型:milvus(外部向量库) / sqlite(仅本地兜底表,不联网)
+  provider: milvus
+  # Milvus REST 端点(standalone v2.4.15 的 proxy 端口)
+  baseUrl: http://127.0.0.1:19530
+  # 数据库名(v2.4 默认 default)
+  database: default
+  # 集合名;按租户隔离写在 tenantId 标量字段上,不是按租户建集合
+  collection: help_sale_kb
+  # 开启鉴权时填 user:token;未开启留空
+  token: ""
+  # 向量维度,必须与 embedding 模型输出一致(bge-small-zh-v1.5 = 512)
+  dimension: 512
+  # 度量类型:COSINE / L2 / IP
+  metricType: COSINE
+  # 索引类型:IVF_FLAT / FLAT / HNSW
+  indexType: IVF_FLAT
+  # IVF 聚类中心数(小数据量用 128 足够)
+  indexNlist: 128
+  # 语义检索默认返回条数
+  searchTopK: 5
+  # 语义命中相似度阈值(playbook_check 语义通道默认值)
+  scoreThreshold: 0.72
+  # 单次 Milvus 请求超时(毫秒)
+  timeoutMs: 8000
+  # 批量写入的每批向量条数(控制单次请求体大小)
+  embedBatch: 64
+
+milvus_backend:
+  # Milvus v2.4.15 配置覆盖(与镜像内 milvus.yaml 合并,优先级更高)
+  # 目标: standalone 不依赖 MinIO,数据直接写本地挂载目录
+  common:
+    storageType: local
+    security:
+      authorizationEnabled: false
+
+  localStorage:
+    path: /var/lib/milvus/data/
+
+  metastore:
+    type: etcd
+
+  etcd:
+    endpoints: [127.0.0.1:2379]
+    requestTimeout: 10000
+
+  rocksmq:
+    path: /var/lib/milvus/rdb_data/
+    retentionSizeInMB: 4096
+
+  # 数据卷位于网络文件系统(JuiceFS):mmap 语义不可靠,统一关闭
+  queryNode:
+    mmap:
+      vectorField: false
+      vectorIndex: false
+      scalarField: false
+      scalarIndex: false
+      chunkCache: false
+
+  dataNode:
+    segment:
+      syncPeriod: 300
+
+  # 单机小规模:关闭自动索引落盘与磁盘索引,降低 IO 抖动
+  indexCoord:
+    bindIndexNodeMode:
+      enable: false
+
+  log:
+    level: info
+    file:
+      rootPath: /var/lib/milvus/logs
+      maxSize: 64
+      maxBackups: 5
+    stdout: true
+
+milvus_docker_compose:
+  # rmh_milvus — Milvus standalone v2.4.15 + etcd v3.5.14,无 MinIO
+  # 存储: common.storageType=local,向量/索引/段数据直接落挂载目录(见 ./milvus/data)
+  # 网络: host,etcd 仅监听 127.0.0.1:2379,Milvus 通过本机回环访问,不额外暴露端口
+  # 数据根目录: /kanas/nlp/renminhui/rmh_milvus
+  # 启动: docker compose -f /kanas/nlp/renminhui/rmh_milvus/docker-compose.yml up -d
+  name: rmh_milvus
+
+  services:
+    rmh-milvus-etcd:
+      image: quay.io/coreos/etcd:v3.5.14
+      container_name: rmh-milvus-etcd
+      restart: unless-stopped
+      network_mode: host
+      user: "0:0"
+      environment:
+        ETCD_AUTO_COMPACTION_MODE: revision
+        ETCD_AUTO_COMPACTION_RETENTION: "1000"
+        ETCD_QUOTA_BACKEND_BYTES: "4294967296"
+        ETCD_BACKEND_BATCH_LIMIT: "5000"
+        ETCD_BACKEND_BATCH_INTERVAL: 50ms
+        ETCD_HEARTBEAT_INTERVAL: "500"
+        ETCD_ELECTION_TIMEOUT: "2500"
+      volumes:
+        - ./etcd:/etcd
+      command:
+        - /usr/local/bin/etcd
+        - --name=rmh-milvus-etcd
+        - --data-dir=/etcd
+        - --initial-cluster-state=new
+        - --initial-cluster=rmh-milvus-etcd=http://127.0.0.1:2380
+        - --listen-client-urls=http://127.0.0.1:2379
+        - --advertise-client-urls=http://127.0.0.1:2379
+        - --listen-peer-urls=http://127.0.0.1:2380
+        - --initial-advertise-peer-urls=http://127.0.0.1:2380
+        - --max-request-bytes=10485760
+      healthcheck:
+        test: ["CMD", "/usr/local/bin/etcdctl", "--endpoints=http://127.0.0.1:2379", "endpoint", "health"]
+        interval: 30s
+        timeout: 20s
+        retries: 5
+        start_period: 20s
+
+    rmh-milvus:
+      image: milvusdb/milvus:v2.4.15
+      container_name: rmh-milvus
+      restart: unless-stopped
+      network_mode: host
+      depends_on:
+        rmh-milvus-etcd:
+          condition: service_healthy
+      command: ["milvus", "run", "standalone"]
+      environment:
+        ETCD_ENDPOINTS: 127.0.0.1:2379
+        COMMON_STORAGETYPE: local
+        LOCALSTORAGE_PATH: /var/lib/milvus/data/
+        ROCKSMQ_PATH: /var/lib/milvus/rdb_data/
+      ulimits:
+        nofile:
+          soft: 65536
+          hard: 65536
+      volumes:
+        - ./milvus/data:/var/lib/milvus/data
+        - ./milvus/rdb_data:/var/lib/milvus/rdb_data
+        - ./milvus/lock:/var/lib/milvus/lock
+        - ./milvus/logs:/var/lib/milvus/logs
+        - ./user.yaml:/milvus/configs/user.yaml:ro
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://127.0.0.1:9091/healthz"]
+        interval: 30s
+        timeout: 20s
+        retries: 10
+        start_period: 90s
+
+# ───────────────────────── 工作流挖掘 ─────────────────────────
+# 从 agent_events 的历史工具调用轨迹里挖掘高频串联,产出待审批草稿
+workflows:
+  mine:
+    # 挖掘回溯天数(1-365)
+    days: 14
+    # 子序列最短步数(2-8)
+    minWindow: 2
+    # 子序列最长步数(2-8,且 >= minWindow)
+    maxWindow: 4
+    # 同一串联至少出现在多少次独立运行中(每个运行内同序列只计一次)
+    minCount: 2
+    # 最多返回多少条候选串联
+    topChains: 8
+    # 对前 N 条候选调用模型提炼成草稿(每条一次模型调用,直接决定接口耗时)
+    refineTop: 3
+    # 是否按工具序列签名跳过已存在的工作流(含已驳回的,避免反复产出同一条)
+    dedupe: true
+
+
+# ───────────────────────── 本地日志 ─────────────────────────
+# 所有日志统一写入 logging.dir:
+#   - 模型输入输出日志(runtime 开启时):<dir>/model-calls.log
+#   - 运行日志(请求/错误,console 的"运行"页签):<dir>/runtime.log
+# 环境变量一律不参与配置覆盖(CONFIG_PATH 除外)。
+logging:
+  # 是否启用模型输入输出本地日志(请求体/响应/推理过程写入 NDJSON)
+  enabled: true
+  # 日志目录(相对仓库根)
+  dir: log
+  # 运行日志级别:debug 全部写入;info 写 info/error;error 只写错误日志
+  level: info
+  # 运行日志文件名(位于 dir 下)
+  runtimeFile: runtime.log
+  # 单个日志文件轮转上限(字节),超过后保留最近一半
+  maxBytes: 8388608
+
+# ───────────────────────── 子代理/多代理 ─────────────────────────
+subagents:
+  # 子代理并行执行并发上限(资源隔离,避免抢占)
+  maxConcurrency: 2
+  # 看板消费轮询间隔(毫秒)
+  pollIntervalMs: 2000
+  # 子代理任务超时上限(毫秒)
+  timeoutMs: 600000
+  # 子代理默认工具白名单(未指定时使用)
+  defaultTools:
+    - knowledge_search
+    - customer_query
+
+# ───────────────────────── 业务默认值 ─────────────────────────
+# 所有运行默认值统一在此配置,代码内不再写死默认参数
+defaults:
+  # 经营洞察默认窗口(天)
+  insightsDays: 7
+  # 规则改进聚合默认窗口(天)
+  improvementsDays: 30
+  # 会话列表默认条数
+  conversationsLimit: 30
+  # 成交列表默认条数
+  dealsLimit: 100
+  # 门店概览默认时间窗口(天)
+  storeOverviewDays: 30
+  # 客户清单默认条数
+  customersLimit: 50
+  # 知识沉淀候选默认条数
+  knowledgeCandidatesLimit: 50
+  # Agent 线程列表默认条数
+  agentThreadsLimit: 30
+  # 会话原文默认读取条数上限
+  transcriptLimit: 50
+  # Agent 列表类工具默认条数(会话/任务/候选)
+  agentListLimit: 20
+  # 通知到期提醒每次扫描的最大记录数
+  notificationScanLimit: 50
+  # 到期提醒队列单次取出条数上限
+  remindersTakeLimit: 100
+# ───────────────────────── 中间件:MySQL 归档仓库 ─────────────────────────
+mysql:
+  # data.mode=mysql 时用作业务主库;local 模式不使用
+  enabled: true
+  # 建库前是否重建全部业务表(mysql 模式初始化/表结构升级用;true 会清空远程业务表,MYSQL_SCHEMA_REBUILD 可覆盖)
+  schemaRebuild: false
+  # 连接超时(毫秒;MYSQL_CONNECT_TIMEOUT 可覆盖)
+  connectTimeout: 8000
+  # 可选:远程 MySQL 连接参数(部署环境填写)
+  host: your-mysql-host
+  port: 3306
+  user: root
+  password: change-me
+  database: help_sale
+
+# ───────────────────────── 中间件:Redis 到期提醒队列 ─────────────────────────
+redis:
+  # 是否启用跟进任务到期提醒(关闭则退化为内存队列)
+  enabled: true
+  # 可选:远程 Redis 连接参数(部署环境填写)
+  host: your-mysql-host
+  port: 6379
+  password: change-me
+
+
+# ───────────────────────── 通知推送 ─────────────────────────
+notification:
+  # 到期提醒推送开关
+  enabled: true
+  # Webhook 地址:到期任务会 POST JSON 到该地址;留空则只记录日志不推送
+  webhookUrl: ""
+
+
+# ───────────────────────── 自动任务(定时主动工作) ─────────────────────────
+automation:
+  # 总开关:false 时定时调度器不启动(手动触发接口仍可用)
+  enabled: true
+  # 每日晨报自动生成时间(HH:MM,服务器本地时间)
+  morningDigestTime: "08:00"
+  # 周报汇总:星期几(1=周一 … 7=周日)与生成时间
+  weeklyReportWeekday: 1
+  weeklyReportTime: "09:00"
+  # 沉默客户判定天数与每日自动建唤醒任务开关/时间
+  silentCustomerDays: 7
+  silentWakeupEnabled: true
+  wakeupTaskTime: "08:30"
+# ───────────────────────── 公司与团队 ─────────────────────────
+company:
+  # 公司名称:写入系统提示词与客户档案上下文
+  name: 你的公司
+  # 团队名称:写入系统提示词
+  team: 销售团队
+
+userkey: test
+
+client:
+  # 前端注入配置(页面脚本通过 window.APP_CONFIG 读取)
+  # 工作流自动挖掘接口超时(毫秒)
+  workflowMineTimeoutMs: 120000

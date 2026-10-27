@@ -1,0 +1,31 @@
+{
+  "name": "insight_query",
+  "label": "经营洞察",
+  "description": "Generate today's morning briefing, or view business trends over the last N days (analysis volume, top intents, task completion rate, vehicle model preference).",
+  "description_language": "en",
+  "category": "经营",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "type": {
+        "type": "string",
+        "enum": [
+          "morning",
+          "trend"
+        ],
+        "default": "morning",
+        "description": "insight kind"
+      },
+      "days": {
+        "type": "number",
+        "maximum": 90,
+        "description": "trend window in days (for trend)"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

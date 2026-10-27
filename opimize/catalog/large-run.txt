@@ -1,0 +1,29 @@
+# 干净基准:100 英文 MCP + 100 中文工作流(只测双语召回)
+
+语料: 200 个工具(中文池 zh 100 / 英文池 en 100);向量索引构建 5312ms
+用例: 200 条(MCP 组 100 + 工作流组 100),每条都已配 zh/en 两侧 query
+参数: topK=8 floorZh=0.45 floorEn=0.6 perLanguageTopK=8(均来自配置)
+
+## 1. 双语召回命中率(排名只算自己那一段)
+| 组 | 用例数 | 该段平均条数 | Top1 | Top3 | Top8 | MRR | 另一段平均条数 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| MCP(英文池) | 100 | 8.0 | 100.0% | 100.0% | 100.0% | 1.000 | 5.19 |
+| 工作流(中文池) | 100 | 8.0 | 81.0% | 91.0% | 100.0% | 0.878 | 7.69 |
+| **合计** | 200 | 8.0 | 90.5% | 95.5% | 100.0% | 0.939 | 6.44 |
+
+## 2. 正确答案落在自己那一段的第几名
+| 组 | 第 1 名 | 第 2-3 名 | 第 4-8 名 | 没进该段 |
+| --- | --- | --- | --- | --- |
+| MCP(英文池) | 100/100 | 0/100 | 0/100 | 0/100 |
+| 工作流(中文池) | 81/100 | 10/100 | 9/100 | 0/100 |
+
+## 3. 未进前三名的用例明细(最多 10 条)
+- wf-016 [workflow] zh=检查一下会话合不合规 / en=run the conversation quality check workflow → 期望 workflow_conversation_quality_check;实际该段前 3 名=workflow_conversation_extract, workflow_conversation_follow-up, workflow_conversation_review(正确项在第 5 名)
+- wf-026 [workflow] zh=检查一下话术合不合规 / en=run the sales script quality check workflow → 期望 workflow_sales_script_quality_check;实际该段前 3 名=workflow_sales_script_extract, workflow_sales_script_review, workflow_sales_script_follow-up(正确项在第 4 名)
+- wf-036 [workflow] zh=检查一下待办合不合规 / en=run the task quality check workflow → 期望 workflow_task_quality_check;实际该段前 3 名=workflow_task_review, workflow_task_follow-up, workflow_task_extract(正确项在第 4 名)
+- wf-046 [workflow] zh=检查一下知识库合不合规 / en=run the knowledge base quality check workflow → 期望 workflow_knowledge_base_quality_check;实际该段前 3 名=workflow_knowledge_base_extract, workflow_knowledge_base_follow-up, workflow_knowledge_base_review(正确项在第 7 名)
+- wf-056 [workflow] zh=检查一下成交合不合规 / en=run the deal quality check workflow → 期望 workflow_deal_quality_check;实际该段前 3 名=workflow_deal_follow-up, workflow_deal_extract, workflow_deal_review(正确项在第 4 名)
+- wf-066 [workflow] zh=检查一下门店合不合规 / en=run the store quality check workflow → 期望 workflow_store_quality_check;实际该段前 3 名=workflow_store_extract, workflow_store_review, workflow_store_scoring(正确项在第 4 名)
+- wf-076 [workflow] zh=检查一下竞品合不合规 / en=run the competitor quality check workflow → 期望 workflow_competitor_quality_check;实际该段前 3 名=workflow_competitor_extract, workflow_competitor_follow-up, workflow_competitor_review(正确项在第 6 名)
+- wf-086 [workflow] zh=检查一下报价合不合规 / en=run the quote quality check workflow → 期望 workflow_quote_quality_check;实际该段前 3 名=workflow_quote_extract, workflow_quote_follow-up, workflow_quote_review(正确项在第 4 名)
+- wf-096 [workflow] zh=检查一下周报合不合规 / en=run the weekly report quality check workflow → 期望 workflow_weekly_report_quality_check;实际该段前 3 名=workflow_weekly_report_extract, workflow_weekly_report_follow-up, workflow_weekly_report_review(正确项在第 6 名)

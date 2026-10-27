@@ -1,0 +1,32 @@
+{
+  "name": "keyword_extract_strict",
+  "label": "候选标签匹配",
+  "description": "Match a given list of candidate tags against a text (substring matching) and return the ones that hit, for tagging and intent detection.",
+  "description_language": "en",
+  "category": "文本算法",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "text",
+      "candidates"
+    ],
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "text to match against"
+      },
+      "candidates": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "candidate tag list"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

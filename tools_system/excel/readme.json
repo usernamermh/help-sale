@@ -1,0 +1,33 @@
+{
+  "name": "excel",
+  "label": "读取 Excel/CSV",
+  "description": "Read .xlsx/.xls/.csv files inside the repository and turn a worksheet into table text (repository paths only); at most 10 rows per page and page 1 by default - never page through everything automatically; when there are more pages, just state the total count, the rest is reachable through the frontend pager, and pass page only when the user explicitly asks for more.",
+  "description_language": "en",
+  "category": "文件读取",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "filePath"
+    ],
+    "properties": {
+      "filePath": {
+        "type": "string",
+        "description": "path inside the repository, e.g. data/quote.xlsx"
+      },
+      "sheet": {
+        "type": "string",
+        "description": "worksheet name or index (0-based), defaults to the first one"
+      },
+      "page": {
+        "type": "number",
+        "default": 1,
+        "description": "page number, at most 10 rows per page; page 1 by default, pass this only when the user explicitly asks for more"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

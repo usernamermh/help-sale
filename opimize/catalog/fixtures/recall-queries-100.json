@@ -1,0 +1,1103 @@
+[
+  {
+    "id": "zh-01",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_001",
+      "workflow_zh_002",
+      "workflow_zh_005"
+    ],
+    "zh": "把上周积累的客户素材整体过一遍:先给重点客户各出一份画像速览,再按活跃度和成交情况分个层,最后给排在末尾的那批安排回访时间",
+    "en": "review last week's account materials: brief each key account, tier them by activity and deal size, then book call-backs for the bottom group"
+  },
+  {
+    "id": "zh-02",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_003",
+      "workflow_zh_040",
+      "workflow_zh_005"
+    ],
+    "zh": "最近明显感觉有些客户不吭声了:先把长时间没有互动的圈出来,查一下他们当时是因为什么走掉的,再从里面挑出还值得救的排上联系动作",
+    "en": "find accounts that went quiet, look into why they left, and get the ones worth saving back on the contact schedule"
+  },
+  {
+    "id": "zh-03",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_021",
+      "workflow_zh_023",
+      "workflow_zh_024"
+    ],
+    "zh": "这周的门店经营盘点要交:出一份本周汇总、把各店目标完成进度对比一下、销售的成交和跟进也拉个名次出来",
+    "en": "prepare the weekly store review: a roll-up, each store's progress to target, and a rep ranking by deals and touches"
+  },
+  {
+    "id": "zh-04",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_039",
+      "workflow_zh_010",
+      "workflow_zh_011"
+    ],
+    "zh": "最近客户提价格的越来越多:先把这段时间的异议归归类,再看标准说法有没有覆盖到,没覆盖的那些给出改进方向",
+    "en": "group recent objections, check whether the standard replies cover them, and suggest how the wording should change where they don't"
+  },
+  {
+    "id": "zh-05",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_006",
+      "workflow_zh_013",
+      "workflow_zh_012"
+    ],
+    "zh": "这周的通话质量要盘一下:按标准把会话原文过一遍、统计每个人的话术使用情况、命中率最低的那几位安排一轮集中辅导",
+    "en": "review this week's call quality against the checklist, measure wording usage per rep, and coach the weakest few"
+  },
+  {
+    "id": "zh-06",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_027",
+      "workflow_zh_026",
+      "workflow_zh_028"
+    ],
+    "zh": "对手最近动作挺多:把他们新的促销和价格变化整理一下、和我们自己的政策逐条比一比、再把他们的主打说法拆开给一份应答口径",
+    "en": "collect the rivals' recent promotions and price moves, compare them with our policy line by line, and break down their pitch into replies for our team"
+  },
+  {
+    "id": "zh-07",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_029",
+      "workflow_zh_031",
+      "workflow_zh_030"
+    ],
+    "zh": "报价这块得防风险:抽一批单子看看有没有越权、把明显低于底线的挑出来、再和现在执行的政策核对一遍",
+    "en": "audit quotations for approvals beyond authority, flag prices clearly below the floor, and check them against the policy in force"
+  },
+  {
+    "id": "zh-08",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_014",
+      "workflow_zh_015",
+      "workflow_zh_017"
+    ],
+    "zh": "知识库该更新了:看看客户常问却查不到的内容有哪些、把重复的条目挑出来合并、再把售后高频问题整理成问答草稿",
+    "en": "update the internal wiki: find the questions asked but missing, merge duplicated entries, and draft Q and A for frequent after-sales asks"
+  },
+  {
+    "id": "zh-09",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_013",
+      "workflow_zh_032",
+      "workflow_zh_033"
+    ],
+    "zh": "新人这周要带起来:先看他话术使用的薄弱点、据此排一份两周辅导安排、再出几道对练题给他练",
+    "en": "onboard the new hire: find where their wording is weakest, lay out a two-week coaching plan, and write practice questions"
+  },
+  {
+    "id": "zh-10",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_034",
+      "workflow_zh_035",
+      "workflow_zh_021"
+    ],
+    "zh": "库存和交付要盯紧:在售车型的库存对一遍、订单排期也核一遍、可能延期的单独列出来放进本周的汇总里",
+    "en": "watch stock and delivery: reconcile what is on hand, check the order schedule, and list likely slips into this week's roll-up"
+  },
+  {
+    "id": "zh-11",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_037",
+      "workflow_zh_038",
+      "workflow_zh_020"
+    ],
+    "zh": "线索分配得调:按门店产能和销售活跃度重新分一遍、看看最近活动的到店转化效果、再生成一份本周客户走访安排",
+    "en": "rebalance leads across stores by capacity and activity, measure the last campaign's walk-in conversion, and draft this week's visit itinerary"
+  },
+  {
+    "id": "zh-12",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_025",
+      "workflow_zh_023",
+      "workflow_zh_002"
+    ],
+    "zh": "月度经营复盘要写:各阶段客户流转和流失算一下、门店目标完成情况比一比、客户分层的变化也看一下",
+    "en": "draft the monthly review: stage-by-stage flow and drop-off, each store against target, and how the account tiers shifted"
+  },
+  {
+    "id": "zh-13",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_002",
+      "workflow_zh_005",
+      "workflow_zh_004"
+    ],
+    "zh": "这个月要抓复购:按成交金额把客户分个层、给两三个月没联系的排上回访、快过生日的先准备一段问候",
+    "en": "push repeat business: split accounts by deal size, line up call-backs for those untouched for months, and prepare birthday greetings"
+  },
+  {
+    "id": "zh-14",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_013",
+      "workflow_zh_011",
+      "workflow_zh_012"
+    ],
+    "zh": "话术质量专项:整体使用情况统计一下、长期没人用的那些给改进意见、再据此出一份辅导安排",
+    "en": "a wording quality push: count overall usage, suggest improvements for unused wording, and turn that into a coaching plan"
+  },
+  {
+    "id": "zh-15",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_007",
+      "workflow_zh_039",
+      "workflow_zh_040"
+    ],
+    "zh": "客户满意度这块:挑几段近期对话压成要点、把这一阵的异议集中汇总、再做一次客户流失原因归纳",
+    "en": "look at satisfaction: condense recent conversations, pool the objections raised lately, and summarise why accounts were lost"
+  },
+  {
+    "id": "zh-16",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_036",
+      "workflow_zh_020",
+      "workflow_zh_019"
+    ],
+    "zh": "门店管理这周排期:按客流预测把下周班次排出来、客户走访也排上、顺便把过期和快到期的跟进任务提醒一下",
+    "en": "plan the store week: build next week's shifts from the traffic forecast, fit in customer visits, and remind about overdue and due-soon follow-ups"
+  },
+  {
+    "id": "zh-17",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_016",
+      "workflow_zh_030",
+      "workflow_zh_029"
+    ],
+    "zh": "政策变动要同步:新价格政策跟知识库里的旧版本比一遍、把需要更新的条目列出来、涉及报价的部分再校验一次",
+    "en": "roll out the policy change: diff the new pricing rules against the old entry, list what needs updating, and re-check anything affecting quotes"
+  },
+  {
+    "id": "zh-18",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_027",
+      "workflow_zh_028",
+      "workflow_zh_026",
+      "workflow_zh_022"
+    ],
+    "zh": "竞品专项复盘:他们最近动作出一份摘要、主打说法拆一份、和我们政策逐条比一比,最后合进月度复盘结论里",
+    "en": "competitor deep dive: a digest of their recent moves, a breakdown of their pitch, a comparison with our policy, all folded into the monthly review"
+  },
+  {
+    "id": "zh-19",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_001",
+      "workflow_zh_002",
+      "workflow_zh_003"
+    ],
+    "zh": "客户资产整个盘一遍:画像、分层、风险预警三件事一起做,给我一份总览",
+    "en": "take stock of the whole customer base: briefs, tiering and at-risk alerts as one overview"
+  },
+  {
+    "id": "zh-20",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_008",
+      "workflow_zh_006",
+      "workflow_zh_013"
+    ],
+    "zh": "周会材料准备:最近对话按诉求类型归一下类看占比、质检结果拉出来、话术使用情况也统计一下",
+    "en": "prepare the weekly pack: conversations by intent, the quality-check findings, and wording usage stats"
+  },
+  {
+    "id": "zh-21",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_017",
+      "workflow_zh_014",
+      "workflow_zh_009"
+    ],
+    "zh": "售后压力有点大:高频问题先整理成问答草稿、查一下哪些内容库里缺、再把对话里的敏感承诺排查一遍",
+    "en": "after-sales is overloaded: draft Q and A for frequent asks, find which ones have no entry, and sweep conversations for risky promises"
+  },
+  {
+    "id": "zh-22",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_029",
+      "workflow_zh_030",
+      "workflow_zh_031"
+    ],
+    "zh": "报价与折扣专项审计:审批权限核对、政策符合性校验、异常低价排查三件事一起做",
+    "en": "audit quotes and discounts together: approval authority, policy compliance, and abnormally low prices"
+  },
+  {
+    "id": "zh-23",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_033",
+      "workflow_zh_032",
+      "workflow_zh_013"
+    ],
+    "zh": "培训体系补一补:出几道对练题、给新人排辅导计划、把话术使用的短板统计出来",
+    "en": "beef up training: practice questions, a coaching plan for new hires, and stats on where wording usage falls short"
+  },
+  {
+    "id": "zh-24",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_002",
+      "workflow_zh_020",
+      "workflow_zh_005"
+    ],
+    "zh": "客户运营做成闭环:先分层、按层次排走访、走访完再排回访",
+    "en": "close the loop on accounts: tier them, schedule visits by tier, then line up call-backs afterwards"
+  },
+  {
+    "id": "zh-25",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_023",
+      "workflow_zh_019",
+      "workflow_zh_025"
+    ],
+    "zh": "经营预警一揽子:门店目标缺口提示、逾期任务提醒、各阶段转化也看一下",
+    "en": "one pass on business alerts: stores behind target, overdue follow-ups, and how each stage converts"
+  },
+  {
+    "id": "zh-26",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_015",
+      "workflow_zh_017",
+      "workflow_zh_016"
+    ],
+    "zh": "知识运营三件事:重复条目合并、售后问答草稿、政策变动的同步清单",
+    "en": "three things for the wiki: merge duplicates, draft after-sales Q and A, and list what the policy change affects"
+  },
+  {
+    "id": "zh-27",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_037",
+      "workflow_zh_038",
+      "workflow_zh_025"
+    ],
+    "zh": "从线索到成交整条链复盘:线索分配的效果、活动的到店转化、各阶段流转效率",
+    "en": "review the path from lead to close: how allocation performed, campaign walk-in conversion, and stage-to-stage efficiency"
+  },
+  {
+    "id": "zh-28",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_009",
+      "workflow_zh_008",
+      "workflow_zh_007"
+    ],
+    "zh": "对话质量专项:敏感表述排查、诉求归类统计、再把关键几段压成要点",
+    "en": "a push on conversation quality: scan for risky wording, tally intents, and condense the key exchanges"
+  },
+  {
+    "id": "zh-29",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_004",
+      "workflow_zh_005",
+      "workflow_zh_020"
+    ],
+    "zh": "客户关怀活动安排:近期过生日的准备问候、老客户排回访、重点客户安排上门走访",
+    "en": "plan a care round: birthday greetings, call-backs for long-standing accounts, and on-site visits for key ones"
+  },
+  {
+    "id": "zh-30",
+    "group": "zh",
+    "expect": [
+      "workflow_zh_022",
+      "workflow_zh_021",
+      "workflow_zh_024"
+    ],
+    "zh": "月度全套材料:月度经营复盘、本周汇总、销售名次一起给我",
+    "en": "the full monthly pack: the monthly review, this week's roll-up, and the rep standings"
+  },
+  {
+    "id": "en-01",
+    "group": "en",
+    "expect": [
+      "mcp_crm_list_customers",
+      "mcp_crm_get_customer_profile",
+      "mcp_crm_list_activities"
+    ],
+    "zh": "把本季度新进的客户拉出来,看看每个人的负责销售和当前阶段,再把最近的活动记录一起调出来",
+    "en": "pull the accounts added this quarter, show the owner and stage for each, and bring up their latest activity history"
+  },
+  {
+    "id": "en-02",
+    "group": "en",
+    "expect": [
+      "mcp_crm_list_activities",
+      "mcp_crm_log_activity",
+      "mcp_crm_add_tag"
+    ],
+    "zh": "挑几家重点客户看看最近的沟通记录,把重要的那几次补一条备注,再给他们打个重点客户的标记",
+    "en": "go through the recent history of a few key accounts, add notes for the important exchanges, and flag them so they stand out"
+  },
+  {
+    "id": "en-03",
+    "group": "en",
+    "expect": [
+      "mcp_crm_search_customers_by_name",
+      "mcp_crm_get_customer_profile",
+      "mcp_crm_list_opportunities"
+    ],
+    "zh": "按名字找几个客户,核对他们的公司和对接人,再看看他们手上还有哪些在谈的项目",
+    "en": "look up a few accounts by name, check company and contact details, and see which deals are still open"
+  },
+  {
+    "id": "en-04",
+    "group": "en",
+    "expect": [
+      "mcp_crm_list_opportunities",
+      "mcp_crm_update_opportunity_amount",
+      "mcp_analytics_get_funnel"
+    ],
+    "zh": "把本季在谈的项目金额过一遍,金额填错的直接改掉,再算一下各阶段转化",
+    "en": "review the amounts on this quarter's open deals, correct the ones entered wrong, and work out stage conversion"
+  },
+  {
+    "id": "en-05",
+    "group": "en",
+    "expect": [
+      "mcp_support_list_tickets",
+      "mcp_support_get_ticket",
+      "mcp_support_update_ticket_status"
+    ],
+    "zh": "客户抱怨挺多:把还没关掉的工单列出来,挑几条看看详情和处理时限,已经处理完的直接改成已解决",
+    "en": "complaints are piling up: list open cases, check a few in detail with their deadlines, and close the finished ones"
+  },
+  {
+    "id": "en-06",
+    "group": "en",
+    "expect": [
+      "mcp_support_search_tickets_by_keyword",
+      "mcp_support_get_ticket",
+      "mcp_kb_search_knowledge"
+    ],
+    "zh": "想搞清楚大家到底在问什么:按关键词搜工单、挑命中最高的看详情、再去内部知识库找有没有对应的说明",
+    "en": "work out what people keep asking: search cases by keyword, open the top matches, and check the internal wiki for an explanation"
+  },
+  {
+    "id": "en-07",
+    "group": "en",
+    "expect": [
+      "mcp_billing_list_invoices",
+      "mcp_billing_list_payments",
+      "mcp_billing_list_refunds"
+    ],
+    "zh": "财务对账:应收的单子列出来、回款记录核对一下、退款申请也一起拉一遍",
+    "en": "reconcile the books: list what customers owe, check incoming amounts, and bring up money-back requests"
+  },
+  {
+    "id": "en-08",
+    "group": "en",
+    "expect": [
+      "mcp_billing_get_invoice",
+      "mcp_billing_list_payments",
+      "mcp_email_send_email"
+    ],
+    "zh": "有几张单子客户说算错了:把明细和税点调出来、核对一下付款记录、再写封邮件把差异解释清楚",
+    "en": "customers say a few bills are wrong: open the itemised detail and tax, check the payment record, and mail an explanation of the difference"
+  },
+  {
+    "id": "en-09",
+    "group": "en",
+    "expect": [
+      "mcp_calendar_list_events",
+      "mcp_calendar_find_free_slots",
+      "mcp_calendar_create_event"
+    ],
+    "zh": "下周要见几位客户:先看看日历上已经有什么安排、找几个大家都有空的时段、把见面先约上",
+    "en": "there are customer meetings next week: check what is already booked, find windows that suit everyone, and put them in"
+  },
+  {
+    "id": "en-10",
+    "group": "en",
+    "expect": [
+      "mcp_calendar_update_event",
+      "mcp_calendar_find_free_slots",
+      "mcp_email_send_email"
+    ],
+    "zh": "原定的会要挪时间:找个不冲突的时段、把安排改掉、再给参会人发封说明邮件",
+    "en": "the planned meeting needs moving: find a clash-free slot, change the booking, and let attendees know by mail"
+  },
+  {
+    "id": "en-11",
+    "group": "en",
+    "expect": [
+      "mcp_email_search_mail",
+      "mcp_email_list_threads",
+      "mcp_email_send_email"
+    ],
+    "zh": "邮箱里太乱了:按关键词把和价格有关的往来找出来、看看最近几封讲了什么、再统一回一封说明",
+    "en": "the mailbox is a mess: find the threads about pricing by keyword, read the latest messages, and send one reply covering everyone"
+  },
+  {
+    "id": "en-12",
+    "group": "en",
+    "expect": [
+      "mcp_sheet_create_sheet",
+      "mcp_sheet_append_rows",
+      "mcp_sheet_export_rows"
+    ],
+    "zh": "给团队出一份数据表:先建一个带表头的表格、把整理好的数据写进去、再导出成文件发出去",
+    "en": "make a data table for the team: create it with headers, write the prepared rows in, and export it as a file to share"
+  },
+  {
+    "id": "en-13",
+    "group": "en",
+    "expect": [
+      "mcp_sheet_read_range",
+      "mcp_sheet_append_rows",
+      "mcp_sheet_export_rows"
+    ],
+    "zh": "表格数据要接上:先读一下原来那块数据、把新增的接在后面、再导出新版本",
+    "en": "continue the existing table: read the current range, append the new rows, and export a fresh copy"
+  },
+  {
+    "id": "en-14",
+    "group": "en",
+    "expect": [
+      "mcp_analytics_query_metrics",
+      "mcp_analytics_list_dashboards",
+      "mcp_analytics_get_funnel"
+    ],
+    "zh": "看经营数据:把上个月的指标查出来、看看有哪些现成看板可用、再拉一次漏斗数据",
+    "en": "look at business numbers: query last month's metrics, see which dashboards exist, and pull the funnel numbers"
+  },
+  {
+    "id": "en-15",
+    "group": "en",
+    "expect": [
+      "mcp_warehouse_list_products",
+      "mcp_warehouse_get_inventory",
+      "mcp_warehouse_list_shipments"
+    ],
+    "zh": "仓库要盘一遍:商品清单列出来、看每个仓库的在库量、再把在途的到货时间也列上",
+    "en": "take stock of the warehouse: list products, show quantities per location, and add estimated arrival for goods in transit"
+  },
+  {
+    "id": "en-16",
+    "group": "en",
+    "expect": [
+      "mcp_warehouse_list_shipments",
+      "mcp_task_create_task",
+      "mcp_notify_send_webhook"
+    ],
+    "zh": "这批货要催:查一下发货状态和预计到达、把可能延误的挑出来、再给相关同事建个跟进任务",
+    "en": "chase this shipment: check dispatch status and expected arrival, flag likely delays, and create a follow-up task for the colleague"
+  },
+  {
+    "id": "en-17",
+    "group": "en",
+    "expect": [
+      "mcp_task_list_tasks",
+      "mcp_task_complete_task",
+      "mcp_notify_send_webhook"
+    ],
+    "zh": "帮我盯一下手上的事:列出还没做完的按到期时间排一下、做完的那些直接关掉、再把结果同步到群里",
+    "en": "watch my work queue: list what is still open by due date, close the finished ones, and post the outcome to the channel"
+  },
+  {
+    "id": "en-18",
+    "group": "en",
+    "expect": [
+      "mcp_kb_list_categories",
+      "mcp_kb_search_knowledge",
+      "mcp_kb_get_article"
+    ],
+    "zh": "知识库整一整:先按类别看看文章数量、搜几个关键词看命中情况、再把重要的那几篇正文读出来",
+    "en": "tidy the wiki: list categories and counts, search a few keywords to see hits, and read the body of the important pages"
+  },
+  {
+    "id": "en-19",
+    "group": "en",
+    "expect": [
+      "mcp_hr_list_employees",
+      "mcp_hr_get_team_roster",
+      "mcp_task_create_task"
+    ],
+    "zh": "人员信息核对:列出各部门的人和负责人、看看团队排班可用性、再给负责人建一条确认任务",
+    "en": "check people records: list staff by department and manager, see team shift availability, and create a confirmation task for the manager"
+  },
+  {
+    "id": "en-20",
+    "group": "en",
+    "expect": [
+      "mcp_doc_read_document",
+      "mcp_doc_export_pdf",
+      "mcp_notify_send_webhook"
+    ],
+    "zh": "文档处理:把这份文档的内容读出来、导出成 PDF、再把结果通知到群里",
+    "en": "handle a document: read its text, export it as PDF, and notify the channel with the result"
+  },
+  {
+    "id": "en-21",
+    "group": "en",
+    "expect": [
+      "mcp_crm_get_customer_profile",
+      "mcp_crm_list_activities",
+      "mcp_crm_log_activity"
+    ],
+    "zh": "客户档案补齐:看看联系方式是否完整、核对最近几次沟通、缺失的信息补一条记录进去",
+    "en": "fill in account records: check contact details, look at recent interactions, and add a note for whatever is missing"
+  },
+  {
+    "id": "en-22",
+    "group": "en",
+    "expect": [
+      "mcp_crm_list_opportunities",
+      "mcp_analytics_get_funnel",
+      "mcp_crm_list_activities"
+    ],
+    "zh": "项目推进会要准备:各阶段在谈金额列出来、算一下转化情况、再看几个重点项目最近的沟通",
+    "en": "prepare the pipeline meeting: list open deal amounts by stage, work out conversion, and review recent activity on the key deals"
+  },
+  {
+    "id": "en-23",
+    "group": "en",
+    "expect": [
+      "mcp_billing_list_invoices",
+      "mcp_billing_list_payments",
+      "mcp_email_send_email"
+    ],
+    "zh": "回款提醒:把快到期的应收找出来、核对是否已经回款、给还没付的客户写封提醒邮件",
+    "en": "chase payments: find bills falling due, check whether the money arrived, and mail a reminder to those who have not paid"
+  },
+  {
+    "id": "en-24",
+    "group": "en",
+    "expect": [
+      "mcp_calendar_list_events",
+      "mcp_calendar_find_free_slots",
+      "mcp_task_create_task"
+    ],
+    "zh": "客户到访安排:看看下周日历排了什么、找个共同空档、再建一条接待任务",
+    "en": "arrange a customer visit: check next week's diary, find a common window, and create a task to receive them"
+  },
+  {
+    "id": "en-25",
+    "group": "en",
+    "expect": [
+      "mcp_email_search_mail",
+      "mcp_email_list_threads",
+      "mcp_crm_log_activity"
+    ],
+    "zh": "竞品情报追踪:在邮箱里搜竞品关键词、把相关往来打开看看、把要点记成一条沟通记录",
+    "en": "track competitor intel: search the mailbox for rival keywords, open the relevant threads, and log the key points as an activity"
+  },
+  {
+    "id": "en-26",
+    "group": "en",
+    "expect": [
+      "mcp_analytics_list_dashboards",
+      "mcp_analytics_query_metrics",
+      "mcp_analytics_get_funnel"
+    ],
+    "zh": "看板梳理:列出现有看板、把最近指标查一遍、再拉一次漏斗核对口径",
+    "en": "review reporting: list available dashboards, query recent metrics, and pull the funnel again to check the definitions"
+  },
+  {
+    "id": "en-27",
+    "group": "en",
+    "expect": [
+      "mcp_warehouse_list_products",
+      "mcp_warehouse_get_inventory",
+      "mcp_notify_send_webhook"
+    ],
+    "zh": "库房与交付:商品和在库量查一下、核对发货计划、可能延期的通知到群里",
+    "en": "stock and delivery: check products and quantities, review dispatch plans, and post likely delays to the channel"
+  },
+  {
+    "id": "en-28",
+    "group": "en",
+    "expect": [
+      "mcp_task_create_task",
+      "mcp_task_list_tasks",
+      "mcp_task_complete_task"
+    ],
+    "zh": "任务管理:给自己建一条今天的待办、把清单列出来、做完的直接关闭",
+    "en": "task management: add a to-do for today, list my queue, and close what is done"
+  },
+  {
+    "id": "en-29",
+    "group": "en",
+    "expect": [
+      "mcp_doc_read_document",
+      "mcp_doc_export_pdf",
+      "mcp_email_send_email"
+    ],
+    "zh": "合同归档:把合同文档读出来、导出 PDF、再把文件发给对接同事",
+    "en": "file the contract: read the document, export it as PDF, and mail the file to the colleague"
+  },
+  {
+    "id": "en-30",
+    "group": "en",
+    "expect": [
+      "mcp_hr_list_employees",
+      "mcp_hr_get_team_roster",
+      "mcp_calendar_find_free_slots"
+    ],
+    "zh": "培训安排:列出参训人员和他们的排班情况、找一段大家都有空的时间",
+    "en": "arrange training: list the trainees and their shift availability, and find a window that works for everyone"
+  },
+  {
+    "id": "mix-01",
+    "group": "mix",
+    "expect": [
+      "mcp_crm_list_customers",
+      "workflow_zh_007",
+      "mcp_task_create_task"
+    ],
+    "zh": "从系统里拉出本月新增的客户,结合我们的会话记录看看谁提到过分期付款,再给这些人各建一条跟进待办",
+    "en": "pull this month's new accounts, check the conversation records for anyone mentioning instalments, and create a follow-up task for each of them"
+  },
+  {
+    "id": "mix-02",
+    "group": "mix",
+    "expect": [
+      "mcp_support_list_tickets",
+      "workflow_zh_007",
+      "workflow_zh_013"
+    ],
+    "zh": "有几单一直没解决:把没关掉的工单列出来、对照会话原文看看客户到底怎么说的、再统计一下我们话术的覆盖情况",
+    "en": "some cases are still open: list them, check the conversation records for what the customer actually asked, and measure our wording coverage"
+  },
+  {
+    "id": "mix-03",
+    "group": "mix",
+    "expect": [
+      "mcp_crm_list_opportunities",
+      "workflow_zh_025",
+      "workflow_zh_021"
+    ],
+    "zh": "这周的周报要写:先查一下在谈项目的金额、再看各阶段转化的数据、最后把周报生成出来",
+    "en": "draft this week's report: query open deal amounts, review stage conversion numbers, then produce the weekly roll-up"
+  },
+  {
+    "id": "mix-04",
+    "group": "mix",
+    "expect": [
+      "mcp_analytics_query_metrics",
+      "workflow_zh_023",
+      "workflow_zh_025"
+    ],
+    "zh": "经营例会材料:把上个月的经营指标查出来、出一份门店业绩预警、再把各阶段转化算一遍",
+    "en": "for the business meeting: query last month's metrics, raise store performance alerts, and compute stage conversion"
+  },
+  {
+    "id": "mix-05",
+    "group": "mix",
+    "expect": [
+      "mcp_support_list_tickets",
+      "workflow_zh_039",
+      "workflow_zh_033"
+    ],
+    "zh": "投诉处理要统一口径:把最近的工单找出来、看看我们的异议汇总、再据此出几道对练题给团队练",
+    "en": "standardise complaint handling: pull recent cases, review our objection summary, and turn it into practice questions for the team"
+  },
+  {
+    "id": "mix-06",
+    "group": "mix",
+    "expect": [
+      "mcp_billing_list_invoices",
+      "workflow_zh_030",
+      "workflow_zh_031"
+    ],
+    "zh": "价格政策落实情况:拉一批开出的单子、核对是否符合现行政策、再找找明显异常的折扣",
+    "en": "check how pricing rules are applied: pull a batch of issued bills, verify them against the current policy, and find clearly abnormal discounts"
+  },
+  {
+    "id": "mix-07",
+    "group": "mix",
+    "expect": [
+      "mcp_email_search_mail",
+      "workflow_zh_027",
+      "workflow_zh_026"
+    ],
+    "zh": "竞品情报汇总:在邮箱里搜竞品相关的往来、结合我们自己的竞品动态摘要、给出一份对比结论",
+    "en": "pull competitor intel together: search the mailbox for rival threads, combine with our own digest of their moves, and write a comparison"
+  },
+  {
+    "id": "mix-08",
+    "group": "mix",
+    "expect": [
+      "mcp_crm_list_customers",
+      "workflow_zh_013",
+      "workflow_zh_032"
+    ],
+    "zh": "新人带教要看数据:把他手上客户的情况拉出来、评估他的话术使用水平、再排一份辅导计划",
+    "en": "onboard the new hire with data: pull their account list, assess their wording usage, and lay out a coaching plan"
+  },
+  {
+    "id": "mix-09",
+    "group": "mix",
+    "expect": [
+      "mcp_warehouse_get_inventory",
+      "workflow_zh_035",
+      "workflow_zh_021"
+    ],
+    "zh": "库存和交付对一下:看在库数量、核对订单排期、把可能延期的写进本周汇总",
+    "en": "reconcile stock and delivery: check quantities on hand, verify the order schedule, and note likely slips in this week's roll-up"
+  },
+  {
+    "id": "mix-10",
+    "group": "mix",
+    "expect": [
+      "mcp_crm_get_customer_profile",
+      "workflow_zh_020",
+      "mcp_calendar_create_event"
+    ],
+    "zh": "客户拜访准备:把档案和最近沟通调出来、生成一份走访安排、再把见面约进日历",
+    "en": "prepare a customer visit: pull the profile and recent interactions, draft an itinerary, and book the meeting in the calendar"
+  },
+  {
+    "id": "mix-11",
+    "group": "mix",
+    "expect": [
+      "mcp_support_search_tickets_by_keyword",
+      "mcp_kb_search_knowledge",
+      "workflow_zh_014"
+    ],
+    "zh": "知识缺口排查:按关键词搜工单、去内部知识库找有没有对应说明、把缺口记成补充建议",
+    "en": "find knowledge gaps: search cases by keyword, check whether the wiki explains them, and record the gaps as suggestions"
+  },
+  {
+    "id": "mix-12",
+    "group": "mix",
+    "expect": [
+      "mcp_analytics_query_metrics",
+      "mcp_sheet_export_rows",
+      "mcp_email_send_email"
+    ],
+    "zh": "数据交付:把指标查出来、导出成表格文件、再发邮件给同事",
+    "en": "deliver data: query the metrics, export them as a sheet, and mail the file to the colleague"
+  },
+  {
+    "id": "mix-13",
+    "group": "mix",
+    "expect": [
+      "mcp_hr_get_team_roster",
+      "workflow_zh_036",
+      "mcp_task_create_task"
+    ],
+    "zh": "排班安排:看团队排班的可用情况、生成下周门店排班、再给班次负责人建一条任务",
+    "en": "plan the rota: check team shift availability, build next week's store rota, and create a task for the shift lead"
+  },
+  {
+    "id": "mix-14",
+    "group": "mix",
+    "expect": [
+      "mcp_support_list_tickets",
+      "workflow_zh_003",
+      "workflow_zh_040"
+    ],
+    "zh": "流失与工单一起看:找出有未结工单的客户、对照我们的流失风险名单、给出挽回建议",
+    "en": "look at churn and cases together: find accounts with open cases, cross-check our at-risk list, and suggest how to win them back"
+  },
+  {
+    "id": "mix-15",
+    "group": "mix",
+    "expect": [
+      "mcp_crm_list_opportunities",
+      "workflow_zh_002",
+      "workflow_zh_005"
+    ],
+    "zh": "客户分层做细一点:把在谈金额一起纳入、重新分一次层、给最上面那批排回访",
+    "en": "refine the tiering: fold in open deal amounts, re-tier the accounts, and schedule call-backs for the top group"
+  },
+  {
+    "id": "mix-16",
+    "group": "mix",
+    "expect": [
+      "workflow_zh_006",
+      "mcp_support_get_ticket",
+      "workflow_zh_018"
+    ],
+    "zh": "质检整改:先把会话按标准检一遍、把检出的问题和相关工单核对、输出一份整改清单",
+    "en": "act on quality findings: run the conversation check, cross-check the findings against the related cases, and produce a fix list"
+  },
+  {
+    "id": "mix-17",
+    "group": "mix",
+    "expect": [
+      "mcp_support_search_tickets_by_keyword",
+      "mcp_email_search_mail",
+      "workflow_zh_038"
+    ],
+    "zh": "活动效果复盘:从工单和邮件里找活动相关的反馈、结合我们自己的活动复盘数据、给一个结论",
+    "en": "review the campaign: gather feedback from cases and mail, combine with our own campaign numbers, and draw a conclusion"
+  },
+  {
+    "id": "mix-18",
+    "group": "mix",
+    "expect": [
+      "mcp_billing_get_invoice",
+      "mcp_doc_read_document",
+      "workflow_zh_029"
+    ],
+    "zh": "报价与合同核对:把发票明细调出来、读一下合同文档确认条款、再走一次审批符合性检查",
+    "en": "check quote and contract: pull the invoice detail, read the contract document for the terms, and run the approval compliance check"
+  },
+  {
+    "id": "mix-19",
+    "group": "mix",
+    "expect": [
+      "mcp_warehouse_list_shipments",
+      "workflow_zh_035",
+      "mcp_email_send_email"
+    ],
+    "zh": "交付催办:看发货状态、核对交付排期、给客户发封延迟说明邮件",
+    "en": "chase delivery: check dispatch status, verify the delivery schedule, and mail the customer an explanation of the delay"
+  },
+  {
+    "id": "mix-20",
+    "group": "mix",
+    "expect": [
+      "mcp_support_search_tickets_by_keyword",
+      "workflow_zh_017",
+      "workflow_zh_015"
+    ],
+    "zh": "知识沉淀:把工单里反复出现的问题整理成问答草稿、再做一次重复条目检查",
+    "en": "build knowledge: draft Q and A from the recurring issues in cases, then check for duplicated entries"
+  },
+  {
+    "id": "mix-21",
+    "group": "mix",
+    "expect": [
+      "mcp_crm_list_customers",
+      "workflow_zh_004",
+      "mcp_task_create_task"
+    ],
+    "zh": "客户关怀排期:把客户联系方式拉出来、找出近期过生日的、生成问候并建一条提醒任务",
+    "en": "plan customer care: pull contact details, find upcoming birthdays, prepare a greeting, and create a reminder task"
+  },
+  {
+    "id": "mix-22",
+    "group": "mix",
+    "expect": [
+      "mcp_crm_list_opportunities",
+      "workflow_zh_024",
+      "workflow_zh_025"
+    ],
+    "zh": "销售排名和项目一起看:把在谈金额拉出来、出一份销售名次、再算各阶段转化",
+    "en": "see ranking and pipeline together: pull open deal amounts, produce the rep standings, and compute stage conversion"
+  },
+  {
+    "id": "mix-23",
+    "group": "mix",
+    "expect": [
+      "mcp_crm_list_customers",
+      "workflow_zh_037",
+      "workflow_zh_038"
+    ],
+    "zh": "活动线索分配:把活动来的客户挑出来、按门店产能分下去、再跟踪一次活动效果",
+    "en": "allocate campaign leads: pick out the accounts that came from the campaign, distribute them by store capacity, and track the campaign result"
+  },
+  {
+    "id": "mix-24",
+    "group": "mix",
+    "expect": [
+      "mcp_warehouse_get_inventory",
+      "workflow_zh_030",
+      "workflow_zh_022"
+    ],
+    "zh": "库存和政策一起核:看品种与在库量、校验价格政策、把异常项写进月度复盘",
+    "en": "check stock and policy together: review products and quantities, validate the pricing policy, and note exceptions in the monthly review"
+  },
+  {
+    "id": "mix-25",
+    "group": "mix",
+    "expect": [
+      "mcp_email_list_threads",
+      "mcp_crm_log_activity",
+      "workflow_zh_007"
+    ],
+    "zh": "沟通记录归档:把邮箱里的往来打开、记一条活动备注、把关键结论写进会话摘要",
+    "en": "file the correspondence: open the mail threads, log an activity note, and put the key conclusions into the conversation summary"
+  },
+  {
+    "id": "mix-26",
+    "group": "mix",
+    "expect": [
+      "workflow_zh_013",
+      "workflow_zh_033",
+      "mcp_sheet_append_rows"
+    ],
+    "zh": "培训考核:统计话术覆盖情况、出几道对练题、把结果写进表格",
+    "en": "training and assessment: measure wording coverage, write practice questions, and put the results into the sheet"
+  },
+  {
+    "id": "mix-27",
+    "group": "mix",
+    "expect": [
+      "mcp_support_get_ticket",
+      "mcp_support_update_ticket_status",
+      "mcp_notify_send_webhook"
+    ],
+    "zh": "投诉升级处理:取工单详情、把状态改成处理中、把处理结果同步到群里",
+    "en": "escalate a complaint: open the case detail, move its status along, and post the outcome to the channel"
+  },
+  {
+    "id": "mix-28",
+    "group": "mix",
+    "expect": [
+      "mcp_crm_list_customers",
+      "workflow_zh_002",
+      "workflow_zh_001"
+    ],
+    "zh": "客户资产盘点:把客户和在谈项目一起列出来、结合我们的分层规则、输出一份盘点结论",
+    "en": "take stock of accounts: list customers and open deals, apply our tiering rules, and write up the conclusion"
+  },
+  {
+    "id": "mix-29",
+    "group": "mix",
+    "expect": [
+      "mcp_warehouse_list_shipments",
+      "workflow_zh_035",
+      "workflow_zh_036"
+    ],
+    "zh": "交付和排班别冲突:看在途发货、核对交付排期、排班时把到货日避开",
+    "en": "keep delivery and shifts apart: check goods in transit, verify the delivery schedule, and plan shifts around arrival dates"
+  },
+  {
+    "id": "mix-30",
+    "group": "mix",
+    "expect": [
+      "mcp_analytics_get_funnel",
+      "workflow_zh_022",
+      "workflow_zh_021"
+    ],
+    "zh": "复盘材料:拉漏斗数据、出月度复盘、再写一份本周汇总",
+    "en": "review materials: pull funnel numbers, write the monthly review, and produce this week's roll-up"
+  },
+  {
+    "id": "mix-31",
+    "group": "mix",
+    "expect": [
+      "mcp_support_search_tickets_by_keyword",
+      "workflow_zh_039",
+      "workflow_zh_014"
+    ],
+    "zh": "异议知识化:从工单里把异议找出来、汇总成清单、补充进知识库建议里",
+    "en": "turn objections into knowledge: gather them from cases, summarise the list, and add it to the wiki suggestions"
+  },
+  {
+    "id": "mix-32",
+    "group": "mix",
+    "expect": [
+      "mcp_calendar_find_free_slots",
+      "workflow_zh_020",
+      "mcp_task_create_task"
+    ],
+    "zh": "走访安排:先找几个空档、排一份客户走访计划、再建提醒任务",
+    "en": "plan visits: find free windows, draft a customer visit plan, and create reminder tasks"
+  },
+  {
+    "id": "mix-33",
+    "group": "mix",
+    "expect": [
+      "mcp_billing_get_invoice",
+      "workflow_zh_030",
+      "mcp_email_send_email"
+    ],
+    "zh": "价格与发票核对:调发票明细核对金额、校验政策符合性、把异常发邮件给财务",
+    "en": "check pricing against bills: pull invoice detail, validate policy compliance, and mail the exceptions to finance"
+  },
+  {
+    "id": "mix-34",
+    "group": "mix",
+    "expect": [
+      "mcp_crm_list_customers",
+      "workflow_zh_004",
+      "workflow_zh_038"
+    ],
+    "zh": "生日营销:把近期过生日的客户筛出来、准备问候动作、再复盘一下这类活动的效果",
+    "en": "birthday marketing: filter upcoming birthdays, prepare the greeting, and review how this kind of campaign performed"
+  },
+  {
+    "id": "mix-35",
+    "group": "mix",
+    "expect": [
+      "mcp_kb_search_knowledge",
+      "mcp_kb_get_article",
+      "workflow_zh_014"
+    ],
+    "zh": "知识问答质量:检索一下看命中情况、读一篇确认内容是否过期、把缺口写进补充建议",
+    "en": "check answer quality: search the wiki, read one page to see whether it is stale, and note gaps as suggestions"
+  },
+  {
+    "id": "mix-36",
+    "group": "mix",
+    "expect": [
+      "mcp_support_list_tickets",
+      "mcp_support_get_ticket",
+      "mcp_support_update_ticket_status"
+    ],
+    "zh": "工单时限风险:列出工单看有没有超时风险、取详情确认、把紧急的直接改状态并同步",
+    "en": "case deadline risk: list cases for breach risk, open the detail to confirm, and push the urgent ones forward"
+  },
+  {
+    "id": "mix-37",
+    "group": "mix",
+    "expect": [
+      "workflow_zh_033",
+      "workflow_zh_032",
+      "workflow_zh_012"
+    ],
+    "zh": "销售培训闭环:出对练题、排辅导计划、再把短板写进培训安排",
+    "en": "close the training loop: write practice questions, plan coaching, and fold the weak spots into the training plan"
+  },
+  {
+    "id": "mix-38",
+    "group": "mix",
+    "expect": [
+      "workflow_zh_002",
+      "workflow_zh_020",
+      "mcp_calendar_create_event"
+    ],
+    "zh": "客户走访计划:先分层、按层次排走访、再把见面约进日历",
+    "en": "visit plan: tier the accounts, schedule visits by tier, and book them in the calendar"
+  },
+  {
+    "id": "mix-39",
+    "group": "mix",
+    "expect": [
+      "mcp_warehouse_list_shipments",
+      "workflow_zh_035",
+      "mcp_notify_send_webhook"
+    ],
+    "zh": "延误预警:查在途到货、核对排期、把可能延期的通知到内部群",
+    "en": "delay warning: check goods in transit, verify the schedule, and post likely delays to the internal channel"
+  },
+  {
+    "id": "mix-40",
+    "group": "mix",
+    "expect": [
+      "mcp_analytics_query_metrics",
+      "workflow_zh_022",
+      "workflow_zh_024"
+    ],
+    "zh": "全域经营复盘:拉经营指标、出月度复盘、再把销售排名算出来",
+    "en": "full business review: query the metrics, write the monthly review, and compute the rep standings"
+  }
+]

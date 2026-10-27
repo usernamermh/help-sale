@@ -1,0 +1,29 @@
+{
+  "name": "ppt",
+  "label": "读取 PPT",
+  "description": "Read a .pptx deck inside the repository and extract the text of every slide (repository paths only).",
+  "description_language": "en",
+  "category": "文件读取",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "filePath"
+    ],
+    "properties": {
+      "filePath": {
+        "type": "string",
+        "description": "path inside the repository, e.g. data/proposal.pptx"
+      },
+      "maxSlides": {
+        "type": "number",
+        "default": 20,
+        "maximum": 100
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

@@ -1,0 +1,35 @@
+{
+  "name": "update_memory",
+  "label": "更新记忆",
+  "description": "Write user preferences or operational lessons into memory.md (appended to the given section, de-duplicated; the file is part of the system prompt). Business data must not go into memory - persist it in the database instead.",
+  "description_language": "en",
+  "category": "记忆",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "section",
+      "content"
+    ],
+    "properties": {
+      "section": {
+        "type": "string",
+        "enum": [
+          "用户记忆",
+          "系统记忆",
+          "工具经验",
+          "规则改进",
+          "模型端点"
+        ]
+      },
+      "content": {
+        "type": "string",
+        "description": "one memory entry, e.g. prefer the customer's own words when searching scripts"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

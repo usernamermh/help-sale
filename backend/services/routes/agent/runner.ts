@@ -1,0 +1,148 @@
+// 子代理执行与消费:并行池、超时中止、停止信号、共享输出注入(原 v1 services/subagent-runner.ts)
+import type { DatabaseSync } from "node:sqlite";
+import { Agent, type StreamFn } from "@earendil-works/pi-agent-core";
+import { config } from "../../../env.js";
+import { LOCAL_PROVIDER_ID, createModelRegistry, type ModelRuntime } from "../../../integrations_pi/models.js";
+import { getSubagentPrompt } from "../../../prompts/multi-agent.js";
+import { loadExternalAgentTools, externalToolPaths } from "../../external-tools.js";
+import { isStopped } from "../../stop-signal.js";
+import { createTimelineRecorder } from "../../timeline.js";
+import { claimKanbanCard, finishKanbanCard, listKanbanCards, touchKanbanCard, type KanbanCard } from "./kanban.js";
+
+/** 子代理默认工具白名单(来自配置 subagents.defaultTools)。 */
+const DEFAULT_SUBAGENT_TOOLS = config.subagentDefaultTools;
+/** 多代理模式下子代理绝对不允许使用的工具(派生/编排)。 */
+const FORBIDDEN_SUBAGENT_TOOLS = new Set(["subagents", "kanban", "emit_final"]);
+export interface SubagentRunnerDeps {
+	db: DatabaseSync;
+	runtime?: ModelRuntime;
+	streamFn?: StreamFn;
+}
+
+/** 并行执行上限(资源隔离:同一批最多并发 2 个子代理,避免抢占)。 */
+const MAX_CONCURRENCY = config.subagentMaxConcurrency;
+
+function subagentSystemPrompt(card: KanbanCard, tools: string[], sharedOutputs?: string): string {
+	return getSubagentPrompt({ goal: card.goal ?? card.title, tools, sharedOutputs });
+}
+
+/** 读取同一批看板中"已完成"的其他子代理结果,供允许共享的子代理参考(并发池分批执行:后批子代理可见前批结论)。 */
+function collectSharedOutputs(db: DatabaseSync, card: KanbanCard): string {
+	if (card.shareEnabled !== true) return "";
+	const others = listKanbanCards(db, card.tenantId, { threadId: card.threadId })
+		.filter((c) => c.id !== card.id && c.status === "done" && c.result)
+		.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+	if (others.length === 0) return "";
+	const lines = others.map((c) => `- [${c.title}] ${(c.result ?? "").slice(0, 2000)}`);
+		return lines.join("\n");
+}
+/** 从 agent 消息中提取最终答复:优先最后一条 assistant 文本(子代理不使用 emit_final)。 */
+function extractAnswer(messages: unknown[]): string {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		const m = messages[i] as { role?: string; content?: unknown };
+		if (m.role !== "assistant") continue;
+		const text = Array.isArray(m.content)
+			? m.content.map((c) => (c && typeof c === "object" && "text" in c ? String((c as { text?: string }).text ?? "") : "")).join("")
+			: typeof m.content === "string"
+				? m.content
+				: "";
+		if (text.trim()) return text.trim();
+	}
+	throw new Error("子代理未产出结论");
+}
+
+async function runSubTask(deps: SubagentRunnerDeps, card: KanbanCard): Promise<string> {
+	if (await isStopped(card.threadId)) throw new Error("agent stopped by user");
+	const runtime = deps.runtime ?? createModelRegistry();
+	const streamFn = deps.streamFn ?? runtime.streamFn;
+	const model = runtime.models.getModel(LOCAL_PROVIDER_ID, config.modelId);
+	if (!model) throw new Error(`model not found: ${LOCAL_PROVIDER_ID}/${config.modelId}`);
+
+	const all = await loadExternalAgentTools(externalToolPaths(), { db: deps.db, tenantId: card.tenantId });
+	const allowed = (card.tools && card.tools.length > 0 ? card.tools : DEFAULT_SUBAGENT_TOOLS).filter((t) => !FORBIDDEN_SUBAGENT_TOOLS.has(t));
+	const tools = all.filter((t) => allowed.includes(t.name));
+
+	// 共享输出:主代理允许时,把其他已完成子代理的最新结论注入本子代理 prompt(并发池分批执行场景)
+	const sharedOutputs = collectSharedOutputs(deps.db, card);
+	const agent = new Agent({
+		sessionId: `sub-${card.id}`,
+		streamFn,
+		initialState: { systemPrompt: subagentSystemPrompt(card, tools.map((t) => t.name), sharedOutputs), tools: tools as never, model, messages: [] },
+	});
+	// 子代理轨迹落库:此前子代理完全不写 agent_events,而 multi 模式恰恰最容易形成稳定套路,
+	// 挖掘因此看不到任何子代理链路。这里以 sub-<cardId> 为运行标识写入,线程归属沿用宿主 threadId。
+	const recorder = createTimelineRecorder(deps.db, { tenantId: card.tenantId, conversationId: `sub-${card.id}`, threadId: card.threadId });
+	agent.subscribe((event) => recorder.listen(event));
+	// 心跳:定期刷新卡片 updated_at,供主代理监督判断是否仍在执行(避免被误判为无进展)
+	const heartbeat = setInterval(() => {
+		try { touchKanbanCard(deps.db, card.tenantId, card.id); } catch { /* 忽略 */ }
+	}, 30000);
+	// 单任务超时:超过上限仍未完成视为执行卡死,主动中止(兜底,避免永久占用资源)
+	const taskTimer = setTimeout(() => { agent.abort(); }, config.subagentTimeoutMs);
+	// 执行中定时检查停止键:用户点击停止后,正在执行的子代理立即中止(不再等待模型完成)
+	const stopTimer = setInterval(() => {
+		isStopped(card.threadId)
+			.then((stopped) => { if (stopped) agent.abort(); })
+			.catch(() => undefined);
+	}, 2000);
+	try {
+		await agent.prompt(card.goal ?? card.title);
+	} finally {
+		clearInterval(stopTimer);
+		clearInterval(heartbeat);
+		clearTimeout(taskTimer);
+		// 无论成功/失败/超时中止,已产生的工具事件都要落库(失败轨迹同样供挖掘与复盘参考)
+		await recorder.flush().catch(() => undefined);
+	}
+	return extractAnswer(agent.state.messages);
+}
+
+/** 消费看板:取 pending 卡片并行执行(至多 MAX_CONCURRENCY),结果回填看板。 */
+export async function consumeKanbanSubagents(deps: SubagentRunnerDeps, tenantId: string, opts: { limit?: number; threadId?: string } = {}): Promise<KanbanCard[]> {
+	if (opts.threadId && await isStopped(opts.threadId)) return [];
+	const pending = listKanbanCards(deps.db, tenantId, { status: "pending", threadId: opts.threadId }).slice(0, opts.limit ?? MAX_CONCURRENCY);
+	if (pending.length === 0) return [];
+	const results: KanbanCard[] = [];
+	await Promise.all(
+		pending.map(async (card) => {
+			claimKanbanCard(deps.db, tenantId, card.id);
+			try {
+				const result = await runSubTask(deps, card);
+				finishKanbanCard(deps.db, tenantId, card.id, { ok: true, result });
+			} catch (error) {
+				finishKanbanCard(deps.db, tenantId, card.id, { ok: false, error: error instanceof Error ? error.message : String(error) });
+			}
+		}),
+	);
+	for (const card of pending) {
+		const updated = listKanbanCards(deps.db, tenantId, { threadId: opts.threadId }).find((c) => c.id === card.id);
+		if (updated) results.push(updated);
+	}
+	return results;
+}
+
+/** 启动子代理消费者:按轮询间隔扫描看板,消费全部线程的 pending 卡片(含多代理任务)。 */
+export function startSubagentConsumer(deps: SubagentRunnerDeps, tenantIds: string[] = []): () => void {
+	const timer = setInterval(() => {
+		// 清理陈旧 inprogress 卡:子代理进程被中断/重启后,已领取但长期未完成的卡标记 error,避免前端一直等待
+		try {
+			const staleCutoff = new Date(Date.now() - config.subagentTimeoutMs).toISOString();
+			deps.db.prepare("UPDATE kanban_cards SET status = 'error', error = '子代理执行中断(超时或服务重启)', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE status = 'inprogress' AND updated_at < ?").run(staleCutoff);
+		} catch (error) {
+			console.warn("[subagents] 清理陈旧卡片失败:", error instanceof Error ? error.message : String(error));
+		}
+		const tenants = tenantIds.length > 0 ? tenantIds : ["t_demo"];
+		for (const tenantId of tenants) {
+			// 按线程分组取 pending 卡片,逐线程消费(每个线程并发上限 MAX_CONCURRENCY)
+			const pending = listKanbanCards(deps.db, tenantId, { status: "pending" });
+			const threadIds = [...new Set(pending.map((c) => c.threadId))];
+			for (const threadId of threadIds) {
+				consumeKanbanSubagents(deps, tenantId, { limit: MAX_CONCURRENCY, threadId }).catch((error) => {
+					console.warn(`[subagents] 消费失败(${tenantId}/${threadId}): ${error instanceof Error ? error.message : String(error)}`);
+				});
+			}
+		}
+	}, config.subagentPollIntervalMs);
+	timer.unref?.();
+	return () => clearInterval(timer);
+}

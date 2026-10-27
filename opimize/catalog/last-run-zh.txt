@@ -1,0 +1,193 @@
+本地工具元数据: 中文(改造前快照 fixtures/tool-meta-zh.json)
+测试集: 98 条查询(可命中 92 + 闲聊 6)
+
+############ 语料:全量:本地目录 + MCP + 工作流(81 个工具) ############
+本语料适用用例: 98 条(期望 92 + 闲聊 6)
+参数: topK=8(配置 tools.catalog.topK) semanticFloor=0.45(配置 tools.catalog.semanticFloor)
+文档向量索引构建耗时: 10302ms(懒构建,只在第一次检索时发生一次)
+
+== 总览(98 条查询;Top1/Top3/Top8 = 可接受工具落在前 N 名的查询占比) ==
+方案                        Top1命中  Top3命中  Top8命中  MRR     P@3     闲聊返回空  闲聊均返回  
+① 旧方案 裸子串+词边界      51.1%     67.4%     72.8%     0.589   22.1%   83.3%       0.17        
+② 词面 BM25                 54.3%     64.1%     75.0%     0.611   20.7%   83.3%       0.17        
+③ 语义 BGE 向量             50.0%     68.5%     79.3%     0.601   22.1%   83.3%       0.33        
+④ 双通道 RRF(生产)          53.3%     73.9%     85.9%     0.647   23.8%   66.7%       0.50        
+
+== 分类型 Top3 命中率(mcp=中文问句找英文工具,en=英文问句找同样的工具) ==
+方案                        local    mcp      mixed    rewrite   en       
+① 旧方案 裸子串+词边界      87.5%    30.0%    62.5%    50.0%     81.8%    
+② 词面 BM25                 87.5%    25.0%    50.0%    40.0%     81.8%    
+③ 语义 BGE 向量             90.6%    40.0%    75.0%    60.0%     63.6%    
+④ 双通道 RRF(生产)          96.9%    40.0%    62.5%    60.0%     81.8%    
+
+== semanticFloor 敏感性(双通道方案,其余参数不变) ==
+floor    Top1命中  Top3命中  Top8命中  P@3     闲聊返回空  
+0        52.2%     75.0%     88.0%     24.1%   0.0%        
+0.3      52.2%     75.0%     88.0%     24.1%   0.0%        
+0.35     52.2%     75.0%     88.0%     24.1%   16.7%       
+0.4      52.2%     75.0%     87.0%     24.1%   33.3%       
+0.45     53.3%     73.9%     85.9%     23.8%   66.7%       
+0.5      53.3%     70.7%     81.5%     22.8%   83.3%       
+0.55     53.3%     68.5%     76.1%     21.8%   83.3%       
+0.6      52.2%     65.2%     76.1%     20.7%   83.3%       
+0.65     55.4%     66.3%     76.1%     21.1%   83.3%       
+0.7      55.4%     64.1%     75.0%     20.7%   83.3%       
+
+== 双通道方案 未命中 / 误召回明细(floor=0.45) ==
+✗ local-12 [local] 把这些评论按话题自动分组
+   期望: cluster
+   实际: chart_generate, subagents, table_generate, cluster, knowledge_ingest
+✗ mcp-03 [mcp] 提一个 pull request
+   期望: mcp_github_create_pull_request
+   实际: mcp_github_update_pull_request_branch, mcp_github_pull_request_read, mcp_github_merge_pull_request, mcp_github_update_pull_request, mcp_github_add_reply_to_pull_request_comment
+✗ mcp-04 [mcp] 列出这个仓库的 PR
+   期望: mcp_github_list_pull_requests
+   实际: ppt, txt, excel, terminal, mcp_github_list_releases
+✗ mcp-05 [mcp] 在 GitHub 上找一个类似的开源项目
+   期望: mcp_github_search_repositories
+   实际: mcp_github_create_branch, mcp_github_get_tag, mcp_github_get_latest_release, mcp_github_list_branches, mcp_github_get_release_by_tag
+✗ mcp-06 [mcp] 把这个 PR 合并掉
+   期望: mcp_github_merge_pull_request
+   实际: workflow_manage, mcp_github_delete_file, mcp_github_get_release_by_tag, mcp_github_get_latest_release, sql
+✗ mcp-07 [mcp] 看看仓库里这个文件的内容
+   期望: mcp_github_get_file_contents
+   实际: txt, ppt, excel, file_read, file_write_new
+✗ mcp-08 [mcp] 查看这个 PR 的详情
+   期望: mcp_github_pull_request_read
+   实际: customer_query, insight_query, excel, subagents, conversation_query
+✗ mcp-13 [mcp] 搜索代码里用到 createSalesAgentTools 的地方
+   期望: mcp_github_search_code
+   实际: web_search, subagents, mcp_github_get_me, browser, playbook_check
+✗ mcp-15 [mcp] 扫描一下有没有泄露的密钥
+   期望: mcp_github_run_secret_scanning
+   实际: web_search, customer_query, workflow_manage, excel, browser
+✗ mcp-16 [mcp] 看看最近的提交记录
+   期望: mcp_github_list_commits
+   实际: conversation_query, workflow_manage, knowledge_ingest, update_memory, customer_query
+✗ mcp-17 [mcp] 仓库里有哪些分支
+   期望: mcp_github_list_branches
+   实际: ppt, dialog_extract, txt, excel
+✗ mcp-19 [mcp] 按标签筛选一下 issue 列表
+   期望: mcp_github_list_issues
+   实际: mcp_github_sub_issue_write, mcp_github_list_issue_types, mcp_github_issue_read, mcp_github_issue_write, mcp_github_search_issues
+✗ mcp-20 [mcp] 找一个 GitHub 用户
+   期望: mcp_github_search_users
+   实际: mcp_github_get_me, mcp_github_create_branch, mcp_github_push_files, mcp_github_delete_file, file_write_new
+✗ mix-01 [mixed] 列出这个仓库的 pull request
+   期望: mcp_github_list_pull_requests
+   实际: mcp_github_pull_request_read, mcp_github_update_pull_request_branch, mcp_github_merge_pull_request, mcp_github_update_pull_request, mcp_github_list_pull_requests
+✗ mix-05 [mixed] 看看最近的 commit 记录
+   期望: mcp_github_list_commits
+   实际: conversation_query, mcp_github_get_commit, mcp_github_search_commits, mcp_github_list_commits, workflow_manage
+✗ mix-07 [mixed] 搜一下 GitHub 上的 repository
+   期望: mcp_github_search_repositories
+   实际: mcp_github_fork_repository, mcp_github_list_repository_collaborators, mcp_github_create_repository, mcp_github_search_repositories, mcp_github_get_latest_release
+✗ rw-04 [rewrite] 客户老是没人管,给我生成点提醒
+   期望: task_manage
+   实际: customer_query, table_generate, conversation_query, task_manage, chart_generate
+✗ rw-07 [rewrite] 上周都聊了些什么,帮我回顾一下
+   期望: conversation_query
+   实际: task_manage
+✗ rw-09 [rewrite] 帮我把这套客户跟进动作重复跑一遍
+   期望: workflow_wf_6741, workflow_manage
+   实际: task_manage, conversation_query, customer_query, workflow_manage, kanban
+✗ rw-10 [rewrite] 把竞品的价格和我们的比一比
+   期望: workflow_wf_8802
+   实际: knowledge_search, knowledge_ingest
+✗ en-03 [en] generate today''s morning briefing
+   期望: insight_query
+   实际: chart_generate, workflow_wf_2190, table_generate, workflow_wf_6741, insight_query
+✗ en-08 [en] calculate (12+8)*3 for me
+   期望: computer
+   实际: mcp_github_get_me, mcp_github_ui_get, subagents, mcp_github_get_latest_release, mcp_github_list_repository_collaborators
+✗ en-10 [en] hand this task over to a subagent and run it in parallel
+   期望: subagents
+   实际: workflow_wf_6741, task_manage, mcp_github_run_secret_scanning, mcp_github_pull_request_review_write, subagents
+✗ en-11 [en] search the web for the latest subsidy policy
+   期望: web_search
+   实际: mcp_github_get_latest_release, mcp_github_search_commits, mcp_github_search_pull_requests, mcp_github_search_users, mcp_github_search_code
+✗ chat-03 [chitchat] 帮我推荐一部电影
+   期望: (不应命中任何工具)
+   实际: chart_generate
+✗ chat-06 [chitchat] ok,继续说
+   期望: (不应命中任何工具)
+   实际: knowledge_candidate, knowledge_ingest
+
+############ 语料:生产编目:仅 MCP + 工作流(49 个工具) ############
+本语料适用用例: 46 条(期望 40 + 闲聊 6)
+参数: topK=8(配置 tools.catalog.topK) semanticFloor=0.45(配置 tools.catalog.semanticFloor)
+文档向量索引构建耗时: 1ms(懒构建,只在第一次检索时发生一次)
+
+== 总览(46 条查询;Top1/Top3/Top8 = 可接受工具落在前 N 名的查询占比) ==
+方案                        Top1命中  Top3命中  Top8命中  MRR     P@3     闲聊返回空  闲聊均返回  
+① 旧方案 裸子串+词边界      40.0%     55.0%     57.5%     0.461   16.7%   100.0%      0.00        
+② 词面 BM25                 35.0%     47.5%     60.0%     0.430   14.5%   100.0%      0.00        
+③ 语义 BGE 向量             42.5%     70.0%     77.5%     0.555   21.7%   100.0%      0.00        
+④ 双通道 RRF(生产)          50.0%     62.5%     77.5%     0.575   19.6%   100.0%      0.00        
+
+== 分类型 Top3 命中率(mcp=中文问句找英文工具,en=英文问句找同样的工具) ==
+方案                        local    mcp      mixed    rewrite   en       
+① 旧方案 裸子串+词边界        -      30.0%    75.0%    0.0%      100.0%   
+② 词面 BM25                   -      25.0%    62.5%    0.0%      90.0%    
+③ 语义 BGE 向量               -      45.0%    100.0%   50.0%     100.0%   
+④ 双通道 RRF(生产)            -      40.0%    75.0%    50.0%     100.0%   
+
+== semanticFloor 敏感性(双通道方案,其余参数不变) ==
+floor    Top1命中  Top3命中  Top8命中  P@3     闲聊返回空  
+0        50.0%     65.0%     85.0%     20.3%   0.0%        
+0.3      50.0%     65.0%     85.0%     20.3%   33.3%       
+0.35     50.0%     65.0%     82.5%     20.3%   50.0%       
+0.4      50.0%     62.5%     80.0%     19.6%   66.7%       
+0.45     50.0%     62.5%     77.5%     19.6%   100.0%      
+0.5      47.5%     60.0%     72.5%     18.8%   100.0%      
+0.55     42.5%     50.0%     65.0%     15.2%   100.0%      
+0.6      40.0%     47.5%     65.0%     14.5%   100.0%      
+0.65     40.0%     50.0%     62.5%     15.2%   100.0%      
+0.7      37.5%     47.5%     60.0%     14.5%   100.0%      
+
+== 双通道方案 未命中 / 误召回明细(floor=0.45) ==
+✗ mcp-03 [mcp] 提一个 pull request
+   期望: mcp_github_create_pull_request
+   实际: mcp_github_update_pull_request_branch, mcp_github_pull_request_read, mcp_github_merge_pull_request, mcp_github_update_pull_request, mcp_github_add_reply_to_pull_request_comment
+✗ mcp-04 [mcp] 列出这个仓库的 PR
+   期望: mcp_github_list_pull_requests
+   实际: mcp_github_list_releases, mcp_github_list_branches, mcp_github_ui_get, mcp_github_list_commits, mcp_github_get_release_by_tag
+✗ mcp-05 [mcp] 在 GitHub 上找一个类似的开源项目
+   期望: mcp_github_search_repositories
+   实际: mcp_github_create_branch, mcp_github_get_tag, mcp_github_get_latest_release, mcp_github_list_branches, mcp_github_get_release_by_tag
+✗ mcp-06 [mcp] 把这个 PR 合并掉
+   期望: mcp_github_merge_pull_request
+   实际: mcp_github_delete_file, mcp_github_get_release_by_tag, mcp_github_get_latest_release, mcp_github_create_or_update_file, mcp_github_get_file_contents
+✗ mcp-07 [mcp] 看看仓库里这个文件的内容
+   期望: mcp_github_get_file_contents
+   实际: mcp_github_search_repositories, mcp_github_list_branches, mcp_github_push_files, mcp_github_get_file_contents, mcp_github_get_release_by_tag
+✗ mcp-08 [mcp] 查看这个 PR 的详情
+   期望: mcp_github_pull_request_read
+   实际: mcp_github_get_me, mcp_github_ui_get, workflow_wf_2190, mcp_github_get_latest_release, mcp_github_list_branches
+✗ mcp-13 [mcp] 搜索代码里用到 createSalesAgentTools 的地方
+   期望: mcp_github_search_code
+   实际: mcp_github_get_me, mcp_github_create_branch, mcp_github_create_or_update_file, mcp_github_get_label, mcp_github_create_repository
+✗ mcp-15 [mcp] 扫描一下有没有泄露的密钥
+   期望: mcp_github_run_secret_scanning
+   实际: mcp_github_get_me
+✗ mcp-16 [mcp] 看看最近的提交记录
+   期望: mcp_github_list_commits
+   实际: workflow_wf_6741
+✗ mcp-17 [mcp] 仓库里有哪些分支
+   期望: mcp_github_list_branches
+   实际: (空)
+✗ mcp-19 [mcp] 按标签筛选一下 issue 列表
+   期望: mcp_github_list_issues
+   实际: mcp_github_sub_issue_write, mcp_github_issue_read, mcp_github_list_issue_types, mcp_github_search_issues, mcp_github_issue_write
+✗ mcp-20 [mcp] 找一个 GitHub 用户
+   期望: mcp_github_search_users
+   实际: mcp_github_get_me, mcp_github_create_branch, mcp_github_push_files, mcp_github_delete_file, mcp_github_get_tag
+✗ mix-01 [mixed] 列出这个仓库的 pull request
+   期望: mcp_github_list_pull_requests
+   实际: mcp_github_pull_request_read, mcp_github_update_pull_request_branch, mcp_github_merge_pull_request, mcp_github_update_pull_request, mcp_github_list_pull_requests
+✗ mix-07 [mixed] 搜一下 GitHub 上的 repository
+   期望: mcp_github_search_repositories
+   实际: mcp_github_fork_repository, mcp_github_list_repository_collaborators, mcp_github_create_repository, mcp_github_search_repositories, mcp_github_get_latest_release
+✗ rw-10 [rewrite] 把竞品的价格和我们的比一比
+   期望: workflow_wf_8802
+   实际: (空)

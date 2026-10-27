@@ -1,0 +1,80 @@
+{
+  "name": "kanban",
+  "label": "看板协作",
+  "description": "Multi-agent collaboration board (isolated per tenant): the main agent creates task cards (optionally with a goal and a tool whitelist), subagents pick them up and write results back to the card; supports add/list/get/move/finish/remove and serves as the communication bus between agents.",
+  "description_language": "en",
+  "category": "协作",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "op": {
+        "type": "string",
+        "enum": [
+          "add",
+          "list",
+          "get",
+          "move",
+          "finish",
+          "remove"
+        ],
+        "default": "list",
+        "description": "operation: add creates a card; list shows cards; get returns details; move changes status; finish writes the result back (ok=false marks an error); remove deletes"
+      },
+      "title": {
+        "type": "string",
+        "description": "card title (for add)"
+      },
+      "description": {
+        "type": "string",
+        "description": "card description"
+      },
+      "goal": {
+        "type": "string",
+        "description": "subagent goal (multi-agent mode)"
+      },
+      "tools": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "tool whitelist available to the subagent"
+      },
+      "id": {
+        "type": "string",
+        "description": "card id (for get/move/finish/remove)"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "inprogress",
+          "done",
+          "error"
+        ],
+        "description": "card status"
+      },
+      "statusFilter": {
+        "type": "string",
+        "description": "status filter (for list)"
+      },
+      "result": {
+        "type": "string",
+        "description": "execution result (for finish)"
+      },
+      "error": {
+        "type": "string",
+        "description": "error message (for finish)"
+      },
+      "ok": {
+        "type": "boolean",
+        "default": true,
+        "description": "whether finish succeeded; false marks the card as error"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

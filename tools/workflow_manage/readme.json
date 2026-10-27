@@ -1,0 +1,76 @@
+{
+  "name": "workflow_manage",
+  "label": "工作流沉淀",
+  "description": "Manage the pipeline that turns model execution traces into reusable fixed workflows: mine frequent tool chains from past runs and produce draft workflows (mine), list drafts (list), promote a draft into a workflow the model can call directly after the user confirms (approve), reject it (reject), disable or enable it (disable), statically check whether the tools used by its steps are available (check). Use it when the user wants the whole flow to become repeatable, asks whether recent runs contain repeated steps worth saving, or wants the reusable workflows organized.",
+  "description_language": "en",
+  "category": "工作流",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "op"
+    ],
+    "properties": {
+      "op": {
+        "type": "string",
+        "enum": [
+          "mine",
+          "list",
+          "approve",
+          "reject",
+          "disable",
+          "check"
+        ],
+        "description": "mine = mine traces and produce drafts; list = list workflows; approve/reject = review a draft; disable = disable or enable; check = static self-check"
+      },
+      "workflowId": {
+        "type": "string",
+        "description": "workflow id (required for approve/reject/disable/check)"
+      },
+      "days": {
+        "type": "number",
+        "description": "history window in days for mining (for mine; defaults to config workflows.mine.days)"
+      },
+      "minCount": {
+        "type": "number",
+        "description": "minimum number of distinct runs a chain must appear in (for mine; defaults to config)"
+      },
+      "minWindow": {
+        "type": "number",
+        "description": "minimum steps in a chain (for mine, 2-8)"
+      },
+      "maxWindow": {
+        "type": "number",
+        "description": "maximum steps in a chain (for mine, 2-8)"
+      },
+      "topChains": {
+        "type": "number",
+        "description": "maximum number of candidate chains to return (for mine)"
+      },
+      "refineTop": {
+        "type": "number",
+        "description": "refine the top N chains with the model (for mine; larger is slower)"
+      },
+      "status": {
+        "type": "string",
+        "description": "list filter: draft (default)/enabled/disabled/rejected/all"
+      },
+      "origin": {
+        "type": "string",
+        "description": "list filter: mined (mined from traces)/manual (defined by hand); empty means all"
+      },
+      "enabled": {
+        "type": "boolean",
+        "description": "target state for disable: true = enabled, false = disabled"
+      },
+      "limit": {
+        "type": "number",
+        "description": "maximum number of rows returned by list"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

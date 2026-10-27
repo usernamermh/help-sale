@@ -1,0 +1,29 @@
+{
+  "name": "txt",
+  "label": "读取文本文件",
+  "description": "Read a text file inside the repository (txt/md/csv/json/yaml, ...); repository paths only, to prevent reads outside the repo.",
+  "description_language": "en",
+  "category": "文件读取",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "filePath"
+    ],
+    "properties": {
+      "filePath": {
+        "type": "string",
+        "description": "path inside the repository, relative or absolute, e.g. tools/data/example.txt"
+      },
+      "maxChars": {
+        "type": "number",
+        "default": 4000,
+        "maximum": 20000
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

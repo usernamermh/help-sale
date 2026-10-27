@@ -1,0 +1,25 @@
+.tsbuildinfo
+.tmp/
+node_modules/
+dist/
+.env
+.env.local
+backend/data/
+backend/.tmp/
+/pi/
+/pi/**/dist/
+/.playwright-cli/
+*.log
+*.pid
+*.tmp
+.DS_Store
+reference/llm-agent-workflow/
+llm-agent-workflow-master.zip
+llm-agent-workflow-master
+
+# 本地敏感/内部文件(不入库)
+help-sale.config.yaml
+/docs/plans/
+/data/
+
+data/models/

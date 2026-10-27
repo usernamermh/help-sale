@@ -1,0 +1,24 @@
+{
+  "name": "file_read",
+  "label": "任意路径读取文件",
+  "description": "Read a document from any local path (txt/md/csv/json/yaml/log/xml/html/xlsx/pdf/pptx/docx, ...) and return the extracted text; read-only - use it when the user explicitly wants a local file read.",
+  "description_language": "en",
+  "category": "文件读取",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "filePath"
+    ],
+    "properties": {
+      "filePath": {
+        "type": "string",
+        "description": "any absolute local path, e.g. C:/data/customers.xlsx or E:/proj_help_sale/data/report.pdf"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

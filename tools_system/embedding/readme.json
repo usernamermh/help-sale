@@ -1,0 +1,27 @@
+{
+  "name": "embedding",
+  "label": "文本向量",
+  "description": "Encode texts into fixed-dimension vectors (local lightweight BGE model, ~512 dims; falls back to character n-gram vectors when the model is missing); used for similarity scoring and clustering.",
+  "description_language": "en",
+  "category": "文本算法",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "texts"
+    ],
+    "properties": {
+      "texts": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "texts to encode"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

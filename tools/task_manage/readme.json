@@ -1,0 +1,57 @@
+{
+  "name": "task_manage",
+  "label": "跟进任务",
+  "description": "Create a follow-up task for a customer, list pending or completed tasks, or mark a task as done.",
+  "description_language": "en",
+  "category": "任务",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "op": {
+        "type": "string",
+        "enum": [
+          "create",
+          "list",
+          "complete"
+        ],
+        "default": "list",
+        "description": "operation kind"
+      },
+      "customerKey": {
+        "type": "string",
+        "description": "customer key or name (for create)"
+      },
+      "action": {
+        "type": "string",
+        "description": "follow-up action (for create)"
+      },
+      "dueAt": {
+        "type": "string",
+        "description": "due time in ISO format (for create)"
+      },
+      "taskId": {
+        "type": "string",
+        "description": "task id (for complete)"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "done"
+        ],
+        "default": "pending",
+        "description": "status filter for the list"
+      },
+      "limit": {
+        "type": "number",
+        "maximum": 100,
+        "description": "maximum number of rows"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

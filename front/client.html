@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>助销agent管理平台 · 客户端</title>
+  <style>
+    :root {
+      --bg: #eef2f8;
+      --bg2: #e2e8f0;
+      --card: #fff;
+      --line: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+      --brand: #2563eb;
+      --brand2: #3b82f6;
+      --shadow: 0 8px 28px rgba(15, 23, 42, .07);
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      background: linear-gradient(160deg, #eef2f8 0%, #e7edf7 55%, #eef4ff 100%);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 28px;
+      background: linear-gradient(120deg, #1e3a8a 0%, #2563eb 55%, #4f46e5 100%);
+      color: #fff;
+      box-shadow: 0 2px 16px rgba(30, 58, 138, .28);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    header h1 {
+      font-size: 20px;
+      margin: 0;
+      letter-spacing: .5px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    header h1::before {
+      content: "";
+      width: 11px;
+      height: 11px;
+      border-radius: 3px;
+      background: linear-gradient(135deg, #60a5fa, #c4b5fd);
+      box-shadow: 0 0 10px rgba(147, 197, 253, .8);
+    }
+
+    header .sub {
+      font-size: 12px;
+      opacity: .85;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: 14px;
+    }
+
+    header .nav {
+      margin-left: auto;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hdr-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(255, 255, 255, .30);
+      background: rgba(255, 255, 255, .12);
+      color: #fff;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 12.5px;
+      font-family: inherit;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 1px 4px rgba(15, 23, 42, .16);
+      transition: all .2s ease;
+    }
+
+    .hdr-btn svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .hdr-btn:hover {
+      background: rgba(255, 255, 255, .26);
+      border-color: rgba(255, 255, 255, .55);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, .24);
+    }
+
+    .hdr-btn.active {
+      background: #fff;
+      color: #1d4ed8;
+      border-color: #fff;
+      box-shadow: 0 4px 14px rgba(30, 58, 138, .35);
+    }
+
+    .hdr-btn.active svg {
+      stroke: #1d4ed8;
+    }
+
+    header .nav a {
+      color: #fff;
+      opacity: .9;
+      text-decoration: none;
+    }
+
+    .client-layout {
+      display: flex;
+      gap: 14px;
+      width: 100%;
+      max-width: none;
+      margin: 18px auto;
+      padding: 0 24px;
+      height: calc(100vh - 82px);
+      min-height: 520px;
+    }
+
+    .side {
+      width: 250px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .side-block {
+      background: var(--card);
+      border: 1px solid rgba(226, 232, 240, .9);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      flex: 1 1 0;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    #capList,
+    #threadList {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .side-title {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      margin: 0 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .side-title::before {
+      content: "◈";
+      color: var(--brand);
+      font-size: 10px;
+    }
+
+    .cap-item {
+      font-size: 13px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      transition: background .15s;
+    }
+
+    .cap-item:hover {
+      background: #f1f5f9;
+    }
+
+    .cap-item b {
+      font-weight: 600;
+    }
+
+    .cap-item .d {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .cap-cat {
+      font-size: 11px;
+      color: var(--brand);
+      margin: 8px 0 4px;
+      font-weight: 600;
+    }
+
+    .chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .agent-chat {
+      flex: 1;
+      overflow: auto;
+      background: var(--card);
+      border: 1px solid rgba(226, 232, 240, .9);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .agent-msg {
+      margin: 0 0 14px;
+      padding: 11px 14px;
+      border-radius: 16px;
+      max-width: 88%;
+      line-height: 1.6;
+    }
+
+    .agent-user {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: #fff;
+      border: 0;
+      margin-left: auto;
+      border-bottom-right-radius: 6px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, .22);
+    }
+
+    .agent-assist {
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-bottom-left-radius: 6px;
+    }
+
+    .welcome {
+      padding: 38px 20px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .welcome-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+
+    .welcome-sub {
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+
+    .welcome-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .welcome-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      text-align: left;
+      min-width: 160px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, .06);
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .welcome-btn:hover {
+      border-color: #2563eb;
+      box-shadow: 0 3px 10px rgba(37, 99, 235, .15);
+    }
+
+    .wb-name {
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 13px;
+    }
+
+    .wb-time {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .welcome-result {
+      text-align: left;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .welcome-pick {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 14px;
+    }
+
+    .welcome-select {
+      min-width: 260px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 13px;
+      background: #fff;
+      color: #334155;
+    }
+
+    .welcome-back {
+      display: inline-block;
+      margin-bottom: 10px;
+      cursor: pointer;
+      color: #2563eb;
+      font-size: 13px;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+
+    .agent-body {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .agent-body .md {
+      white-space: normal;
+    }
+
+    .agent-body .md p {
+      margin: 0 0 8px;
+    }
+
+    .agent-body .md h1,
+    .agent-body .md h2,
+    .agent-body .md h3 {
+      margin: 10px 0 6px;
+      font-size: 1.05em;
+    }
+
+    .agent-body .md table {
+      border-collapse: collapse;
+      margin: 8px 0;
+      width: 100%;
+    }
+
+    .agent-body .md th,
+    .agent-body .md td {
+      border: 1px solid var(--line);
+      padding: 5px 8px;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    .agent-body .md th {
+      background: #f1f5f9;
+      font-weight: 600;
+    }
+
+    .agent-body .md code {
+      background: #eef2ff;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .agent-body .md pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 10px;
+      border-radius: 8px;
+      overflow: auto;
+    }
+
+    .agent-body .md pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+
+    .agent-body .md ul,
+    .agent-body .md ol {
+      margin: 6px 0;
+      padding-left: 20px;
+    }
+
+    .agent-body .md a {
+      color: var(--brand);
+    }
+
+    .mermaid-render {
+      margin: 8px 0;
+      overflow: auto;
+      text-align: center;
+    }
+
+    .echarts-render {
+      margin: 8px 0;
+      width: 100%;
+      max-width: 100%;
+      overflow: auto;
+      text-align: center;
+    }
+
+    .echarts-render svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .mermaid-render svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .agent-meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .agent-input {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .agent-input textarea {
+      flex: 1;
+      min-height: 56px;
+      resize: none;
+      padding: 11px 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 14px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .agent-input button {
+      border: 0;
+      border-radius: 12px;
+      padding: 0 24px;
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, .25);
+      transition: transform .15s, box-shadow .15s;
+    }
+
+    .agent-input button:disabled {
+      opacity: .55;
+      cursor: wait;
+    }
+
+    .thread-item {
+      position: relative;
+      padding: 8px 10px;
+      padding-right: 74px;
+      border-radius: 10px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background .15s;
+    }
+
+    .thread-actions {
+      position: absolute;
+      top: 50%;
+      right: 6px;
+      transform: translateY(-50%);
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity .15s;
+    }
+
+    .thread-item:hover .thread-actions {
+      opacity: 1;
+    }
+
+    .thread-act {
+      border: 0;
+      background: #eef2ff;
+      color: var(--brand);
+      border-radius: 6px;
+      font-size: 11px;
+      padding: 2px 7px;
+      cursor: pointer;
+    }
+
+    .thread-act.del {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .thread-act:hover {
+      filter: brightness(.96);
+    }
+
+    .thread-item:hover {
+      background: #f1f5f9;
+    }
+
+    .thread-item.selected {
+      background: linear-gradient(135deg, #eff6ff, #eef2ff);
+      border: 1px solid #bfdbfe;
+      font-weight: 500;
+    }
+
+    .thread-item .t {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .clear-btn {
+      border: 0;
+      background: #fee2e2;
+      color: #b91c1c;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 4px 10px;
+      line-height: 1;
+      margin-left: 8px;
+    }
+
+    .clear-btn:hover {
+      background: #fecaca;
+    }
+
+    .side {
+      transition: width .22s ease, opacity .18s ease;
+    }
+
+    .side.collapsed {
+      width: 0;
+      padding: 0;
+      border: 0;
+      opacity: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .right-resizer {
+      width: 6px;
+      flex-shrink: 0;
+      cursor: col-resize;
+      border-radius: 3px;
+      background: transparent;
+    }
+
+    .right-resizer:hover {
+      background: #bfdbfe;
+    }
+
+    .right-col {
+      width: 272px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+    }
+
+    .run-item {
+      font-size: 12px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 8px 10px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+    }
+
+    .run-item .run-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .run-item .run-head::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--brand);
+      flex-shrink: 0;
+    }
+
+    .run-item.run-done .run-head::before {
+      background: #16a34a;
+    }
+
+    .run-item .run-time {
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .run-detail {
+      margin: 5px 2px 2px;
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .run-item .run-sum {
+      margin-top: 3px;
+      color: #64748b;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .run-sum .md,
+    .run-sum {
+      font-size: 12px;
+    }
+
+    .run-sum table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 6px 0;
+    }
+
+    .run-sum th,
+    .run-sum td {
+      border: 1px solid var(--line);
+      padding: 4px 6px;
+      font-size: 11px;
+      text-align: left;
+    }
+
+    .run-sum th {
+      background: #f1f5f9;
+      font-weight: 600;
+    }
+
+    .run-item.run-done {
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+    }
+
+    .tr-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .tr-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      margin: 0 0 8px;
+    }
+
+    .tr-close {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .tr-meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      word-break: break-all;
+    }
+
+    .tr-list {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .tr-line {
+      font-size: 12px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 8px 10px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+    }
+
+    .tr-line .tr-time {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .tr-line .tr-role {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 999px;
+      font-size: 11px;
+      margin: 0 6px;
+      background: #eef2ff;
+      color: var(--brand);
+    }
+
+    .tr-line .tr-role.sales {
+      background: #ecfdf5;
+      color: #16a34a;
+    }
+
+    .tr-line .tr-role.other {
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .tr-line .tr-text {
+      margin-top: 3px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #334155;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    .agent-step-body {
+      margin-top: 2px;
+      color: #64748b;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 120px;
+      overflow: auto;
+      background: #f8fafc;
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
+
+    .kb-group { margin-bottom: 12px; }
+    .kb-group-head { font-weight: 600; font-size: 12.5px; color: #475569; margin-bottom: 6px; }
+    .kb-card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; background: #fff; font-size: 12.5px; }
+    .kb-card.kb-pending { border-left: 3px solid #f59e0b; }
+    .kb-card.kb-inprogress { border-left: 3px solid #3b82f6; }
+    .kb-card.kb-done { border-left: 3px solid #16a34a; }
+    .kb-card.kb-error { border-left: 3px solid #dc2626; }
+    .kb-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .kb-goal { color: #475569; margin: 4px 0; line-height: 1.5; }
+    .kb-tools { color: #94a3b8; font-size: 11.5px; margin: 2px 0; }
+    .kb-result { color: #166534; background: #f0fdf4; border-radius: 6px; padding: 6px 8px; margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
+    .kb-error { color: #991b1b; background: #fef2f2; border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
+    .tr-text.tr-highlight { font-weight: 700; background: #fef9c3; border-radius: 4px; padding: 2px 4px; }
+    .plan-card {
+      margin: 0 0 10px;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+    }
+
+    .plan-head {
+      font-weight: 600;
+      color: #1d4ed8;
+      margin-bottom: 6px;
+    }
+
+    .plan-steps {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .plan-steps li {
+      margin: 3px 0;
+    }
+
+    .plan-tool {
+      display: inline-block;
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-radius: 6px;
+      padding: 0 7px;
+      font-size: 11px;
+      margin-left: 6px;
+    }
+
+    .plan-purpose {
+      color: #64748b;
+      font-size: 11.5px;
+    }
+
+    .plan-verify {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed #bfdbfe;
+      color: #334155;
+      font-size: 12px;
+    }
+
+    .pager-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: center;
+      margin: 8px 0 2px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .pager-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--brand);
+      border-radius: 8px;
+      padding: 3px 12px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+
+    .pager-btn:hover:not(:disabled) {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
+    .pager-btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .pager-info {
+      white-space: nowrap;
+    }
+
+    .modal-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, .45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-box {
+      width: min(1280px, 98vw);
+      height: 88vh;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(15, 23, 42, .3);
+      padding: 16px 18px;
+      overflow: hidden;
+    }
+
+    .jobs-layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      gap: 14px;
+    }
+
+    .jobs-list {
+      width: 320px;
+      flex-shrink: 0;
+      overflow: auto;
+      border-right: 1px solid var(--line);
+      padding-right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .jobs-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 11px;
+      cursor: pointer;
+      font-size: 12.5px;
+      background: #fff;
+      transition: border-color .15s, background .15s;
+    }
+
+    .jobs-item:hover {
+      border-color: #bfdbfe;
+      background: #f8fafc;
+    }
+
+    .jobs-item.active {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+
+    .jobs-item .ji-name {
+      font-weight: 600;
+    }
+
+    .jobs-item .ji-time {
+      color: #64748b;
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    .jobs-item .ji-tag {
+      display: inline-block;
+      background: #eef2ff;
+      color: #1d4ed8;
+      border-radius: 6px;
+      padding: 0 6px;
+      font-size: 10.5px;
+      margin-left: 6px;
+    }
+
+    .jobs-detail {
+      flex: 1;
+      min-width: 0;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .jd-name {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .jd-time {
+      color: #1d4ed8;
+      font-size: 12.5px;
+    }
+
+    .jd-desc {
+      font-size: 13px;
+      color: #334155;
+    }
+
+    .jd-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .jd-actions button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #334155;
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 12.5px;
+      cursor: pointer;
+    }
+
+    .jd-actions button:hover {
+      background: #f1f5f9;
+    }
+
+    .jd-actions button.primary {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: #fff;
+      border: 0;
+    }
+
+    .jd-actions button.danger {
+      background: #fee2e2;
+      color: #b91c1c;
+      border-color: #fecaca;
+    }
+
+    .jd-runs {
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+    }
+
+    .jd-runs .run-line {
+      font-size: 12px;
+      color: #64748b;
+      padding: 3px 0;
+      border-bottom: 1px dashed #f1f5f9;
+    }
+
+    .jd-runs .run-line.ok {
+      color: #16a34a;
+    }
+
+    .jd-runs .run-line.err {
+      color: #b91c1c;
+    }
+
+    .job-form label {
+      display: block;
+      font-size: 12px;
+      color: #64748b;
+      margin: 8px 0 3px;
+    }
+
+    .job-form input,
+    .job-form select,
+    .job-form textarea {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 6px 9px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .job-form textarea {
+      resize: vertical;
+    }
+
+    .job-form .row2 {
+      display: flex;
+      gap: 10px;
+    }
+
+    .job-form .row2>div {
+      flex: 1;
+    }
+
+    .job-add {
+      border: 1px dashed #93c5fd;
+      background: #f8faff;
+      color: #1d4ed8;
+      border-radius: 10px;
+      padding: 8px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 12.5px;
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
+
+    .modal-close {
+      border: 0;
+      background: #f1f5f9;
+      color: #334155;
+      border-radius: 8px;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .job-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      background: #fafbfc;
+    }
+
+    .job-card .job-name {
+      font-weight: 600;
+      color: #1d4ed8;
+    }
+
+    .job-card .job-time {
+      display: inline-block;
+      background: #eef2ff;
+      color: #1d4ed8;
+      border-radius: 6px;
+      padding: 1px 8px;
+      font-size: 11px;
+      margin-left: 8px;
+    }
+
+    .job-card .job-desc {
+      margin-top: 5px;
+      font-size: 12.5px;
+      color: #334155;
+    }
+
+    .job-card .job-status {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .job-card .job-status.ok {
+      color: #16a34a;
+    }
+
+    .job-card .job-status.err {
+      color: #b91c1c;
+    }
+
+    .pager-pre {
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 8px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>助销agent管理平台</h1>
+        <span class="sub">客户端 · 对话助销</span>
+        <span class="header-left">
+          <button id="headerCapsBtn" class="hdr-btn active" title="显示/隐藏业务逻辑功能">
+          <svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
+          </svg>业务逻辑功能</button>
+          
+          <button id="headerThreadsBtn" class="hdr-btn active" title="显示/隐藏历史会话">
+          <svg viewBox="0 0 24 24"><path d="M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+          </svg>历史会话</button>
+        </span>
+        
+        <span class="nav">
+        <button id="headerRunBtn" class="hdr-btn" title="显示/隐藏本轮任务">
+        <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+        </svg>本轮任务</button>
+
+        <button id="headerTrBtn" class="hdr-btn" title="显示/隐藏对话原文">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>对话原文</button>
+
+        <button id="headerKanbanBtn" class="hdr-btn" title="显示/隐藏协作看板">
+        <svg viewBox="0 0 24 24"><path d="M4 4h6v16H4zM14 4h6v10h-6z" />
+        </svg>子agent协作看板</button>
+
+        <button id="headerKeywordsBtn" class="hdr-btn" title="关键词管理">
+        <svg viewBox="0 0 24 24"><path d="M7 7h10v2H7zM7 11h6v2H7zM7 15h8v2H7z" />
+        </svg>关键词管理</button>
+
+        <button id="headerJobsBtn" class="hdr-btn" title="查看定时任务" onclick="openJobsModal()">
+        <svg viewBox="0 0 24 24"><path d="M12 8v4l3 3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+        </svg>定时任务</button>
+
+        <button id="headerWorkflowsBtn" class="hdr-btn" title="工作流管理" onclick="openWorkflowsModal()">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10" />
+        </svg>工作流</button>
+        </span>
+  </header>
+<script>window.APP_CONFIG = __CLIENT_CONFIG__;</script>
+  
+  
+  <div class="client-layout">
+    <aside class="side" id="side">
+      <div class="side-block grow" id="capsBlock">
+        <div class="side-title">业务逻辑功能</div>
+        <div id="capList">加载中…</div>
+      </div>
+      <div class="side-block" id="threadsBlock">
+        <div class="side-title">历史会话<button id="clearThreadsBtn" class="clear-btn" title="一键清理全部历史会话">清理</button></div>
+        <button id="newBtn" class="secondary" style="width:100%;margin-bottom:8px">+ 新会话</button>
+        <div id="threadList"></div>
+      </div>
+    </aside>
+    <section class="chat">
+      <div class="agent-chat" id="chat"></div>
+      <div class="agent-input"><textarea id="goal" placeholder="下达目标"></textarea>
+        <button id="sendBtn">发送</button>
+        <button id="stopBtn" style="display:none;background:linear-gradient(135deg,#dc2626,#b91c1c);box-shadow:0 4px 12px rgba(220,38,38,.25)">停止</button></div>
+    </section>
+    <div id="rightResizer" class="right-resizer" title="拖动调整右侧面板宽度"></div>
+    <div class="right-col" id="rightCol">
+      <aside class="side-block tr-panel" id="runPanel" style="display:none">
+        <div class="tr-head"><span>本轮任务</span>
+        <button class="tr-close" onclick="hideRunPanel()">×</button></div>
+        <div class="tr-meta" id="runMeta"></div>
+        <div class="tr-list" id="runList"></div>
+      </aside>
+      <aside class="side-block tr-panel" id="trPanel" style="display:none">
+        <div class="tr-head"><span>对话原文</span>
+        <button class="tr-close" onclick="hideTrPanel()">×</button></div>
+        <div class="tr-meta" id="trMeta"></div>
+        <div class="tr-list" id="trList"></div>
+      </aside>
+      <aside class="side-block tr-panel" id="kanbanPanel" style="display:none">
+        <div class="tr-head"><span>子agent协作看板</span>
+        <button class="tr-close" onclick="hideKanbanPanel()">×</button></div>
+        <div class="tr-meta" id="kanbanMeta"></div>
+        <div class="tr-list" id="kanbanList"></div>
+      </aside>
+    </div>
+  </div>
+  
+  <div id="jobsModal" class="modal-mask" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head"><span>⏰ 定时任务</span>
+        <button class="modal-close" onclick="closeJobsModal()">关闭</button>
+      </div>
+      <div class="jobs-layout">
+        <div class="jobs-list" id="jobsList">加载中…</div>
+        <div class="jobs-detail" id="jobsDetail">请选择左侧任务，或新增一个定时任务</div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="keywordsModal" class="modal-mask" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head"><span>🏷️ 关键词管理</span>
+        <button class="modal-close" onclick="closeKeywordsModal()">关闭</button></div>
+      <div style="display:flex;flex:1;min-height:0;gap:12px">
+        <!-- 左侧:分类目录 + 多选筛选 -->
+        <div style="width:300px;flex-shrink:0;border-right:1px solid var(--line);padding-right:10px;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 0">
+            <span style="font-weight:600;font-size:13px">📁 分类目录</span>
+            <button class="secondary" style="margin-left:auto" onclick="openCategoryForm()">＋ 新建分类</button>
+          </div>
+          <div id="kwCatForm" style="display:none;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px">
+            <input id="kwCatName" placeholder="分类名称" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px" />
+            <select id="kwCatParent" style="width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px"><option value="">无(作为一级分类)</option></select>
+            <div style="display:flex;gap:6px">
+              <button class="secondary" style="flex:1" onclick="saveCategoryForm()">保存</button>
+              <button class="secondary" style="flex:1" onclick="cancelCategoryForm()">取消</button>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px">
+            <span>勾选筛选:</span>
+            <span id="kwFilterInfo" class="mini">未筛选</span>
+            <button class="secondary" style="margin-left:auto" onclick="clearKwFilter()">清空</button>
+          </div>
+          <div id="kwCatTree" style="flex:1;overflow:auto;font-size:12.5px">加载中…</div>
+        </div>
+        <!-- 右侧:关键词列表 -->
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div class="keywords-add" style="display:flex;gap:8px;padding:6px 0;flex-wrap:wrap;align-items:center">
+            <input id="kwInput" placeholder="新增关键词(分类取左侧勾选路径，未勾选则不分类)" style="flex:1;min-width:150px;padding:7px;border:1px solid #cbd5e1;border-radius:8px" />
+            <button class="secondary" onclick="addKeyword()">＋ 添加</button>
+          </div>
+          <div class="keywords-list" id="keywordsList" style="flex:1;overflow:auto;display:flex;flex-direction:column;gap:6px">加载中…</div>
+          <div class="keywords-pager" style="display:flex;justify-content:center;gap:10px;padding:8px 0;align-items:center">
+            <button class="pager-btn" onclick="kwPage(-1)">上一页</button>
+            <span id="kwPageInfo">第 1/1 页 · 共 0 条</span>
+            <button class="pager-btn" onclick="kwPage(1)">下一页</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="workflowsModal" class="modal-mask" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head"><span>🔁 工作流</span>
+        <button class="modal-close" onclick="closeWorkflowsModal()">关闭</button></div>
+  <div id="workflowFormModal" class="modal-mask" style="display:none">
+    <div class="modal-box" style="width:min(760px,96vw);height:auto;max-height:88vh">
+      <div class="modal-head"><span id="wfFormTitle">编辑工作流</span><button class="modal-close" onclick="closeWorkflowForm()">关闭</button></div>
+      <div style="padding:14px 0;display:flex;flex-direction:column;gap:12px">
+        <div><label style="font-size:13px;color:var(--muted)">名称</label><input id="wfFormName" placeholder="工作流名称" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #cbd5e1;border-radius:8px" /></div>
+        <div><label style="font-size:13px;color:var(--muted)">描述</label><input id="wfFormDesc" placeholder="描述(可空)" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #cbd5e1;border-radius:8px" /></div>
+        <div style="flex:1;min-height:220px;display:flex;flex-direction:column"><label style="font-size:13px;color:var(--muted)">步骤定义(JSON 数组,{{param.字段}}为可配置参数)</label><textarea id="wfFormSteps" rows="10" spellcheck="false" style="flex:1;width:100%;box-sizing:border-box;padding:8px;border:1px solid #cbd5e1;border-radius:8px;font-family:Consolas,monospace;font-size:12px"></textarea></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="secondary" onclick="closeWorkflowForm()">取消</button>
+          <button class="primary" onclick="saveWorkflowForm()">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+      <div style="display:flex;flex:1;min-height:0;gap:12px">
+        <div style="width:320px;flex-shrink:0;border-right:1px solid var(--line);padding-right:10px;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 0">
+            <span style="font-weight:600;font-size:13px">工作流列表</span>
+            <span style="font-size:12px;color:var(--muted)">系统自动沉淀，可编辑微调</span>
+          </div>
+          <div id="workflowList" style="flex:1;overflow:auto">加载中…</div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div id="workflowDetail" style="flex:1;overflow:auto;font-size:13px">请选择左侧工作流，或新建一个</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="/vendor/marked.min.js"></script>
+<script src="/vendor/purify.min.js"></script>
+<!--CLIENT_FUNCTIONS-->
+  </script>
+</body>
+
+</html>

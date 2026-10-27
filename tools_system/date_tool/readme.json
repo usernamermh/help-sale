@@ -1,0 +1,28 @@
+{
+  "name": "date_tool",
+  "label": "日期转换",
+  "description": "Convert relative dates mentioned in conversation (next Monday, this Friday, today, ...) into concrete calendar dates.",
+  "description_language": "en",
+  "category": "通用",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "text"
+    ],
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "text containing relative dates"
+      },
+      "baseDate": {
+        "type": "string",
+        "description": "base date YYYY-MM-DD, defaults to today"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

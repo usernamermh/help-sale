@@ -1,0 +1,54 @@
+{
+  "name": "subagents",
+  "label": "子代理任务",
+  "description": "Register and inspect subagent tasks: op=create hands a goal to a subagent (optional tools whitelist); op=list shows the queue and statuses; op=get returns one task's result. The host orchestrator consumes and runs subagent tasks automatically.",
+  "description_language": "en",
+  "category": "协作",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "op": {
+        "type": "string",
+        "enum": [
+          "create",
+          "list",
+          "get"
+        ],
+        "default": "list",
+        "description": "operation kind"
+      },
+      "title": {
+        "type": "string",
+        "description": "task title (for create)"
+      },
+      "goal": {
+        "type": "string",
+        "description": "goal the subagent must achieve (for create)"
+      },
+      "input": {
+        "type": "object",
+        "description": "extra input passed to the subagent (for create)"
+      },
+      "tools": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "tool whitelist the subagent may use (defaults to the default read-only tools)"
+      },
+      "taskId": {
+        "type": "string",
+        "description": "task id (for get)"
+      },
+      "statusFilter": {
+        "type": "string",
+        "description": "status filter: queued/running/done/error"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

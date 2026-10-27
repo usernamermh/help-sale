@@ -1,0 +1,45 @@
+{
+  "name": "web_search",
+  "label": "网络搜索",
+  "description": "Run a web search through Serper (Google search API) and return result titles/links/snippets; use it for real-time external information, when the knowledge base has no answer, or when a fact needs verifying. Requires tools.webSearch.apiKey to be configured.",
+  "description_language": "en",
+  "category": "网络",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "q"
+    ],
+    "properties": {
+      "q": {
+        "type": "string",
+        "description": "search keywords"
+      },
+      "num": {
+        "type": "number",
+        "default": 10,
+        "maximum": 20,
+        "description": "number of results"
+      },
+      "gl": {
+        "type": "string",
+        "description": "country/region code, e.g. cn/us (optional)"
+      },
+      "hl": {
+        "type": "string",
+        "description": "interface language code, e.g. zh-cn/en (optional)"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "requires": [
+    {
+      "kind": "config",
+      "key": "tools.webSearch.apiKey",
+      "present": true
+    }
+  ],
+  "toggleable": true
+}

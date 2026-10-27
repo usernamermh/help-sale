@@ -1,0 +1,47 @@
+{
+  "name": "table_generate",
+  "label": "生成表格/流程图",
+  "description": "Turn structured data (array of arrays or array of objects) into a Markdown table, optionally with a mermaid flow or pie chart, for the frontend to render; at most 10 rows per page and page 1 by default - never page through everything automatically; when there are more pages, just state the total count, the rest is reachable through the frontend pager, and pass page only when the user explicitly asks for more.",
+  "description_language": "en",
+  "category": "呈现",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string",
+        "description": "table title (optional)"
+      },
+      "rows": {
+        "type": "array",
+        "description": "array of arrays or array of objects (object keys become the header)"
+      },
+      "chartType": {
+        "type": "string",
+        "enum": [
+          "table",
+          "mermaid",
+          "both"
+        ],
+        "default": "table"
+      },
+      "graph": {
+        "type": "array",
+        "description": "flow-graph edge list [{from,to,label?}]"
+      },
+      "pie": {
+        "type": "array",
+        "description": "pie data [{label,value}]"
+      },
+      "page": {
+        "type": "number",
+        "default": 1,
+        "description": "page number, at most 10 rows per page; page 1 by default, pass this only when the user explicitly asks for more"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

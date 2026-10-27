@@ -1,0 +1,29 @@
+{
+  "name": "knowledge_search",
+  "label": "话术检索",
+  "description": "Search the team knowledge base for sales scripts, competitor material, pricing policies and after-sales FAQ and return the matched content; say so honestly when nothing matches.",
+  "description_language": "en",
+  "category": "话术",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "query"
+    ],
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "search terms, e.g. the customer's own words"
+      },
+      "limit": {
+        "type": "number",
+        "maximum": 10,
+        "description": "maximum number of matches"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

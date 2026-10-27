@@ -1,0 +1,1702 @@
+[
+  {
+    "name": "workflow_customer_review",
+    "label": "工作流:客户复盘",
+    "description": "执行已沉淀的工作流「客户复盘」:读取客户档案与最近会话,输出一份复盘结论。可传参数:customerKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_customer_summary",
+    "label": "工作流:客户汇总",
+    "description": "执行已沉淀的工作流「客户汇总」:读取客户档案与最近会话,产出一份可发群的汇总。可传参数:customerKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_customer_alert",
+    "label": "工作流:客户预警",
+    "description": "执行已沉淀的工作流「客户预警」:读取客户档案与最近会话,给出需要预警的清单。可传参数:customerKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_customer_comparison",
+    "label": "工作流:客户对比",
+    "description": "执行已沉淀的工作流「客户对比」:读取客户档案与最近会话,输出差异清单。可传参数:customerKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_customer_archive",
+    "label": "工作流:客户归档",
+    "description": "执行已沉淀的工作流「客户归档」:读取客户档案与最近会话,把过期内容归档。可传参数:customerKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_customer_quality_check",
+    "label": "工作流:客户质检",
+    "description": "执行已沉淀的工作流「客户质检」:读取客户档案与最近会话,输出质检问题清单。可传参数:customerKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_customer_follow-up",
+    "label": "工作流:客户跟进",
+    "description": "执行已沉淀的工作流「客户跟进」:读取客户档案与最近会话,生成跟进待办。可传参数:customerKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_customer_cleanup",
+    "label": "工作流:客户清理",
+    "description": "执行已沉淀的工作流「客户清理」:读取客户档案与最近会话,清理重复与失效内容。可传参数:customerKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_customer_extract",
+    "label": "工作流:客户拉取",
+    "description": "执行已沉淀的工作流「客户拉取」:读取客户档案与最近会话,拉取明细数据。可传参数:customerKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_customer_scoring",
+    "label": "工作流:客户打分",
+    "description": "执行已沉淀的工作流「客户打分」:读取客户档案与最近会话,输出评分结果。可传参数:customerKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_conversation_review",
+    "label": "工作流:会话复盘",
+    "description": "执行已沉淀的工作流「会话复盘」:读取最近的通话与会话原文,输出一份复盘结论。可传参数:conversationKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_conversation_summary",
+    "label": "工作流:会话汇总",
+    "description": "执行已沉淀的工作流「会话汇总」:读取最近的通话与会话原文,产出一份可发群的汇总。可传参数:conversationKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_conversation_alert",
+    "label": "工作流:会话预警",
+    "description": "执行已沉淀的工作流「会话预警」:读取最近的通话与会话原文,给出需要预警的清单。可传参数:conversationKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_conversation_comparison",
+    "label": "工作流:会话对比",
+    "description": "执行已沉淀的工作流「会话对比」:读取最近的通话与会话原文,输出差异清单。可传参数:conversationKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_conversation_archive",
+    "label": "工作流:会话归档",
+    "description": "执行已沉淀的工作流「会话归档」:读取最近的通话与会话原文,把过期内容归档。可传参数:conversationKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_conversation_quality_check",
+    "label": "工作流:会话质检",
+    "description": "执行已沉淀的工作流「会话质检」:读取最近的通话与会话原文,输出质检问题清单。可传参数:conversationKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_conversation_follow-up",
+    "label": "工作流:会话跟进",
+    "description": "执行已沉淀的工作流「会话跟进」:读取最近的通话与会话原文,生成跟进待办。可传参数:conversationKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_conversation_cleanup",
+    "label": "工作流:会话清理",
+    "description": "执行已沉淀的工作流「会话清理」:读取最近的通话与会话原文,清理重复与失效内容。可传参数:conversationKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_conversation_extract",
+    "label": "工作流:会话拉取",
+    "description": "执行已沉淀的工作流「会话拉取」:读取最近的通话与会话原文,拉取明细数据。可传参数:conversationKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_conversation_scoring",
+    "label": "工作流:会话打分",
+    "description": "执行已沉淀的工作流「会话打分」:读取最近的通话与会话原文,输出评分结果。可传参数:conversationKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_sales_script_review",
+    "label": "工作流:话术复盘",
+    "description": "执行已沉淀的工作流「话术复盘」:检索知识库里的标准话术,输出一份复盘结论。可传参数:salesscriptKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_sales_script_summary",
+    "label": "工作流:话术汇总",
+    "description": "执行已沉淀的工作流「话术汇总」:检索知识库里的标准话术,产出一份可发群的汇总。可传参数:salesscriptKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_sales_script_alert",
+    "label": "工作流:话术预警",
+    "description": "执行已沉淀的工作流「话术预警」:检索知识库里的标准话术,给出需要预警的清单。可传参数:salesscriptKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_sales_script_comparison",
+    "label": "工作流:话术对比",
+    "description": "执行已沉淀的工作流「话术对比」:检索知识库里的标准话术,输出差异清单。可传参数:salesscriptKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_sales_script_archive",
+    "label": "工作流:话术归档",
+    "description": "执行已沉淀的工作流「话术归档」:检索知识库里的标准话术,把过期内容归档。可传参数:salesscriptKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_sales_script_quality_check",
+    "label": "工作流:话术质检",
+    "description": "执行已沉淀的工作流「话术质检」:检索知识库里的标准话术,输出质检问题清单。可传参数:salesscriptKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_sales_script_follow-up",
+    "label": "工作流:话术跟进",
+    "description": "执行已沉淀的工作流「话术跟进」:检索知识库里的标准话术,生成跟进待办。可传参数:salesscriptKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_sales_script_cleanup",
+    "label": "工作流:话术清理",
+    "description": "执行已沉淀的工作流「话术清理」:检索知识库里的标准话术,清理重复与失效内容。可传参数:salesscriptKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_sales_script_extract",
+    "label": "工作流:话术拉取",
+    "description": "执行已沉淀的工作流「话术拉取」:检索知识库里的标准话术,拉取明细数据。可传参数:salesscriptKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_sales_script_scoring",
+    "label": "工作流:话术打分",
+    "description": "执行已沉淀的工作流「话术打分」:检索知识库里的标准话术,输出评分结果。可传参数:salesscriptKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_task_review",
+    "label": "工作流:待办复盘",
+    "description": "执行已沉淀的工作流「待办复盘」:读取当前跟进待办,输出一份复盘结论。可传参数:taskKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_task_summary",
+    "label": "工作流:待办汇总",
+    "description": "执行已沉淀的工作流「待办汇总」:读取当前跟进待办,产出一份可发群的汇总。可传参数:taskKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_task_alert",
+    "label": "工作流:待办预警",
+    "description": "执行已沉淀的工作流「待办预警」:读取当前跟进待办,给出需要预警的清单。可传参数:taskKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_task_comparison",
+    "label": "工作流:待办对比",
+    "description": "执行已沉淀的工作流「待办对比」:读取当前跟进待办,输出差异清单。可传参数:taskKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_task_archive",
+    "label": "工作流:待办归档",
+    "description": "执行已沉淀的工作流「待办归档」:读取当前跟进待办,把过期内容归档。可传参数:taskKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_task_quality_check",
+    "label": "工作流:待办质检",
+    "description": "执行已沉淀的工作流「待办质检」:读取当前跟进待办,输出质检问题清单。可传参数:taskKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_task_follow-up",
+    "label": "工作流:待办跟进",
+    "description": "执行已沉淀的工作流「待办跟进」:读取当前跟进待办,生成跟进待办。可传参数:taskKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_task_cleanup",
+    "label": "工作流:待办清理",
+    "description": "执行已沉淀的工作流「待办清理」:读取当前跟进待办,清理重复与失效内容。可传参数:taskKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_task_extract",
+    "label": "工作流:待办拉取",
+    "description": "执行已沉淀的工作流「待办拉取」:读取当前跟进待办,拉取明细数据。可传参数:taskKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_task_scoring",
+    "label": "工作流:待办打分",
+    "description": "执行已沉淀的工作流「待办打分」:读取当前跟进待办,输出评分结果。可传参数:taskKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_knowledge_base_review",
+    "label": "工作流:知识库复盘",
+    "description": "执行已沉淀的工作流「知识库复盘」:检索团队知识库,输出一份复盘结论。可传参数:knowledgebaseKey/days。",
+    "steps": [
+      {
+        "name": "sql",
+        "tool": "sql",
+        "params": {}
+      },
+      {
+        "name": "keyword_extract_free",
+        "tool": "keyword_extract_free",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_knowledge_base_summary",
+    "label": "工作流:知识库汇总",
+    "description": "执行已沉淀的工作流「知识库汇总」:检索团队知识库,产出一份可发群的汇总。可传参数:knowledgebaseKey/days。",
+    "steps": [
+      {
+        "name": "sql",
+        "tool": "sql",
+        "params": {}
+      },
+      {
+        "name": "keyword_extract_free",
+        "tool": "keyword_extract_free",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_knowledge_base_alert",
+    "label": "工作流:知识库预警",
+    "description": "执行已沉淀的工作流「知识库预警」:检索团队知识库,给出需要预警的清单。可传参数:knowledgebaseKey/days。",
+    "steps": [
+      {
+        "name": "sql",
+        "tool": "sql",
+        "params": {}
+      },
+      {
+        "name": "keyword_extract_free",
+        "tool": "keyword_extract_free",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_knowledge_base_comparison",
+    "label": "工作流:知识库对比",
+    "description": "执行已沉淀的工作流「知识库对比」:检索团队知识库,输出差异清单。可传参数:knowledgebaseKey/days。",
+    "steps": [
+      {
+        "name": "sql",
+        "tool": "sql",
+        "params": {}
+      },
+      {
+        "name": "keyword_extract_free",
+        "tool": "keyword_extract_free",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_knowledge_base_archive",
+    "label": "工作流:知识库归档",
+    "description": "执行已沉淀的工作流「知识库归档」:检索团队知识库,把过期内容归档。可传参数:knowledgebaseKey/days。",
+    "steps": [
+      {
+        "name": "sql",
+        "tool": "sql",
+        "params": {}
+      },
+      {
+        "name": "keyword_extract_free",
+        "tool": "keyword_extract_free",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_knowledge_base_quality_check",
+    "label": "工作流:知识库质检",
+    "description": "执行已沉淀的工作流「知识库质检」:检索团队知识库,输出质检问题清单。可传参数:knowledgebaseKey/days。",
+    "steps": [
+      {
+        "name": "sql",
+        "tool": "sql",
+        "params": {}
+      },
+      {
+        "name": "keyword_extract_free",
+        "tool": "keyword_extract_free",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_knowledge_base_follow-up",
+    "label": "工作流:知识库跟进",
+    "description": "执行已沉淀的工作流「知识库跟进」:检索团队知识库,生成跟进待办。可传参数:knowledgebaseKey/days。",
+    "steps": [
+      {
+        "name": "sql",
+        "tool": "sql",
+        "params": {}
+      },
+      {
+        "name": "keyword_extract_free",
+        "tool": "keyword_extract_free",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_knowledge_base_cleanup",
+    "label": "工作流:知识库清理",
+    "description": "执行已沉淀的工作流「知识库清理」:检索团队知识库,清理重复与失效内容。可传参数:knowledgebaseKey/days。",
+    "steps": [
+      {
+        "name": "sql",
+        "tool": "sql",
+        "params": {}
+      },
+      {
+        "name": "keyword_extract_free",
+        "tool": "keyword_extract_free",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_knowledge_base_extract",
+    "label": "工作流:知识库拉取",
+    "description": "执行已沉淀的工作流「知识库拉取」:检索团队知识库,拉取明细数据。可传参数:knowledgebaseKey/days。",
+    "steps": [
+      {
+        "name": "sql",
+        "tool": "sql",
+        "params": {}
+      },
+      {
+        "name": "keyword_extract_free",
+        "tool": "keyword_extract_free",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_knowledge_base_scoring",
+    "label": "工作流:知识库打分",
+    "description": "执行已沉淀的工作流「知识库打分」:检索团队知识库,输出评分结果。可传参数:knowledgebaseKey/days。",
+    "steps": [
+      {
+        "name": "sql",
+        "tool": "sql",
+        "params": {}
+      },
+      {
+        "name": "keyword_extract_free",
+        "tool": "keyword_extract_free",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_deal_review",
+    "label": "工作流:成交复盘",
+    "description": "执行已沉淀的工作流「成交复盘」:读取成交与折扣明细,输出一份复盘结论。可传参数:dealKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_deal_summary",
+    "label": "工作流:成交汇总",
+    "description": "执行已沉淀的工作流「成交汇总」:读取成交与折扣明细,产出一份可发群的汇总。可传参数:dealKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_deal_alert",
+    "label": "工作流:成交预警",
+    "description": "执行已沉淀的工作流「成交预警」:读取成交与折扣明细,给出需要预警的清单。可传参数:dealKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_deal_comparison",
+    "label": "工作流:成交对比",
+    "description": "执行已沉淀的工作流「成交对比」:读取成交与折扣明细,输出差异清单。可传参数:dealKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_deal_archive",
+    "label": "工作流:成交归档",
+    "description": "执行已沉淀的工作流「成交归档」:读取成交与折扣明细,把过期内容归档。可传参数:dealKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_deal_quality_check",
+    "label": "工作流:成交质检",
+    "description": "执行已沉淀的工作流「成交质检」:读取成交与折扣明细,输出质检问题清单。可传参数:dealKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_deal_follow-up",
+    "label": "工作流:成交跟进",
+    "description": "执行已沉淀的工作流「成交跟进」:读取成交与折扣明细,生成跟进待办。可传参数:dealKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_deal_cleanup",
+    "label": "工作流:成交清理",
+    "description": "执行已沉淀的工作流「成交清理」:读取成交与折扣明细,清理重复与失效内容。可传参数:dealKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_deal_extract",
+    "label": "工作流:成交拉取",
+    "description": "执行已沉淀的工作流「成交拉取」:读取成交与折扣明细,拉取明细数据。可传参数:dealKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_deal_scoring",
+    "label": "工作流:成交打分",
+    "description": "执行已沉淀的工作流「成交打分」:读取成交与折扣明细,输出评分结果。可传参数:dealKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_store_review",
+    "label": "工作流:门店复盘",
+    "description": "执行已沉淀的工作流「门店复盘」:读取门店经营数据,输出一份复盘结论。可传参数:storeKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_store_summary",
+    "label": "工作流:门店汇总",
+    "description": "执行已沉淀的工作流「门店汇总」:读取门店经营数据,产出一份可发群的汇总。可传参数:storeKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_store_alert",
+    "label": "工作流:门店预警",
+    "description": "执行已沉淀的工作流「门店预警」:读取门店经营数据,给出需要预警的清单。可传参数:storeKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_store_comparison",
+    "label": "工作流:门店对比",
+    "description": "执行已沉淀的工作流「门店对比」:读取门店经营数据,输出差异清单。可传参数:storeKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_store_archive",
+    "label": "工作流:门店归档",
+    "description": "执行已沉淀的工作流「门店归档」:读取门店经营数据,把过期内容归档。可传参数:storeKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_store_quality_check",
+    "label": "工作流:门店质检",
+    "description": "执行已沉淀的工作流「门店质检」:读取门店经营数据,输出质检问题清单。可传参数:storeKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_store_follow-up",
+    "label": "工作流:门店跟进",
+    "description": "执行已沉淀的工作流「门店跟进」:读取门店经营数据,生成跟进待办。可传参数:storeKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_store_cleanup",
+    "label": "工作流:门店清理",
+    "description": "执行已沉淀的工作流「门店清理」:读取门店经营数据,清理重复与失效内容。可传参数:storeKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_store_extract",
+    "label": "工作流:门店拉取",
+    "description": "执行已沉淀的工作流「门店拉取」:读取门店经营数据,拉取明细数据。可传参数:storeKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_store_scoring",
+    "label": "工作流:门店打分",
+    "description": "执行已沉淀的工作流「门店打分」:读取门店经营数据,输出评分结果。可传参数:storeKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_competitor_review",
+    "label": "工作流:竞品复盘",
+    "description": "执行已沉淀的工作流「竞品复盘」:检索竞品资料,输出一份复盘结论。可传参数:competitorKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_competitor_summary",
+    "label": "工作流:竞品汇总",
+    "description": "执行已沉淀的工作流「竞品汇总」:检索竞品资料,产出一份可发群的汇总。可传参数:competitorKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_competitor_alert",
+    "label": "工作流:竞品预警",
+    "description": "执行已沉淀的工作流「竞品预警」:检索竞品资料,给出需要预警的清单。可传参数:competitorKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_competitor_comparison",
+    "label": "工作流:竞品对比",
+    "description": "执行已沉淀的工作流「竞品对比」:检索竞品资料,输出差异清单。可传参数:competitorKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_competitor_archive",
+    "label": "工作流:竞品归档",
+    "description": "执行已沉淀的工作流「竞品归档」:检索竞品资料,把过期内容归档。可传参数:competitorKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_competitor_quality_check",
+    "label": "工作流:竞品质检",
+    "description": "执行已沉淀的工作流「竞品质检」:检索竞品资料,输出质检问题清单。可传参数:competitorKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_competitor_follow-up",
+    "label": "工作流:竞品跟进",
+    "description": "执行已沉淀的工作流「竞品跟进」:检索竞品资料,生成跟进待办。可传参数:competitorKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_competitor_cleanup",
+    "label": "工作流:竞品清理",
+    "description": "执行已沉淀的工作流「竞品清理」:检索竞品资料,清理重复与失效内容。可传参数:competitorKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_competitor_extract",
+    "label": "工作流:竞品拉取",
+    "description": "执行已沉淀的工作流「竞品拉取」:检索竞品资料,拉取明细数据。可传参数:competitorKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_competitor_scoring",
+    "label": "工作流:竞品打分",
+    "description": "执行已沉淀的工作流「竞品打分」:检索竞品资料,输出评分结果。可传参数:competitorKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_quote_review",
+    "label": "工作流:报价复盘",
+    "description": "执行已沉淀的工作流「报价复盘」:读取历史报价与政策,输出一份复盘结论。可传参数:quoteKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_quote_summary",
+    "label": "工作流:报价汇总",
+    "description": "执行已沉淀的工作流「报价汇总」:读取历史报价与政策,产出一份可发群的汇总。可传参数:quoteKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_quote_alert",
+    "label": "工作流:报价预警",
+    "description": "执行已沉淀的工作流「报价预警」:读取历史报价与政策,给出需要预警的清单。可传参数:quoteKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_quote_comparison",
+    "label": "工作流:报价对比",
+    "description": "执行已沉淀的工作流「报价对比」:读取历史报价与政策,输出差异清单。可传参数:quoteKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_quote_archive",
+    "label": "工作流:报价归档",
+    "description": "执行已沉淀的工作流「报价归档」:读取历史报价与政策,把过期内容归档。可传参数:quoteKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_quote_quality_check",
+    "label": "工作流:报价质检",
+    "description": "执行已沉淀的工作流「报价质检」:读取历史报价与政策,输出质检问题清单。可传参数:quoteKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_quote_follow-up",
+    "label": "工作流:报价跟进",
+    "description": "执行已沉淀的工作流「报价跟进」:读取历史报价与政策,生成跟进待办。可传参数:quoteKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_quote_cleanup",
+    "label": "工作流:报价清理",
+    "description": "执行已沉淀的工作流「报价清理」:读取历史报价与政策,清理重复与失效内容。可传参数:quoteKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_quote_extract",
+    "label": "工作流:报价拉取",
+    "description": "执行已沉淀的工作流「报价拉取」:读取历史报价与政策,拉取明细数据。可传参数:quoteKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_quote_scoring",
+    "label": "工作流:报价打分",
+    "description": "执行已沉淀的工作流「报价打分」:读取历史报价与政策,输出评分结果。可传参数:quoteKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_weekly_report_review",
+    "label": "工作流:周报复盘",
+    "description": "执行已沉淀的工作流「周报复盘」:按周统计经营与跟进情况,输出一份复盘结论。可传参数:weeklyreportKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_weekly_report_summary",
+    "label": "工作流:周报汇总",
+    "description": "执行已沉淀的工作流「周报汇总」:按周统计经营与跟进情况,产出一份可发群的汇总。可传参数:weeklyreportKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_weekly_report_alert",
+    "label": "工作流:周报预警",
+    "description": "执行已沉淀的工作流「周报预警」:按周统计经营与跟进情况,给出需要预警的清单。可传参数:weeklyreportKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_weekly_report_comparison",
+    "label": "工作流:周报对比",
+    "description": "执行已沉淀的工作流「周报对比」:按周统计经营与跟进情况,输出差异清单。可传参数:weeklyreportKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_weekly_report_archive",
+    "label": "工作流:周报归档",
+    "description": "执行已沉淀的工作流「周报归档」:按周统计经营与跟进情况,把过期内容归档。可传参数:weeklyreportKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_weekly_report_quality_check",
+    "label": "工作流:周报质检",
+    "description": "执行已沉淀的工作流「周报质检」:按周统计经营与跟进情况,输出质检问题清单。可传参数:weeklyreportKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_weekly_report_follow-up",
+    "label": "工作流:周报跟进",
+    "description": "执行已沉淀的工作流「周报跟进」:按周统计经营与跟进情况,生成跟进待办。可传参数:weeklyreportKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_weekly_report_cleanup",
+    "label": "工作流:周报清理",
+    "description": "执行已沉淀的工作流「周报清理」:按周统计经营与跟进情况,清理重复与失效内容。可传参数:weeklyreportKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_weekly_report_extract",
+    "label": "工作流:周报拉取",
+    "description": "执行已沉淀的工作流「周报拉取」:按周统计经营与跟进情况,拉取明细数据。可传参数:weeklyreportKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  },
+  {
+    "name": "workflow_weekly_report_scoring",
+    "label": "工作流:周报打分",
+    "description": "执行已沉淀的工作流「周报打分」:按周统计经营与跟进情况,输出评分结果。可传参数:weeklyreportKey/days。",
+    "steps": [
+      {
+        "name": "playbook_check",
+        "tool": "playbook_check",
+        "params": {}
+      },
+      {
+        "name": "insight_query",
+        "tool": "insight_query",
+        "params": {}
+      }
+    ]
+  }
+]

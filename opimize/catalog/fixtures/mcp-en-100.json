@@ -1,0 +1,1702 @@
+[
+  {
+    "name": "mcp_acme_list_repositories",
+    "description": "List repositories available in the Acme workspace. Works across every branch and tag.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "repository id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_get_repository",
+    "description": "Get details of a repository by id. Works across every branch and tag.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "repository id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_create_repository",
+    "description": "Create a new repository. Works across every branch and tag.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "repository id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_update_repository",
+    "description": "Update fields of an existing repository. Works across every branch and tag.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "repository id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_delete_repository",
+    "description": "Delete a repository permanently. Works across every branch and tag.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "repository id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_search_repository",
+    "description": "Search repositories by keyword. Works across every branch and tag.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "repository id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_archive_repository",
+    "description": "Archive a repository so it stops appearing in active lists. Works across every branch and tag.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "repository id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_restore_repository",
+    "description": "Restore an archived repository. Works across every branch and tag.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "repository id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_export_repository",
+    "description": "Export a repository as a downloadable file. Works across every branch and tag.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "repository id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_duplicate_repository",
+    "description": "Duplicate a repository into another workspace, keeping its metadata. Works across every branch and tag.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "repository id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_list_issues",
+    "description": "List issues available in the Acme workspace. Keeps labels, assignees and milestone.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "issue id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_get_issue",
+    "description": "Get details of a issue by id. Keeps labels, assignees and milestone.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "issue id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_create_issue",
+    "description": "Create a new issue. Keeps labels, assignees and milestone.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "issue id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_update_issue",
+    "description": "Update fields of an existing issue. Keeps labels, assignees and milestone.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "issue id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_delete_issue",
+    "description": "Delete a issue permanently. Keeps labels, assignees and milestone.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "issue id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_search_issue",
+    "description": "Search issues by keyword. Keeps labels, assignees and milestone.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "issue id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_archive_issue",
+    "description": "Archive a issue so it stops appearing in active lists. Keeps labels, assignees and milestone.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "issue id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_restore_issue",
+    "description": "Restore an archived issue. Keeps labels, assignees and milestone.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "issue id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_export_issue",
+    "description": "Export a issue as a downloadable file. Keeps labels, assignees and milestone.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "issue id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_duplicate_issue",
+    "description": "Duplicate a issue into another workspace, keeping its metadata. Keeps labels, assignees and milestone.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "issue id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_list_pull_requests",
+    "description": "List pull requests available in the Acme workspace. Reports review state and CI checks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "pull request id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_get_pull_request",
+    "description": "Get details of a pull request by id. Reports review state and CI checks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "pull request id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_create_pull_request",
+    "description": "Create a new pull request. Reports review state and CI checks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "pull request id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_update_pull_request",
+    "description": "Update fields of an existing pull request. Reports review state and CI checks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "pull request id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_delete_pull_request",
+    "description": "Delete a pull request permanently. Reports review state and CI checks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "pull request id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_search_pull_request",
+    "description": "Search pull requests by keyword. Reports review state and CI checks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "pull request id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_archive_pull_request",
+    "description": "Archive a pull request so it stops appearing in active lists. Reports review state and CI checks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "pull request id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_restore_pull_request",
+    "description": "Restore an archived pull request. Reports review state and CI checks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "pull request id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_export_pull_request",
+    "description": "Export a pull request as a downloadable file. Reports review state and CI checks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "pull request id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_duplicate_pull_request",
+    "description": "Duplicate a pull request into another workspace, keeping its metadata. Reports review state and CI checks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "pull request id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_list_releases",
+    "description": "List releases available in the Acme workspace. Includes the git tag and release notes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "release id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_get_release",
+    "description": "Get details of a release by id. Includes the git tag and release notes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "release id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_create_release",
+    "description": "Create a new release. Includes the git tag and release notes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "release id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_update_release",
+    "description": "Update fields of an existing release. Includes the git tag and release notes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "release id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_delete_release",
+    "description": "Delete a release permanently. Includes the git tag and release notes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "release id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_search_release",
+    "description": "Search releases by keyword. Includes the git tag and release notes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "release id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_archive_release",
+    "description": "Archive a release so it stops appearing in active lists. Includes the git tag and release notes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "release id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_restore_release",
+    "description": "Restore an archived release. Includes the git tag and release notes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "release id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_export_release",
+    "description": "Export a release as a downloadable file. Includes the git tag and release notes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "release id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_duplicate_release",
+    "description": "Duplicate a release into another workspace, keeping its metadata. Includes the git tag and release notes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "release id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_list_workflow_runs",
+    "description": "List workflow runs available in the Acme workspace. Returns run status and step logs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "workflow run id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_get_workflow_run",
+    "description": "Get details of a workflow run by id. Returns run status and step logs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "workflow run id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_create_workflow_run",
+    "description": "Create a new workflow run. Returns run status and step logs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "workflow run id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_update_workflow_run",
+    "description": "Update fields of an existing workflow run. Returns run status and step logs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "workflow run id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_delete_workflow_run",
+    "description": "Delete a workflow run permanently. Returns run status and step logs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "workflow run id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_search_workflow_run",
+    "description": "Search workflow runs by keyword. Returns run status and step logs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "workflow run id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_archive_workflow_run",
+    "description": "Archive a workflow run so it stops appearing in active lists. Returns run status and step logs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "workflow run id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_restore_workflow_run",
+    "description": "Restore an archived workflow run. Returns run status and step logs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "workflow run id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_export_workflow_run",
+    "description": "Export a workflow run as a downloadable file. Returns run status and step logs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "workflow run id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_duplicate_workflow_run",
+    "description": "Duplicate a workflow run into another workspace, keeping its metadata. Returns run status and step logs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "workflow run id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_list_packages",
+    "description": "List packages available in the Acme workspace. Covers container and npm packages.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "package id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_get_package",
+    "description": "Get details of a package by id. Covers container and npm packages.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "package id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_create_package",
+    "description": "Create a new package. Covers container and npm packages.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "package id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_update_package",
+    "description": "Update fields of an existing package. Covers container and npm packages.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "package id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_delete_package",
+    "description": "Delete a package permanently. Covers container and npm packages.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "package id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_search_package",
+    "description": "Search packages by keyword. Covers container and npm packages.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "package id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_archive_package",
+    "description": "Archive a package so it stops appearing in active lists. Covers container and npm packages.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "package id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_restore_package",
+    "description": "Restore an archived package. Covers container and npm packages.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "package id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_export_package",
+    "description": "Export a package as a downloadable file. Covers container and npm packages.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "package id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_duplicate_package",
+    "description": "Duplicate a package into another workspace, keeping its metadata. Covers container and npm packages.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "package id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_list_secrets",
+    "description": "List secrets available in the Acme workspace. Scoped to a repository or the whole organization.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "secret id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_get_secret",
+    "description": "Get details of a secret by id. Scoped to a repository or the whole organization.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "secret id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_create_secret",
+    "description": "Create a new secret. Scoped to a repository or the whole organization.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "secret id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_update_secret",
+    "description": "Update fields of an existing secret. Scoped to a repository or the whole organization.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "secret id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_delete_secret",
+    "description": "Delete a secret permanently. Scoped to a repository or the whole organization.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "secret id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_search_secret",
+    "description": "Search secrets by keyword. Scoped to a repository or the whole organization.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "secret id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_archive_secret",
+    "description": "Archive a secret so it stops appearing in active lists. Scoped to a repository or the whole organization.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "secret id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_restore_secret",
+    "description": "Restore an archived secret. Scoped to a repository or the whole organization.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "secret id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_export_secret",
+    "description": "Export a secret as a downloadable file. Scoped to a repository or the whole organization.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "secret id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_duplicate_secret",
+    "description": "Duplicate a secret into another workspace, keeping its metadata. Scoped to a repository or the whole organization.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "secret id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_list_teams",
+    "description": "List teams available in the Acme workspace. Returns members and their roles.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "team id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_get_team",
+    "description": "Get details of a team by id. Returns members and their roles.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "team id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_create_team",
+    "description": "Create a new team. Returns members and their roles.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "team id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_update_team",
+    "description": "Update fields of an existing team. Returns members and their roles.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "team id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_delete_team",
+    "description": "Delete a team permanently. Returns members and their roles.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "team id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_search_team",
+    "description": "Search teams by keyword. Returns members and their roles.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "team id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_archive_team",
+    "description": "Archive a team so it stops appearing in active lists. Returns members and their roles.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "team id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_restore_team",
+    "description": "Restore an archived team. Returns members and their roles.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "team id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_export_team",
+    "description": "Export a team as a downloadable file. Returns members and their roles.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "team id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_duplicate_team",
+    "description": "Duplicate a team into another workspace, keeping its metadata. Returns members and their roles.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "team id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_list_project_boards",
+    "description": "List project boards available in the Acme workspace. Returns columns and cards.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "project board id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_get_project_board",
+    "description": "Get details of a project board by id. Returns columns and cards.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "project board id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_create_project_board",
+    "description": "Create a new project board. Returns columns and cards.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "project board id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_update_project_board",
+    "description": "Update fields of an existing project board. Returns columns and cards.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "project board id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_delete_project_board",
+    "description": "Delete a project board permanently. Returns columns and cards.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "project board id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_search_project_board",
+    "description": "Search project boards by keyword. Returns columns and cards.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "project board id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_archive_project_board",
+    "description": "Archive a project board so it stops appearing in active lists. Returns columns and cards.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "project board id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_restore_project_board",
+    "description": "Restore an archived project board. Returns columns and cards.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "project board id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_export_project_board",
+    "description": "Export a project board as a downloadable file. Returns columns and cards.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "project board id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_duplicate_project_board",
+    "description": "Duplicate a project board into another workspace, keeping its metadata. Returns columns and cards.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "project board id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_list_gists",
+    "description": "List gists available in the Acme workspace. Returns files and revision history.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "gist id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_get_gist",
+    "description": "Get details of a gist by id. Returns files and revision history.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "gist id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_create_gist",
+    "description": "Create a new gist. Returns files and revision history.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "gist id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_update_gist",
+    "description": "Update fields of an existing gist. Returns files and revision history.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "gist id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_delete_gist",
+    "description": "Delete a gist permanently. Returns files and revision history.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "gist id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_search_gist",
+    "description": "Search gists by keyword. Returns files and revision history.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "gist id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_archive_gist",
+    "description": "Archive a gist so it stops appearing in active lists. Returns files and revision history.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "gist id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_restore_gist",
+    "description": "Restore an archived gist. Returns files and revision history.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "gist id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_export_gist",
+    "description": "Export a gist as a downloadable file. Returns files and revision history.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "gist id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  },
+  {
+    "name": "mcp_acme_duplicate_gist",
+    "description": "Duplicate a gist into another workspace, keeping its metadata. Returns files and revision history.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "gist id"
+        },
+        "page": {
+          "type": "number",
+          "description": "page number"
+        }
+      }
+    }
+  }
+]

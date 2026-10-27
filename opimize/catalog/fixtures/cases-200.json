@@ -1,0 +1,1402 @@
+[
+  {
+    "id": "mcp-001",
+    "group": "mcp",
+    "zh": "列出仓库",
+    "en": "list repositories",
+    "expect": "mcp_acme_list_repositories"
+  },
+  {
+    "id": "mcp-002",
+    "group": "mcp",
+    "zh": "查看仓库",
+    "en": "get repository",
+    "expect": "mcp_acme_get_repository"
+  },
+  {
+    "id": "mcp-003",
+    "group": "mcp",
+    "zh": "创建仓库",
+    "en": "create repository",
+    "expect": "mcp_acme_create_repository"
+  },
+  {
+    "id": "mcp-004",
+    "group": "mcp",
+    "zh": "更新仓库",
+    "en": "update repository",
+    "expect": "mcp_acme_update_repository"
+  },
+  {
+    "id": "mcp-005",
+    "group": "mcp",
+    "zh": "删除仓库",
+    "en": "delete repository",
+    "expect": "mcp_acme_delete_repository"
+  },
+  {
+    "id": "mcp-006",
+    "group": "mcp",
+    "zh": "搜索仓库",
+    "en": "search repository",
+    "expect": "mcp_acme_search_repository"
+  },
+  {
+    "id": "mcp-007",
+    "group": "mcp",
+    "zh": "归档仓库",
+    "en": "archive repository",
+    "expect": "mcp_acme_archive_repository"
+  },
+  {
+    "id": "mcp-008",
+    "group": "mcp",
+    "zh": "恢复仓库",
+    "en": "restore repository",
+    "expect": "mcp_acme_restore_repository"
+  },
+  {
+    "id": "mcp-009",
+    "group": "mcp",
+    "zh": "导出仓库",
+    "en": "export repository",
+    "expect": "mcp_acme_export_repository"
+  },
+  {
+    "id": "mcp-010",
+    "group": "mcp",
+    "zh": "复制仓库",
+    "en": "duplicate repository",
+    "expect": "mcp_acme_duplicate_repository"
+  },
+  {
+    "id": "mcp-011",
+    "group": "mcp",
+    "zh": "列出问题单",
+    "en": "list issues",
+    "expect": "mcp_acme_list_issues"
+  },
+  {
+    "id": "mcp-012",
+    "group": "mcp",
+    "zh": "查看问题单",
+    "en": "get issue",
+    "expect": "mcp_acme_get_issue"
+  },
+  {
+    "id": "mcp-013",
+    "group": "mcp",
+    "zh": "创建问题单",
+    "en": "create issue",
+    "expect": "mcp_acme_create_issue"
+  },
+  {
+    "id": "mcp-014",
+    "group": "mcp",
+    "zh": "更新问题单",
+    "en": "update issue",
+    "expect": "mcp_acme_update_issue"
+  },
+  {
+    "id": "mcp-015",
+    "group": "mcp",
+    "zh": "删除问题单",
+    "en": "delete issue",
+    "expect": "mcp_acme_delete_issue"
+  },
+  {
+    "id": "mcp-016",
+    "group": "mcp",
+    "zh": "搜索问题单",
+    "en": "search issue",
+    "expect": "mcp_acme_search_issue"
+  },
+  {
+    "id": "mcp-017",
+    "group": "mcp",
+    "zh": "归档问题单",
+    "en": "archive issue",
+    "expect": "mcp_acme_archive_issue"
+  },
+  {
+    "id": "mcp-018",
+    "group": "mcp",
+    "zh": "恢复问题单",
+    "en": "restore issue",
+    "expect": "mcp_acme_restore_issue"
+  },
+  {
+    "id": "mcp-019",
+    "group": "mcp",
+    "zh": "导出问题单",
+    "en": "export issue",
+    "expect": "mcp_acme_export_issue"
+  },
+  {
+    "id": "mcp-020",
+    "group": "mcp",
+    "zh": "复制问题单",
+    "en": "duplicate issue",
+    "expect": "mcp_acme_duplicate_issue"
+  },
+  {
+    "id": "mcp-021",
+    "group": "mcp",
+    "zh": "列出拉取请求",
+    "en": "list pull requests",
+    "expect": "mcp_acme_list_pull_requests"
+  },
+  {
+    "id": "mcp-022",
+    "group": "mcp",
+    "zh": "查看拉取请求",
+    "en": "get pull request",
+    "expect": "mcp_acme_get_pull_request"
+  },
+  {
+    "id": "mcp-023",
+    "group": "mcp",
+    "zh": "创建拉取请求",
+    "en": "create pull request",
+    "expect": "mcp_acme_create_pull_request"
+  },
+  {
+    "id": "mcp-024",
+    "group": "mcp",
+    "zh": "更新拉取请求",
+    "en": "update pull request",
+    "expect": "mcp_acme_update_pull_request"
+  },
+  {
+    "id": "mcp-025",
+    "group": "mcp",
+    "zh": "删除拉取请求",
+    "en": "delete pull request",
+    "expect": "mcp_acme_delete_pull_request"
+  },
+  {
+    "id": "mcp-026",
+    "group": "mcp",
+    "zh": "搜索拉取请求",
+    "en": "search pull request",
+    "expect": "mcp_acme_search_pull_request"
+  },
+  {
+    "id": "mcp-027",
+    "group": "mcp",
+    "zh": "归档拉取请求",
+    "en": "archive pull request",
+    "expect": "mcp_acme_archive_pull_request"
+  },
+  {
+    "id": "mcp-028",
+    "group": "mcp",
+    "zh": "恢复拉取请求",
+    "en": "restore pull request",
+    "expect": "mcp_acme_restore_pull_request"
+  },
+  {
+    "id": "mcp-029",
+    "group": "mcp",
+    "zh": "导出拉取请求",
+    "en": "export pull request",
+    "expect": "mcp_acme_export_pull_request"
+  },
+  {
+    "id": "mcp-030",
+    "group": "mcp",
+    "zh": "复制拉取请求",
+    "en": "duplicate pull request",
+    "expect": "mcp_acme_duplicate_pull_request"
+  },
+  {
+    "id": "mcp-031",
+    "group": "mcp",
+    "zh": "列出发布版本",
+    "en": "list releases",
+    "expect": "mcp_acme_list_releases"
+  },
+  {
+    "id": "mcp-032",
+    "group": "mcp",
+    "zh": "查看发布版本",
+    "en": "get release",
+    "expect": "mcp_acme_get_release"
+  },
+  {
+    "id": "mcp-033",
+    "group": "mcp",
+    "zh": "创建发布版本",
+    "en": "create release",
+    "expect": "mcp_acme_create_release"
+  },
+  {
+    "id": "mcp-034",
+    "group": "mcp",
+    "zh": "更新发布版本",
+    "en": "update release",
+    "expect": "mcp_acme_update_release"
+  },
+  {
+    "id": "mcp-035",
+    "group": "mcp",
+    "zh": "删除发布版本",
+    "en": "delete release",
+    "expect": "mcp_acme_delete_release"
+  },
+  {
+    "id": "mcp-036",
+    "group": "mcp",
+    "zh": "搜索发布版本",
+    "en": "search release",
+    "expect": "mcp_acme_search_release"
+  },
+  {
+    "id": "mcp-037",
+    "group": "mcp",
+    "zh": "归档发布版本",
+    "en": "archive release",
+    "expect": "mcp_acme_archive_release"
+  },
+  {
+    "id": "mcp-038",
+    "group": "mcp",
+    "zh": "恢复发布版本",
+    "en": "restore release",
+    "expect": "mcp_acme_restore_release"
+  },
+  {
+    "id": "mcp-039",
+    "group": "mcp",
+    "zh": "导出发布版本",
+    "en": "export release",
+    "expect": "mcp_acme_export_release"
+  },
+  {
+    "id": "mcp-040",
+    "group": "mcp",
+    "zh": "复制发布版本",
+    "en": "duplicate release",
+    "expect": "mcp_acme_duplicate_release"
+  },
+  {
+    "id": "mcp-041",
+    "group": "mcp",
+    "zh": "列出流水线运行",
+    "en": "list workflow runs",
+    "expect": "mcp_acme_list_workflow_runs"
+  },
+  {
+    "id": "mcp-042",
+    "group": "mcp",
+    "zh": "查看流水线运行",
+    "en": "get workflow run",
+    "expect": "mcp_acme_get_workflow_run"
+  },
+  {
+    "id": "mcp-043",
+    "group": "mcp",
+    "zh": "创建流水线运行",
+    "en": "create workflow run",
+    "expect": "mcp_acme_create_workflow_run"
+  },
+  {
+    "id": "mcp-044",
+    "group": "mcp",
+    "zh": "更新流水线运行",
+    "en": "update workflow run",
+    "expect": "mcp_acme_update_workflow_run"
+  },
+  {
+    "id": "mcp-045",
+    "group": "mcp",
+    "zh": "删除流水线运行",
+    "en": "delete workflow run",
+    "expect": "mcp_acme_delete_workflow_run"
+  },
+  {
+    "id": "mcp-046",
+    "group": "mcp",
+    "zh": "搜索流水线运行",
+    "en": "search workflow run",
+    "expect": "mcp_acme_search_workflow_run"
+  },
+  {
+    "id": "mcp-047",
+    "group": "mcp",
+    "zh": "归档流水线运行",
+    "en": "archive workflow run",
+    "expect": "mcp_acme_archive_workflow_run"
+  },
+  {
+    "id": "mcp-048",
+    "group": "mcp",
+    "zh": "恢复流水线运行",
+    "en": "restore workflow run",
+    "expect": "mcp_acme_restore_workflow_run"
+  },
+  {
+    "id": "mcp-049",
+    "group": "mcp",
+    "zh": "导出流水线运行",
+    "en": "export workflow run",
+    "expect": "mcp_acme_export_workflow_run"
+  },
+  {
+    "id": "mcp-050",
+    "group": "mcp",
+    "zh": "复制流水线运行",
+    "en": "duplicate workflow run",
+    "expect": "mcp_acme_duplicate_workflow_run"
+  },
+  {
+    "id": "mcp-051",
+    "group": "mcp",
+    "zh": "列出构建产物",
+    "en": "list packages",
+    "expect": "mcp_acme_list_packages"
+  },
+  {
+    "id": "mcp-052",
+    "group": "mcp",
+    "zh": "查看构建产物",
+    "en": "get package",
+    "expect": "mcp_acme_get_package"
+  },
+  {
+    "id": "mcp-053",
+    "group": "mcp",
+    "zh": "创建构建产物",
+    "en": "create package",
+    "expect": "mcp_acme_create_package"
+  },
+  {
+    "id": "mcp-054",
+    "group": "mcp",
+    "zh": "更新构建产物",
+    "en": "update package",
+    "expect": "mcp_acme_update_package"
+  },
+  {
+    "id": "mcp-055",
+    "group": "mcp",
+    "zh": "删除构建产物",
+    "en": "delete package",
+    "expect": "mcp_acme_delete_package"
+  },
+  {
+    "id": "mcp-056",
+    "group": "mcp",
+    "zh": "搜索构建产物",
+    "en": "search package",
+    "expect": "mcp_acme_search_package"
+  },
+  {
+    "id": "mcp-057",
+    "group": "mcp",
+    "zh": "归档构建产物",
+    "en": "archive package",
+    "expect": "mcp_acme_archive_package"
+  },
+  {
+    "id": "mcp-058",
+    "group": "mcp",
+    "zh": "恢复构建产物",
+    "en": "restore package",
+    "expect": "mcp_acme_restore_package"
+  },
+  {
+    "id": "mcp-059",
+    "group": "mcp",
+    "zh": "导出构建产物",
+    "en": "export package",
+    "expect": "mcp_acme_export_package"
+  },
+  {
+    "id": "mcp-060",
+    "group": "mcp",
+    "zh": "复制构建产物",
+    "en": "duplicate package",
+    "expect": "mcp_acme_duplicate_package"
+  },
+  {
+    "id": "mcp-061",
+    "group": "mcp",
+    "zh": "列出密钥",
+    "en": "list secrets",
+    "expect": "mcp_acme_list_secrets"
+  },
+  {
+    "id": "mcp-062",
+    "group": "mcp",
+    "zh": "查看密钥",
+    "en": "get secret",
+    "expect": "mcp_acme_get_secret"
+  },
+  {
+    "id": "mcp-063",
+    "group": "mcp",
+    "zh": "创建密钥",
+    "en": "create secret",
+    "expect": "mcp_acme_create_secret"
+  },
+  {
+    "id": "mcp-064",
+    "group": "mcp",
+    "zh": "更新密钥",
+    "en": "update secret",
+    "expect": "mcp_acme_update_secret"
+  },
+  {
+    "id": "mcp-065",
+    "group": "mcp",
+    "zh": "删除密钥",
+    "en": "delete secret",
+    "expect": "mcp_acme_delete_secret"
+  },
+  {
+    "id": "mcp-066",
+    "group": "mcp",
+    "zh": "搜索密钥",
+    "en": "search secret",
+    "expect": "mcp_acme_search_secret"
+  },
+  {
+    "id": "mcp-067",
+    "group": "mcp",
+    "zh": "归档密钥",
+    "en": "archive secret",
+    "expect": "mcp_acme_archive_secret"
+  },
+  {
+    "id": "mcp-068",
+    "group": "mcp",
+    "zh": "恢复密钥",
+    "en": "restore secret",
+    "expect": "mcp_acme_restore_secret"
+  },
+  {
+    "id": "mcp-069",
+    "group": "mcp",
+    "zh": "导出密钥",
+    "en": "export secret",
+    "expect": "mcp_acme_export_secret"
+  },
+  {
+    "id": "mcp-070",
+    "group": "mcp",
+    "zh": "复制密钥",
+    "en": "duplicate secret",
+    "expect": "mcp_acme_duplicate_secret"
+  },
+  {
+    "id": "mcp-071",
+    "group": "mcp",
+    "zh": "列出团队",
+    "en": "list teams",
+    "expect": "mcp_acme_list_teams"
+  },
+  {
+    "id": "mcp-072",
+    "group": "mcp",
+    "zh": "查看团队",
+    "en": "get team",
+    "expect": "mcp_acme_get_team"
+  },
+  {
+    "id": "mcp-073",
+    "group": "mcp",
+    "zh": "创建团队",
+    "en": "create team",
+    "expect": "mcp_acme_create_team"
+  },
+  {
+    "id": "mcp-074",
+    "group": "mcp",
+    "zh": "更新团队",
+    "en": "update team",
+    "expect": "mcp_acme_update_team"
+  },
+  {
+    "id": "mcp-075",
+    "group": "mcp",
+    "zh": "删除团队",
+    "en": "delete team",
+    "expect": "mcp_acme_delete_team"
+  },
+  {
+    "id": "mcp-076",
+    "group": "mcp",
+    "zh": "搜索团队",
+    "en": "search team",
+    "expect": "mcp_acme_search_team"
+  },
+  {
+    "id": "mcp-077",
+    "group": "mcp",
+    "zh": "归档团队",
+    "en": "archive team",
+    "expect": "mcp_acme_archive_team"
+  },
+  {
+    "id": "mcp-078",
+    "group": "mcp",
+    "zh": "恢复团队",
+    "en": "restore team",
+    "expect": "mcp_acme_restore_team"
+  },
+  {
+    "id": "mcp-079",
+    "group": "mcp",
+    "zh": "导出团队",
+    "en": "export team",
+    "expect": "mcp_acme_export_team"
+  },
+  {
+    "id": "mcp-080",
+    "group": "mcp",
+    "zh": "复制团队",
+    "en": "duplicate team",
+    "expect": "mcp_acme_duplicate_team"
+  },
+  {
+    "id": "mcp-081",
+    "group": "mcp",
+    "zh": "列出项目看板",
+    "en": "list project boards",
+    "expect": "mcp_acme_list_project_boards"
+  },
+  {
+    "id": "mcp-082",
+    "group": "mcp",
+    "zh": "查看项目看板",
+    "en": "get project board",
+    "expect": "mcp_acme_get_project_board"
+  },
+  {
+    "id": "mcp-083",
+    "group": "mcp",
+    "zh": "创建项目看板",
+    "en": "create project board",
+    "expect": "mcp_acme_create_project_board"
+  },
+  {
+    "id": "mcp-084",
+    "group": "mcp",
+    "zh": "更新项目看板",
+    "en": "update project board",
+    "expect": "mcp_acme_update_project_board"
+  },
+  {
+    "id": "mcp-085",
+    "group": "mcp",
+    "zh": "删除项目看板",
+    "en": "delete project board",
+    "expect": "mcp_acme_delete_project_board"
+  },
+  {
+    "id": "mcp-086",
+    "group": "mcp",
+    "zh": "搜索项目看板",
+    "en": "search project board",
+    "expect": "mcp_acme_search_project_board"
+  },
+  {
+    "id": "mcp-087",
+    "group": "mcp",
+    "zh": "归档项目看板",
+    "en": "archive project board",
+    "expect": "mcp_acme_archive_project_board"
+  },
+  {
+    "id": "mcp-088",
+    "group": "mcp",
+    "zh": "恢复项目看板",
+    "en": "restore project board",
+    "expect": "mcp_acme_restore_project_board"
+  },
+  {
+    "id": "mcp-089",
+    "group": "mcp",
+    "zh": "导出项目看板",
+    "en": "export project board",
+    "expect": "mcp_acme_export_project_board"
+  },
+  {
+    "id": "mcp-090",
+    "group": "mcp",
+    "zh": "复制项目看板",
+    "en": "duplicate project board",
+    "expect": "mcp_acme_duplicate_project_board"
+  },
+  {
+    "id": "mcp-091",
+    "group": "mcp",
+    "zh": "列出代码片段",
+    "en": "list gists",
+    "expect": "mcp_acme_list_gists"
+  },
+  {
+    "id": "mcp-092",
+    "group": "mcp",
+    "zh": "查看代码片段",
+    "en": "get gist",
+    "expect": "mcp_acme_get_gist"
+  },
+  {
+    "id": "mcp-093",
+    "group": "mcp",
+    "zh": "创建代码片段",
+    "en": "create gist",
+    "expect": "mcp_acme_create_gist"
+  },
+  {
+    "id": "mcp-094",
+    "group": "mcp",
+    "zh": "更新代码片段",
+    "en": "update gist",
+    "expect": "mcp_acme_update_gist"
+  },
+  {
+    "id": "mcp-095",
+    "group": "mcp",
+    "zh": "删除代码片段",
+    "en": "delete gist",
+    "expect": "mcp_acme_delete_gist"
+  },
+  {
+    "id": "mcp-096",
+    "group": "mcp",
+    "zh": "搜索代码片段",
+    "en": "search gist",
+    "expect": "mcp_acme_search_gist"
+  },
+  {
+    "id": "mcp-097",
+    "group": "mcp",
+    "zh": "归档代码片段",
+    "en": "archive gist",
+    "expect": "mcp_acme_archive_gist"
+  },
+  {
+    "id": "mcp-098",
+    "group": "mcp",
+    "zh": "恢复代码片段",
+    "en": "restore gist",
+    "expect": "mcp_acme_restore_gist"
+  },
+  {
+    "id": "mcp-099",
+    "group": "mcp",
+    "zh": "导出代码片段",
+    "en": "export gist",
+    "expect": "mcp_acme_export_gist"
+  },
+  {
+    "id": "mcp-100",
+    "group": "mcp",
+    "zh": "复制代码片段",
+    "en": "duplicate gist",
+    "expect": "mcp_acme_duplicate_gist"
+  },
+  {
+    "id": "wf-001",
+    "group": "workflow",
+    "zh": "把客户最近的情况复盘一遍",
+    "en": "run the customer review workflow",
+    "expect": "workflow_customer_review"
+  },
+  {
+    "id": "wf-002",
+    "group": "workflow",
+    "zh": "生成客户的汇总",
+    "en": "generate the customer summary workflow",
+    "expect": "workflow_customer_summary"
+  },
+  {
+    "id": "wf-003",
+    "group": "workflow",
+    "zh": "看看客户有没有异常要预警",
+    "en": "run the customer alert workflow",
+    "expect": "workflow_customer_alert"
+  },
+  {
+    "id": "wf-004",
+    "group": "workflow",
+    "zh": "把客户和我们的比一比",
+    "en": "run the customer comparison workflow",
+    "expect": "workflow_customer_comparison"
+  },
+  {
+    "id": "wf-005",
+    "group": "workflow",
+    "zh": "把客户归档一下",
+    "en": "run the customer archive workflow",
+    "expect": "workflow_customer_archive"
+  },
+  {
+    "id": "wf-006",
+    "group": "workflow",
+    "zh": "检查一下客户合不合规",
+    "en": "run the customer quality check workflow",
+    "expect": "workflow_customer_quality_check"
+  },
+  {
+    "id": "wf-007",
+    "group": "workflow",
+    "zh": "给客户安排下一步跟进",
+    "en": "run the customer follow-up workflow",
+    "expect": "workflow_customer_follow-up"
+  },
+  {
+    "id": "wf-008",
+    "group": "workflow",
+    "zh": "把客户里的重复内容清掉",
+    "en": "run the customer cleanup workflow",
+    "expect": "workflow_customer_cleanup"
+  },
+  {
+    "id": "wf-009",
+    "group": "workflow",
+    "zh": "把客户拉出来看看",
+    "en": "run the customer extract workflow",
+    "expect": "workflow_customer_extract"
+  },
+  {
+    "id": "wf-010",
+    "group": "workflow",
+    "zh": "给客户打个分",
+    "en": "run the customer scoring workflow",
+    "expect": "workflow_customer_scoring"
+  },
+  {
+    "id": "wf-011",
+    "group": "workflow",
+    "zh": "把会话最近的情况复盘一遍",
+    "en": "run the conversation review workflow",
+    "expect": "workflow_conversation_review"
+  },
+  {
+    "id": "wf-012",
+    "group": "workflow",
+    "zh": "生成会话的汇总",
+    "en": "generate the conversation summary workflow",
+    "expect": "workflow_conversation_summary"
+  },
+  {
+    "id": "wf-013",
+    "group": "workflow",
+    "zh": "看看会话有没有异常要预警",
+    "en": "run the conversation alert workflow",
+    "expect": "workflow_conversation_alert"
+  },
+  {
+    "id": "wf-014",
+    "group": "workflow",
+    "zh": "把会话和我们的比一比",
+    "en": "run the conversation comparison workflow",
+    "expect": "workflow_conversation_comparison"
+  },
+  {
+    "id": "wf-015",
+    "group": "workflow",
+    "zh": "把会话归档一下",
+    "en": "run the conversation archive workflow",
+    "expect": "workflow_conversation_archive"
+  },
+  {
+    "id": "wf-016",
+    "group": "workflow",
+    "zh": "检查一下会话合不合规",
+    "en": "run the conversation quality check workflow",
+    "expect": "workflow_conversation_quality_check"
+  },
+  {
+    "id": "wf-017",
+    "group": "workflow",
+    "zh": "给会话安排下一步跟进",
+    "en": "run the conversation follow-up workflow",
+    "expect": "workflow_conversation_follow-up"
+  },
+  {
+    "id": "wf-018",
+    "group": "workflow",
+    "zh": "把会话里的重复内容清掉",
+    "en": "run the conversation cleanup workflow",
+    "expect": "workflow_conversation_cleanup"
+  },
+  {
+    "id": "wf-019",
+    "group": "workflow",
+    "zh": "把会话拉出来看看",
+    "en": "run the conversation extract workflow",
+    "expect": "workflow_conversation_extract"
+  },
+  {
+    "id": "wf-020",
+    "group": "workflow",
+    "zh": "给会话打个分",
+    "en": "run the conversation scoring workflow",
+    "expect": "workflow_conversation_scoring"
+  },
+  {
+    "id": "wf-021",
+    "group": "workflow",
+    "zh": "把话术最近的情况复盘一遍",
+    "en": "run the sales script review workflow",
+    "expect": "workflow_sales_script_review"
+  },
+  {
+    "id": "wf-022",
+    "group": "workflow",
+    "zh": "生成话术的汇总",
+    "en": "generate the sales script summary workflow",
+    "expect": "workflow_sales_script_summary"
+  },
+  {
+    "id": "wf-023",
+    "group": "workflow",
+    "zh": "看看话术有没有异常要预警",
+    "en": "run the sales script alert workflow",
+    "expect": "workflow_sales_script_alert"
+  },
+  {
+    "id": "wf-024",
+    "group": "workflow",
+    "zh": "把话术和我们的比一比",
+    "en": "run the sales script comparison workflow",
+    "expect": "workflow_sales_script_comparison"
+  },
+  {
+    "id": "wf-025",
+    "group": "workflow",
+    "zh": "把话术归档一下",
+    "en": "run the sales script archive workflow",
+    "expect": "workflow_sales_script_archive"
+  },
+  {
+    "id": "wf-026",
+    "group": "workflow",
+    "zh": "检查一下话术合不合规",
+    "en": "run the sales script quality check workflow",
+    "expect": "workflow_sales_script_quality_check"
+  },
+  {
+    "id": "wf-027",
+    "group": "workflow",
+    "zh": "给话术安排下一步跟进",
+    "en": "run the sales script follow-up workflow",
+    "expect": "workflow_sales_script_follow-up"
+  },
+  {
+    "id": "wf-028",
+    "group": "workflow",
+    "zh": "把话术里的重复内容清掉",
+    "en": "run the sales script cleanup workflow",
+    "expect": "workflow_sales_script_cleanup"
+  },
+  {
+    "id": "wf-029",
+    "group": "workflow",
+    "zh": "把话术拉出来看看",
+    "en": "run the sales script extract workflow",
+    "expect": "workflow_sales_script_extract"
+  },
+  {
+    "id": "wf-030",
+    "group": "workflow",
+    "zh": "给话术打个分",
+    "en": "run the sales script scoring workflow",
+    "expect": "workflow_sales_script_scoring"
+  },
+  {
+    "id": "wf-031",
+    "group": "workflow",
+    "zh": "把待办最近的情况复盘一遍",
+    "en": "run the task review workflow",
+    "expect": "workflow_task_review"
+  },
+  {
+    "id": "wf-032",
+    "group": "workflow",
+    "zh": "生成待办的汇总",
+    "en": "generate the task summary workflow",
+    "expect": "workflow_task_summary"
+  },
+  {
+    "id": "wf-033",
+    "group": "workflow",
+    "zh": "看看待办有没有异常要预警",
+    "en": "run the task alert workflow",
+    "expect": "workflow_task_alert"
+  },
+  {
+    "id": "wf-034",
+    "group": "workflow",
+    "zh": "把待办和我们的比一比",
+    "en": "run the task comparison workflow",
+    "expect": "workflow_task_comparison"
+  },
+  {
+    "id": "wf-035",
+    "group": "workflow",
+    "zh": "把待办归档一下",
+    "en": "run the task archive workflow",
+    "expect": "workflow_task_archive"
+  },
+  {
+    "id": "wf-036",
+    "group": "workflow",
+    "zh": "检查一下待办合不合规",
+    "en": "run the task quality check workflow",
+    "expect": "workflow_task_quality_check"
+  },
+  {
+    "id": "wf-037",
+    "group": "workflow",
+    "zh": "给待办安排下一步跟进",
+    "en": "run the task follow-up workflow",
+    "expect": "workflow_task_follow-up"
+  },
+  {
+    "id": "wf-038",
+    "group": "workflow",
+    "zh": "把待办里的重复内容清掉",
+    "en": "run the task cleanup workflow",
+    "expect": "workflow_task_cleanup"
+  },
+  {
+    "id": "wf-039",
+    "group": "workflow",
+    "zh": "把待办拉出来看看",
+    "en": "run the task extract workflow",
+    "expect": "workflow_task_extract"
+  },
+  {
+    "id": "wf-040",
+    "group": "workflow",
+    "zh": "给待办打个分",
+    "en": "run the task scoring workflow",
+    "expect": "workflow_task_scoring"
+  },
+  {
+    "id": "wf-041",
+    "group": "workflow",
+    "zh": "把知识库最近的情况复盘一遍",
+    "en": "run the knowledge base review workflow",
+    "expect": "workflow_knowledge_base_review"
+  },
+  {
+    "id": "wf-042",
+    "group": "workflow",
+    "zh": "生成知识库的汇总",
+    "en": "generate the knowledge base summary workflow",
+    "expect": "workflow_knowledge_base_summary"
+  },
+  {
+    "id": "wf-043",
+    "group": "workflow",
+    "zh": "看看知识库有没有异常要预警",
+    "en": "run the knowledge base alert workflow",
+    "expect": "workflow_knowledge_base_alert"
+  },
+  {
+    "id": "wf-044",
+    "group": "workflow",
+    "zh": "把知识库和我们的比一比",
+    "en": "run the knowledge base comparison workflow",
+    "expect": "workflow_knowledge_base_comparison"
+  },
+  {
+    "id": "wf-045",
+    "group": "workflow",
+    "zh": "把知识库归档一下",
+    "en": "run the knowledge base archive workflow",
+    "expect": "workflow_knowledge_base_archive"
+  },
+  {
+    "id": "wf-046",
+    "group": "workflow",
+    "zh": "检查一下知识库合不合规",
+    "en": "run the knowledge base quality check workflow",
+    "expect": "workflow_knowledge_base_quality_check"
+  },
+  {
+    "id": "wf-047",
+    "group": "workflow",
+    "zh": "给知识库安排下一步跟进",
+    "en": "run the knowledge base follow-up workflow",
+    "expect": "workflow_knowledge_base_follow-up"
+  },
+  {
+    "id": "wf-048",
+    "group": "workflow",
+    "zh": "把知识库里的重复内容清掉",
+    "en": "run the knowledge base cleanup workflow",
+    "expect": "workflow_knowledge_base_cleanup"
+  },
+  {
+    "id": "wf-049",
+    "group": "workflow",
+    "zh": "把知识库拉出来看看",
+    "en": "run the knowledge base extract workflow",
+    "expect": "workflow_knowledge_base_extract"
+  },
+  {
+    "id": "wf-050",
+    "group": "workflow",
+    "zh": "给知识库打个分",
+    "en": "run the knowledge base scoring workflow",
+    "expect": "workflow_knowledge_base_scoring"
+  },
+  {
+    "id": "wf-051",
+    "group": "workflow",
+    "zh": "把成交最近的情况复盘一遍",
+    "en": "run the deal review workflow",
+    "expect": "workflow_deal_review"
+  },
+  {
+    "id": "wf-052",
+    "group": "workflow",
+    "zh": "生成成交的汇总",
+    "en": "generate the deal summary workflow",
+    "expect": "workflow_deal_summary"
+  },
+  {
+    "id": "wf-053",
+    "group": "workflow",
+    "zh": "看看成交有没有异常要预警",
+    "en": "run the deal alert workflow",
+    "expect": "workflow_deal_alert"
+  },
+  {
+    "id": "wf-054",
+    "group": "workflow",
+    "zh": "把成交和我们的比一比",
+    "en": "run the deal comparison workflow",
+    "expect": "workflow_deal_comparison"
+  },
+  {
+    "id": "wf-055",
+    "group": "workflow",
+    "zh": "把成交归档一下",
+    "en": "run the deal archive workflow",
+    "expect": "workflow_deal_archive"
+  },
+  {
+    "id": "wf-056",
+    "group": "workflow",
+    "zh": "检查一下成交合不合规",
+    "en": "run the deal quality check workflow",
+    "expect": "workflow_deal_quality_check"
+  },
+  {
+    "id": "wf-057",
+    "group": "workflow",
+    "zh": "给成交安排下一步跟进",
+    "en": "run the deal follow-up workflow",
+    "expect": "workflow_deal_follow-up"
+  },
+  {
+    "id": "wf-058",
+    "group": "workflow",
+    "zh": "把成交里的重复内容清掉",
+    "en": "run the deal cleanup workflow",
+    "expect": "workflow_deal_cleanup"
+  },
+  {
+    "id": "wf-059",
+    "group": "workflow",
+    "zh": "把成交拉出来看看",
+    "en": "run the deal extract workflow",
+    "expect": "workflow_deal_extract"
+  },
+  {
+    "id": "wf-060",
+    "group": "workflow",
+    "zh": "给成交打个分",
+    "en": "run the deal scoring workflow",
+    "expect": "workflow_deal_scoring"
+  },
+  {
+    "id": "wf-061",
+    "group": "workflow",
+    "zh": "把门店最近的情况复盘一遍",
+    "en": "run the store review workflow",
+    "expect": "workflow_store_review"
+  },
+  {
+    "id": "wf-062",
+    "group": "workflow",
+    "zh": "生成门店的汇总",
+    "en": "generate the store summary workflow",
+    "expect": "workflow_store_summary"
+  },
+  {
+    "id": "wf-063",
+    "group": "workflow",
+    "zh": "看看门店有没有异常要预警",
+    "en": "run the store alert workflow",
+    "expect": "workflow_store_alert"
+  },
+  {
+    "id": "wf-064",
+    "group": "workflow",
+    "zh": "把门店和我们的比一比",
+    "en": "run the store comparison workflow",
+    "expect": "workflow_store_comparison"
+  },
+  {
+    "id": "wf-065",
+    "group": "workflow",
+    "zh": "把门店归档一下",
+    "en": "run the store archive workflow",
+    "expect": "workflow_store_archive"
+  },
+  {
+    "id": "wf-066",
+    "group": "workflow",
+    "zh": "检查一下门店合不合规",
+    "en": "run the store quality check workflow",
+    "expect": "workflow_store_quality_check"
+  },
+  {
+    "id": "wf-067",
+    "group": "workflow",
+    "zh": "给门店安排下一步跟进",
+    "en": "run the store follow-up workflow",
+    "expect": "workflow_store_follow-up"
+  },
+  {
+    "id": "wf-068",
+    "group": "workflow",
+    "zh": "把门店里的重复内容清掉",
+    "en": "run the store cleanup workflow",
+    "expect": "workflow_store_cleanup"
+  },
+  {
+    "id": "wf-069",
+    "group": "workflow",
+    "zh": "把门店拉出来看看",
+    "en": "run the store extract workflow",
+    "expect": "workflow_store_extract"
+  },
+  {
+    "id": "wf-070",
+    "group": "workflow",
+    "zh": "给门店打个分",
+    "en": "run the store scoring workflow",
+    "expect": "workflow_store_scoring"
+  },
+  {
+    "id": "wf-071",
+    "group": "workflow",
+    "zh": "把竞品最近的情况复盘一遍",
+    "en": "run the competitor review workflow",
+    "expect": "workflow_competitor_review"
+  },
+  {
+    "id": "wf-072",
+    "group": "workflow",
+    "zh": "生成竞品的汇总",
+    "en": "generate the competitor summary workflow",
+    "expect": "workflow_competitor_summary"
+  },
+  {
+    "id": "wf-073",
+    "group": "workflow",
+    "zh": "看看竞品有没有异常要预警",
+    "en": "run the competitor alert workflow",
+    "expect": "workflow_competitor_alert"
+  },
+  {
+    "id": "wf-074",
+    "group": "workflow",
+    "zh": "把竞品和我们的比一比",
+    "en": "run the competitor comparison workflow",
+    "expect": "workflow_competitor_comparison"
+  },
+  {
+    "id": "wf-075",
+    "group": "workflow",
+    "zh": "把竞品归档一下",
+    "en": "run the competitor archive workflow",
+    "expect": "workflow_competitor_archive"
+  },
+  {
+    "id": "wf-076",
+    "group": "workflow",
+    "zh": "检查一下竞品合不合规",
+    "en": "run the competitor quality check workflow",
+    "expect": "workflow_competitor_quality_check"
+  },
+  {
+    "id": "wf-077",
+    "group": "workflow",
+    "zh": "给竞品安排下一步跟进",
+    "en": "run the competitor follow-up workflow",
+    "expect": "workflow_competitor_follow-up"
+  },
+  {
+    "id": "wf-078",
+    "group": "workflow",
+    "zh": "把竞品里的重复内容清掉",
+    "en": "run the competitor cleanup workflow",
+    "expect": "workflow_competitor_cleanup"
+  },
+  {
+    "id": "wf-079",
+    "group": "workflow",
+    "zh": "把竞品拉出来看看",
+    "en": "run the competitor extract workflow",
+    "expect": "workflow_competitor_extract"
+  },
+  {
+    "id": "wf-080",
+    "group": "workflow",
+    "zh": "给竞品打个分",
+    "en": "run the competitor scoring workflow",
+    "expect": "workflow_competitor_scoring"
+  },
+  {
+    "id": "wf-081",
+    "group": "workflow",
+    "zh": "把报价最近的情况复盘一遍",
+    "en": "run the quote review workflow",
+    "expect": "workflow_quote_review"
+  },
+  {
+    "id": "wf-082",
+    "group": "workflow",
+    "zh": "生成报价的汇总",
+    "en": "generate the quote summary workflow",
+    "expect": "workflow_quote_summary"
+  },
+  {
+    "id": "wf-083",
+    "group": "workflow",
+    "zh": "看看报价有没有异常要预警",
+    "en": "run the quote alert workflow",
+    "expect": "workflow_quote_alert"
+  },
+  {
+    "id": "wf-084",
+    "group": "workflow",
+    "zh": "把报价和我们的比一比",
+    "en": "run the quote comparison workflow",
+    "expect": "workflow_quote_comparison"
+  },
+  {
+    "id": "wf-085",
+    "group": "workflow",
+    "zh": "把报价归档一下",
+    "en": "run the quote archive workflow",
+    "expect": "workflow_quote_archive"
+  },
+  {
+    "id": "wf-086",
+    "group": "workflow",
+    "zh": "检查一下报价合不合规",
+    "en": "run the quote quality check workflow",
+    "expect": "workflow_quote_quality_check"
+  },
+  {
+    "id": "wf-087",
+    "group": "workflow",
+    "zh": "给报价安排下一步跟进",
+    "en": "run the quote follow-up workflow",
+    "expect": "workflow_quote_follow-up"
+  },
+  {
+    "id": "wf-088",
+    "group": "workflow",
+    "zh": "把报价里的重复内容清掉",
+    "en": "run the quote cleanup workflow",
+    "expect": "workflow_quote_cleanup"
+  },
+  {
+    "id": "wf-089",
+    "group": "workflow",
+    "zh": "把报价拉出来看看",
+    "en": "run the quote extract workflow",
+    "expect": "workflow_quote_extract"
+  },
+  {
+    "id": "wf-090",
+    "group": "workflow",
+    "zh": "给报价打个分",
+    "en": "run the quote scoring workflow",
+    "expect": "workflow_quote_scoring"
+  },
+  {
+    "id": "wf-091",
+    "group": "workflow",
+    "zh": "把周报最近的情况复盘一遍",
+    "en": "run the weekly report review workflow",
+    "expect": "workflow_weekly_report_review"
+  },
+  {
+    "id": "wf-092",
+    "group": "workflow",
+    "zh": "生成周报的汇总",
+    "en": "generate the weekly report summary workflow",
+    "expect": "workflow_weekly_report_summary"
+  },
+  {
+    "id": "wf-093",
+    "group": "workflow",
+    "zh": "看看周报有没有异常要预警",
+    "en": "run the weekly report alert workflow",
+    "expect": "workflow_weekly_report_alert"
+  },
+  {
+    "id": "wf-094",
+    "group": "workflow",
+    "zh": "把周报和我们的比一比",
+    "en": "run the weekly report comparison workflow",
+    "expect": "workflow_weekly_report_comparison"
+  },
+  {
+    "id": "wf-095",
+    "group": "workflow",
+    "zh": "把周报归档一下",
+    "en": "run the weekly report archive workflow",
+    "expect": "workflow_weekly_report_archive"
+  },
+  {
+    "id": "wf-096",
+    "group": "workflow",
+    "zh": "检查一下周报合不合规",
+    "en": "run the weekly report quality check workflow",
+    "expect": "workflow_weekly_report_quality_check"
+  },
+  {
+    "id": "wf-097",
+    "group": "workflow",
+    "zh": "给周报安排下一步跟进",
+    "en": "run the weekly report follow-up workflow",
+    "expect": "workflow_weekly_report_follow-up"
+  },
+  {
+    "id": "wf-098",
+    "group": "workflow",
+    "zh": "把周报里的重复内容清掉",
+    "en": "run the weekly report cleanup workflow",
+    "expect": "workflow_weekly_report_cleanup"
+  },
+  {
+    "id": "wf-099",
+    "group": "workflow",
+    "zh": "把周报拉出来看看",
+    "en": "run the weekly report extract workflow",
+    "expect": "workflow_weekly_report_extract"
+  },
+  {
+    "id": "wf-100",
+    "group": "workflow",
+    "zh": "给周报打个分",
+    "en": "run the weekly report scoring workflow",
+    "expect": "workflow_weekly_report_scoring"
+  }
+]

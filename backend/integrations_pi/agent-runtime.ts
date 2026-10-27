@@ -1,0 +1,589 @@
+import { randomUUID } from "node:crypto";
+import type { DatabaseSync } from "node:sqlite";
+import { Agent, type AgentMessage, type StreamFn } from "@earendil-works/pi-agent-core";
+import { createModelRegistry, requiredModel, type ModelRuntime } from "./models.js";
+import { getSalesAgentSystemPrompt } from "../prompts/sales-agent.js";
+import { getPlannerPrompt, getCoordinatorPrompt } from "../prompts/multi-agent.js";
+import { createPlanTools, createSalesAgentTools, systemPlanTool } from "./agent-tools.js";
+import { config } from "../env.js";
+import { createTimelineRecorder, type TimelineRecorder } from "../services/timeline.js";
+import { consumeKanbanSubagents, createKanbanTask, listKanbanCards, resetKanban, updateKanbanCard } from "../services/routes/agent/index.js";
+import { rewriteQueryBilingual } from "../mcp/query-rewrite.js";
+import type { ToolRecallState } from "../mcp/tool-discovery.js";
+import { listCapabilityStates } from "./tables/agents/capabilities.js";
+import { recordAgentPlan, updateAgentPlan } from "./tables/agents/plans.js";
+import { toClientEvents } from "./events-adapter.js";
+import { toolLabel } from "./capabilities.js";
+import type { SessionStore } from "./sessions.js";
+
+export interface SalesAgentDeps {
+	db: DatabaseSync;
+	tenantId: string;
+	store: SessionStore;
+	runtime?: ModelRuntime;
+	streamFn?: StreamFn;
+}
+
+export interface AgentProgressEvent {
+	type: "tool_start" | "tool_end" | "tool_update" | "plan" | "verified" | "text_delta";
+	toolCallId?: string;
+	toolName?: string;
+	label?: string;
+	payload?: unknown;
+}
+
+export interface SalesAgentInput {
+	goal: string;
+	customerKey?: string;
+	conversationId?: string;
+	history?: AgentMessage[];
+	onProgress?: (event: AgentProgressEvent) => void;
+	plan?: PlanDetails; // 执行计划(注入【执行计划】上下文)
+	collectExecutedTools?: boolean; // 收集本轮实际调用工具(用于验证)
+	enablePlan?: boolean; // 新输入入口:为 true 时工具列表附加 emit_plan,由模型自主决定是否规划
+	threadId?: string; // 当前会话 ID:看板按会话隔离,只展示该会话的任务
+	signal?: AbortSignal; // 客户端中断信号:触发后终止 agent 循环(取消在途模型请求/工具执行)
+
+}
+export class AgentCancelledError extends Error {
+	constructor(message = "agent run cancelled") {
+		super(message);
+		this.name = "AgentCancelledError";
+	}
+}
+
+export interface PlanStep {
+	step: string;
+	tool: string;
+	purpose: string;
+}
+
+export interface PlanDetails {
+	mode?: "none" | "single" | "multi"; // 执行模式:none 无需计划直接执行;single 单代理 / multi 多代理并行
+	subtasks?: Array<{ title: string; goal: string; tools?: string[]; shareOutput?: boolean }>; // multi 模式下的子任务清单(shareOutput: 子代理是否可看到其他子代理最新输出)
+	summary?: string;
+	steps: PlanStep[];
+}
+
+export interface PlanVerification {
+	planned: number;
+	executed: string[];
+	coveredTools: string[];
+	missingTools: string[];
+	summary: string;
+}
+
+export interface AgentFinal {
+	answer: string;
+	summary?: string;
+	nextSteps: string[];
+}
+
+
+
+/**
+ * 表格保真:收集本轮工具返回的原始 Markdown 表格(details.rawTable / details.table)。
+ * 模型可能转述/重排表格,最终答复生成后若未包含原文,则原样追加,只允许模型在数据基础上总结。
+ */
+function collectRawTables(messages: unknown[]): string[] {
+	const tables: string[] = [];
+	for (const message of messages) {
+		const m = message as { role?: string; details?: Record<string, unknown> };
+		if (m.role !== "toolResult" || !m.details) continue;
+		const raw =
+			typeof m.details.rawTable === "string"
+				? m.details.rawTable
+				: typeof m.details.table === "string"
+					? m.details.table
+					: undefined;
+		if (raw && raw.includes("|") && !tables.includes(raw)) tables.push(raw);
+	}
+	return tables;
+}
+
+/** 剔除 Markdown 表格:移除代码块外所有以 | 开头的行(模型自造/转述的表格一律不允许出现在答复里)。 */
+/** 给模型构造历史时清理图表代码块:把 ```echarts ... ``` 替换为 [图表] 占位,避免模型复述/转义历史图表 JSON。 */
+export function stripChartsForHistory(content: unknown): unknown {
+	const strip = (t: string) => t.replace(/```echarts\s*\n?[\s\S]*?```/g, "[图表]");
+	if (typeof content === "string") return strip(content);
+	if (Array.isArray(content)) {
+		return content.map((item) => {
+			const c0 = item as { type?: string; text?: string };
+			return c0 && typeof c0.text === "string" ? { ...c0, text: strip(c0.text) } : item;
+		});
+	}
+	return content;
+}
+
+export function stripMarkdownTables(text: string): string {
+	const lines = text.split("\n");
+	const out: string[] = [];
+	let inFence = false;
+	for (const line of lines) {
+		if (/^\s*```/.test(line)) {
+			inFence = !inFence;
+			out.push(line);
+			continue;
+		}
+		if (!inFence && line.trim().startsWith("|")) continue;
+		out.push(line);
+	}
+	return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/** 图表保真:收集本轮工具返回的 ECharts 代码块(```echarts),最终答复原样追加,由前端渲染交互式图表。 */
+function collectRawCharts(messages: unknown[]): string[] {
+	const blocks: string[] = [];
+	for (const message of messages) {
+		const m = message as { role?: string; content?: unknown };
+		if (m.role !== "toolResult") continue;
+		const text = assistantText(m.content);
+		const re = /```echarts\s*\n?([\s\S]*?)```/g;
+		let mm: RegExpExecArray | null;
+		while ((mm = re.exec(text)) !== null) {
+			const block = "```echarts\n" + mm[1].trim() + "\n```";
+			if (!blocks.includes(block)) blocks.push(block);
+		}
+	}
+	return blocks;
+}
+
+function appendRawCharts(answer: string, messages: unknown[]): string {
+	const blocks = collectRawCharts(messages);
+	if (blocks.length === 0) return answer;
+	return answer ? `${answer}\n\n${blocks.join("\n\n")}` : blocks.join("\n\n");
+}
+
+function appendRawTables(answer: string, messages: unknown[]): string {
+	const tables = collectRawTables(messages);
+	// 仅当本轮有工具返回表格时,剔除模型重复输出的表格并追加工具原文;无工具表格时,保留模型自己输出的表格
+	if (tables.length === 0) return answer;
+	// 多次查表时只保留最后一次工具返回的表格
+	const table = tables[tables.length - 1];
+	let out = stripMarkdownTables(answer);
+	// 防重复:即使已包含工具原文,也统一只保留一份
+	out = out.replace(table, "");
+	out = out.replace(/\n{3,}/g, "\n\n").trim();
+	return out ? `${out}\n\n${table}` : table;
+}
+/** 从 assistant 消息 content(TextContent[] 或字符串)提取纯文本。 */
+function assistantText(content: unknown): string {
+	if (!content) return "";
+	if (typeof content === "string") return content;
+	if (Array.isArray(content)) {
+		return content
+			.map((c) => {
+				const item = c as { type?: string; text?: string };
+				return typeof item?.text === "string" ? item.text : "";
+			})
+			.join("");
+	}
+	return "";
+}
+export interface SalesAgentResult {
+	runId: string;
+	final?: AgentFinal;
+	messages: unknown[];
+	plan?: PlanDetails;
+	verification?: PlanVerification;
+	executedTools?: string[];
+}
+
+export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput): Promise<SalesAgentResult> {
+	const { db, tenantId, store } = deps;
+	if (!input.goal || !input.goal.trim()) throw new Error("goal is empty");
+
+	const runtime = deps.runtime ?? createModelRegistry();
+	const streamFn = deps.streamFn ?? runtime.streamFn;
+
+	const model = requiredModel(runtime);
+
+	const basePrompt = getSalesAgentSystemPrompt({
+		companyName: config.companyName,
+		teamName: config.teamName,
+	});
+	// 自适应规划:模型可先调用 emit_plan 输出执行计划再执行(复杂任务),也可直接执行(简单任务)
+	const planHint = input.enablePlan
+		? "\n\n【可选规划】如果任务需要多步骤/多数据源/并行拆解,请先调用 emit_plan 输出执行计划(模式 single 或 multi),再按计划执行;简单任务(单步查询/直接回答)直接调用业务工具完成,不需要规划。"
+		: "";
+	const systemPrompt = (input.plan && input.plan.steps?.length
+		? `${basePrompt}\n\n【执行计划】按以下计划执行,可依据实际结果灵活调整顺序,但不要遗漏关键步骤:\n${input.plan.steps.map((s, i) => `${i + 1}. ${s.step}${s.tool ? ` (工具:${s.tool})` : ""} - ${s.purpose}`).join("\n")}`
+		: basePrompt) + planHint;
+	const capabilityStates = listCapabilityStates(db, tenantId);
+	const disabled = new Set(capabilityStates.filter((c) => !c.enabled).map((c) => c.name));
+	// traceHolder:让工作流步骤事件写入当前运行的 recorder(步骤轨迹与 agent 轨迹同缓冲,seq 连续)
+	const traceHolder: { recorder?: TimelineRecorder } = {};
+	// recallState:工具挂载阶段写入"是否进编目、编目里有多少工具";下面据此决定要不要做双语 query 改写
+	const recallState: ToolRecallState = {};
+	const tools = (await createSalesAgentTools({ db, tenantId, store, traceHolder, recallState })).filter(
+		(t) => t.name === "emit_final" || !disabled.has(t.name),
+	);
+
+	// 新输入:附加 emit_plan(不中断执行),模型自主决定是否需要规划;执行中/子代理阶段不带此工具
+	if (input.enablePlan) {
+		tools.push(systemPlanTool({ terminate: false }));
+	}
+
+	const runId = randomUUID();
+	const annotations: string[] = [];
+	// 把“目标客户/目标会话”附加到用户目标上
+	// 如果调用方带了 customerKey（这次任务针对哪个客户）或 conversationId（针对哪段会话），就把它们拼到用户目标后面再发给模型
+	if (input.customerKey) annotations.push(`目标客户标识: ${input.customerKey}`);
+	if (input.conversationId) annotations.push(`目标会话 ID: ${input.conversationId}`);
+	const goalText = annotations.length ? `${input.goal}\n\n${annotations.join("\n")}` : input.goal;
+
+	// 工具(含 MCP)数量超过阈值(即进了编目模式)才触发双语 query 改写:一次模型调用,
+	// 换来"中文 query 召回中文描述的工具 + 英文 query 召回英文描述的工具"两条召回通道。
+	// 开关关闭 / 超时 / 解析失败都会退回用户原话,不阻塞本轮执行。
+	if (config.toolsCatalogBilingualEnabled && recallState.catalog?.active) {
+		recallState.bilingual = await rewriteQueryBilingual(input.goal, {
+			toolCount: recallState.catalog.toolCount,
+			timeoutMs: config.toolsCatalogRewriteTimeoutMs,
+		});
+	}
+
+	const stateMessages = Array.isArray(input.history) ? input.history : [];
+	const agent = new Agent({
+		sessionId: runId,
+		streamFn,
+		initialState: { systemPrompt, tools: tools as never, model, messages: stateMessages },
+	});
+
+	const onAbort = () => agent.abort();
+	if (input.signal) {
+		if (input.signal.aborted) onAbort();
+		else input.signal.addEventListener("abort", onAbort, { once: true });
+	}
+	
+	// 订阅事件：落库 + 收集工具 + 转发前端
+	const executedTools: string[] = [];
+	const recorder = createTimelineRecorder(db, { tenantId, conversationId: runId, threadId: input.threadId });
+	traceHolder.recorder = recorder; // 工作流步骤事件绑定到本次运行轨迹
+	agent.subscribe((event) => {
+		recorder.listen(event);  // 把事件写进 agent_events 表(可回放)
+		// 多代理短路:模型 emit_plan 选择 multi 时,立即终止执行,由 runSalesAgentWithPlan 走多代理流程
+		if (input.enablePlan) {
+			for (const ce of toClientEvents(event)) {
+				if (ce.type === "tool_end" && ce.toolName === "emit_plan" && (ce.payload as { mode?: string } | undefined)?.mode === "multi") {
+					agent.abort();
+				}
+			}
+		}
+		if (input.collectExecutedTools) {
+			for (const ce of toClientEvents(event)) {
+				if (ce.type === "tool_start" && ce.toolName && !executedTools.includes(ce.toolName)) executedTools.push(ce.toolName);
+			}
+		}
+		if (input.onProgress) {
+			for (const ce of toClientEvents(event)) {
+				if (ce.type === "tool_start" || ce.type === "tool_end" || ce.type === "tool_update" || ce.type === "text_delta") {
+					input.onProgress({ type: ce.type, toolCallId: ce.toolCallId, toolName: ce.toolName, label: toolLabel(ce.toolName), payload: ce.payload });
+				}
+			}
+		}
+	});
+
+	try {
+		await agent.prompt(goalText);
+		await recorder.flush();
+	} catch (error) {
+		await recorder.flush().catch(() => undefined);
+		throw error;
+	} finally {
+		if (input.signal) input.signal.removeEventListener("abort", onAbort);
+	}
+	// 客户端中断:prompt 正常返回(消息 stopReason=aborted),但按取消处理,不产出最终答复
+	if (input.signal?.aborted) throw new AgentCancelledError("agent run cancelled by client");
+
+	const messages = agent.state.messages;
+
+	// 提取模型自主调用的执行计划(enablePlan 入口;模型可能不调用,此时 plan 为空)
+	let plan: PlanDetails | undefined;
+	for (const message of messages) {
+		if (message.role === "toolResult" && (message as { toolName?: string }).toolName === "emit_plan") {
+			const d = (message as { details?: PlanDetails }).details;
+			if (d && (Array.isArray(d.steps) && d.steps.length || d.mode === "multi" && Array.isArray(d.subtasks) && d.subtasks.length)) {
+				plan = d;
+			}
+		}
+	}
+	let final: AgentFinal | undefined;
+	for (const message of messages) {
+		if (message.role === "toolResult" && (message as { toolName?: string }).toolName === "emit_final") {
+			const details = (message as { details?: Partial<AgentFinal> }).details;
+			if (details?.answer) {
+				final = {
+					answer: details.answer,
+					summary: details.summary,
+					nextSteps: Array.isArray(details.nextSteps) ? details.nextSteps : [],
+				};
+			}
+		}
+	}
+	// 兜底:模型可能不调用 emit_final 而直接输出普通文本;此时把最后一条 assistant 文本作为最终答复
+	if (!final) {
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const message = messages[i] as { role?: string; content?: unknown };
+			if (message.role !== "assistant") continue;
+			const text = assistantText(message.content);
+			if (text.trim()) {
+				final = { answer: text.trim(), summary: undefined, nextSteps: [] };
+				break;
+			}
+		}
+	}
+
+	// 表格保真:模型若未原样呈现工具表格(转述/重排),在最终答复末尾追加原始表格
+	if (final?.answer) final.answer = appendRawTables(final.answer, messages);
+	// 图表保真:工具返回的 ECharts 图表块原样追加到最终答复,由前端渲染
+	if (final?.answer) final.answer = appendRawCharts(final.answer, messages);
+	return { runId, final, messages, executedTools, plan };
+}
+
+/** 规划阶段:只用 emit_plan,输出执行计划(不执行任何工具)。 */
+export async function runPlanPhase(deps: SalesAgentDeps, input: { goal: string; signal?: AbortSignal }): Promise<PlanDetails> {
+	const runtime = deps.runtime ?? createModelRegistry();
+	const streamFn = deps.streamFn ?? runtime.streamFn;
+	const model = requiredModel(runtime);
+
+	const salesTools = await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store });
+	const toolNames = salesTools.map((t) => t.name);
+	// 规划器能看到每个工具的用途(与执行阶段 tools 定义同源),避免只凭名字猜测
+	const toolDescriptions = salesTools.map((t) => t.name + ": " + (t.description ?? ""));
+	const systemPrompt = getPlannerPrompt({ goal: input.goal, toolNames, toolDescriptions });
+	const agent = new Agent({
+		sessionId: `plan-${randomUUID()}`,
+		streamFn,
+		initialState: { systemPrompt, tools: createPlanTools() as never, model, messages: [] },
+	});
+	const onAbort = () => agent.abort();
+	if (input.signal) {
+		if (input.signal.aborted) onAbort();
+		else input.signal.addEventListener("abort", onAbort, { once: true });
+	}
+	try {
+		await agent.prompt(input.goal);
+	} finally {
+		if (input.signal) input.signal.removeEventListener("abort", onAbort);
+	}
+	if (input.signal?.aborted) throw new AgentCancelledError("plan cancelled by client");
+
+	for (const message of agent.state.messages as Array<{ role?: string; toolName?: string; details?: unknown }>) {
+		if (message.role === "toolResult" && message.toolName === "emit_plan" && message.details) {
+			const d = message.details as PlanDetails;
+			const mode = d.mode === "none" ? "none" : d.mode === "multi" ? "multi" : "single";
+			if (mode === "none") return { summary: d.summary, mode: "none", steps: [], subtasks: [] };
+			if (Array.isArray(d.steps) && d.steps.length) return { summary: d.summary, mode: "single", steps: d.steps, subtasks: d.subtasks ?? [] };
+			if (mode === "multi" && Array.isArray(d.subtasks) && d.subtasks.length) return { summary: d.summary, mode: "multi", steps: [], subtasks: d.subtasks };
+		}
+	}
+	throw new Error("规划阶段未产出计划");
+}
+
+/** 验证:对照规划步骤拟用工具与实际调用工具,输出覆盖/缺失摘要。 */
+export function verifyPlan(plan: PlanDetails, executedTools: string[]): PlanVerification {
+	const planned = (plan.steps ?? []).map((s) => s.tool).filter(Boolean);
+	const covered = planned.filter((t) => executedTools.includes(t));
+	const missing = planned.filter((t) => !executedTools.includes(t));
+	const summary =
+		missing.length === 0
+			? `计划 ${planned.length} 个工具步骤全部执行,验证通过。`
+			: `计划 ${planned.length} 个工具步骤,已执行 ${covered.length} 个,未执行 ${missing.join("、")}。`;
+	return { planned: planned.length, executed: [...new Set(executedTools)], coveredTools: covered, missingTools: missing, summary };
+}
+
+/** 多代理提交阶段:主代理把子任务写上看板(仅建卡,不等待执行;子代理由后台消费者异步并行执行)。 */
+export async function submitMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentInput, plan: PlanDetails, runId: string): Promise<{ runId: string; threadId: string; cardIds: string[] }> {
+	const subtasks = plan.subtasks ?? [];
+	if (subtasks.length === 0) throw new Error("multi 模式缺少子任务清单(subtasks)");
+	const threadId = input.threadId ?? "default";
+	resetKanban(deps.db, deps.tenantId, threadId);
+	const cardIds: string[] = [];
+	for (const st of subtasks) {
+		const card = createKanbanTask(deps.db, { tenantId: deps.tenantId, threadId, title: st.title, goal: st.goal, tools: st.tools, shareEnabled: st.shareOutput === true });
+		cardIds.push(card.id);
+		if (input.onProgress) input.onProgress({ type: "tool_start", toolName: "kanban", label: "看板建卡", payload: { id: card.id, title: card.title } });
+		if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "kanban", label: "看板建卡", payload: { id: card.id, title: card.title } });
+	}
+	return { runId, threadId, cardIds };
+}
+/** 多代理汇总阶段:等待当前会话子代理全部完成(后台消费者驱动),协调者读看板汇总输出。 */
+export async function collectMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentInput, plan: PlanDetails, opts: { threadId?: string; cardIds?: string[] } = {}): Promise<SalesAgentResult> {
+	const runtime = deps.runtime ?? createModelRegistry();
+	const streamFn = deps.streamFn ?? runtime.streamFn;
+	const model = requiredModel(runtime);
+	const threadId = opts.threadId ?? input.threadId ?? "default";
+	const createdCardIds = opts.cardIds ?? listKanbanCards(deps.db, deps.tenantId, { threadId }).map((c) => c.id);
+
+	// 等待子代理完成(后台消费者在跑;这里轮询直到全部就绪或超时)
+	const deadline = Date.now() + config.subagentTimeoutMs;
+	while (true) {
+		const cards = listKanbanCards(deps.db, deps.tenantId, { threadId }).filter((c) => createdCardIds.includes(c.id));
+		// 等待全部子任务进入终态(done/error);inprogress 卡不视为完成,否则协调者拿到的是未完成结果
+		const allDone = cards.length > 0 && cards.every((c) => c.status === "done" || c.status === "error");
+		if (allDone || Date.now() > deadline) break;
+		// 监督:总超时之内,若某个 inprogress 卡长时间无心跳(无进展),主代理主动结束它
+		const now = Date.now();
+		for (const card of cards) {
+			if (card.status !== "inprogress") continue;
+			const last = new Date(card.updatedAt).getTime();
+			if (!Number.isNaN(last) && now - last > 120_000) {
+				updateKanbanCard(deps.db, deps.tenantId, card.id, { status: "error", error: "主代理判定子代理长时间无进展,主动结束" });
+				console.warn(`[subagents] 主代理主动结束无进展子任务 ${card.id}`);
+			}
+		}
+		await new Promise((r) => setTimeout(r, config.subagentPollIntervalMs));
+	}
+	const allCards = listKanbanCards(deps.db, deps.tenantId, { threadId }).filter((c) => createdCardIds.includes(c.id));
+	const executed = allCards.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result, error: c.error }));
+	if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "subagents", label: "子代理并行执行", payload: { count: executed.length, results: executed.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result ? c.result.slice(0, 120) : null, error: c.error ?? null })) } });
+
+	// 协调者汇总
+	const coordinatorTools = (await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store })).filter(
+		(t) => t.name === "kanban" || t.name === "emit_final" || t.name === "subagents",
+	);
+	const coordinatorPrompt = getCoordinatorPrompt({ goal: input.goal });
+	const coordinator = new Agent({
+		sessionId: "coord-" + randomUUID(),
+		streamFn,
+		initialState: { systemPrompt: coordinatorPrompt, tools: coordinatorTools as never, model, messages: [] },
+	});
+	coordinator.subscribe((event) => {
+		if (!input.onProgress) return;
+		for (const ce of toClientEvents(event)) {
+			if (ce.type === "text_delta") {
+				input.onProgress({ type: "text_delta", toolCallId: undefined, toolName: undefined, label: undefined, payload: ce.payload });
+			}
+		}
+	});
+	await coordinator.prompt("子代理已执行完毕,请检查看板结果并输出最终答复。");
+	const messages = coordinator.state.messages;
+	let final: AgentFinal | undefined;
+	for (const message of messages) {
+		if (message.role === "toolResult" && (message as { toolName?: string }).toolName === "emit_final") {
+			const details = (message as { details?: Partial<AgentFinal> }).details;
+			if (details?.answer) {
+				final = { answer: details.answer, summary: details.summary, nextSteps: Array.isArray(details.nextSteps) ? details.nextSteps : [] };
+			}
+		}
+	}
+	if (!final) {
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const m = messages[i] as { role?: string; content?: unknown };
+			if (m.role !== "assistant") continue;
+			const text = assistantText(m.content);
+			if (text.trim()) { final = { answer: text.trim(), summary: undefined, nextSteps: [] }; break; }
+		}
+	}
+	return { runId: randomUUID(), final, messages, plan, executedTools: ["kanban", "subagents"] };
+}
+
+/** 多代理执行流:主代理把子任务写上看板 -> 子代理并行执行 -> 协调者读看板检查结果并 emit_final。 */
+export async function runMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentInput, plan: PlanDetails): Promise<SalesAgentResult> {
+	const runtime = deps.runtime ?? createModelRegistry();
+	const streamFn = deps.streamFn ?? runtime.streamFn;
+	const model = requiredModel(runtime);
+	const subtasks = plan.subtasks ?? [];
+	if (subtasks.length === 0) throw new Error("multi 模式缺少子任务清单(subtasks)");
+	const threadId = input.threadId ?? "default";
+
+	// 1) 主代理把子任务写上看板(看板按会话隔离,只展示当前会话的任务)
+	resetKanban(deps.db, deps.tenantId, threadId);
+	const createdCardIds: string[] = [];
+	for (const st of subtasks) {
+		const card = createKanbanTask(deps.db, { tenantId: deps.tenantId, threadId, title: st.title, goal: st.goal, tools: st.tools, shareEnabled: st.shareOutput === true });
+		createdCardIds.push(card.id);
+		if (input.onProgress) input.onProgress({ type: "tool_start", toolName: "kanban", label: "看板建卡", payload: { id: card.id, title: card.title } });
+		if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "kanban", label: "看板建卡", payload: { id: card.id, title: card.title } });
+	}
+
+	// 2) 子代理并行执行(消费者,并发上限 2;子代理不可再派生/不可改看板)
+	if (input.onProgress) input.onProgress({ type: "tool_start", toolName: "subagents", label: "子代理并行执行", payload: { count: subtasks.length } });
+	const deadline = Date.now() + config.subagentTimeoutMs;
+	while (true) {
+		await consumeKanbanSubagents({ db: deps.db, runtime, streamFn }, deps.tenantId, { limit: 2, threadId });
+		const pending = listKanbanCards(deps.db, deps.tenantId, { status: "pending", threadId }).length;
+		if (pending === 0 || Date.now() > deadline) break;
+		await new Promise((r) => setTimeout(r, config.subagentPollIntervalMs));
+	}
+	// 全部子任务就绪后,从看板读取当前会话的最终结果(后台消费者可能已代为执行部分卡片)
+	const allCards = listKanbanCards(deps.db, deps.tenantId, { threadId }).filter((c) => createdCardIds.includes(c.id));
+	const executed = allCards.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result, error: c.error }));
+	if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "subagents", label: "子代理并行执行", payload: { count: executed.length, results: executed.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result ? c.result.slice(0, 120) : null, error: c.error ?? null })) } });
+
+	// 3) 协调者(主代理)读看板检查结果并汇总:只挂 kanban/subagents + emit_final,不注册业务工具
+	const coordinatorTools = (await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store })).filter(
+		(t) => t.name === "kanban" || t.name === "emit_final" || t.name === "subagents",
+	);
+	const coordinatorPrompt = getCoordinatorPrompt({ goal: input.goal });
+	const coordinator = new Agent({
+		sessionId: `coord-${randomUUID()}`,
+		streamFn,
+		initialState: { systemPrompt: coordinatorPrompt, tools: coordinatorTools as never, model, messages: [] },
+	});
+	coordinator.subscribe((event) => {
+		if (!input.onProgress) return;
+		for (const ce of toClientEvents(event)) {
+			if (ce.type === "text_delta") {
+				input.onProgress({ type: "text_delta", toolCallId: undefined, toolName: undefined, label: undefined, payload: ce.payload });
+			}
+		}
+	});
+	await coordinator.prompt("子代理已执行完毕,请检查看板结果并输出最终答复。");
+	const messages = coordinator.state.messages;
+	let final: AgentFinal | undefined;
+	for (const message of messages) {
+		if (message.role === "toolResult" && (message as { toolName?: string }).toolName === "emit_final") {
+			const details = (message as { details?: Partial<AgentFinal> }).details;
+			if (details?.answer) {
+				final = { answer: details.answer, summary: details.summary, nextSteps: Array.isArray(details.nextSteps) ? details.nextSteps : [] };
+			}
+		}
+	}
+	if (!final) {
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const m = messages[i] as { role?: string; content?: unknown };
+			if (m.role !== "assistant") continue;
+			const text = assistantText(m.content);
+			if (text.trim()) { final = { answer: text.trim(), summary: undefined, nextSteps: [] }; break; }
+		}
+	}
+	return { runId: randomUUID(), final, messages, plan, executedTools: ["kanban", "subagents"] };
+}
+
+export async function runSalesAgentWithPlan(deps: SalesAgentDeps, input: SalesAgentInput): Promise<SalesAgentResult> {
+	const runId = randomUUID();
+	if (input.signal?.aborted) throw new AgentCancelledError("agent run cancelled by client");
+
+	// 自适应:单 Agent 一次执行,工具列表附加 emit_plan,由模型自主决定是否规划
+	// - 简单任务:模型不调用 emit_plan,直接执行业务工具并 emit_final
+	// - 复杂任务:模型先 emit_plan(终止执行循环的 multi 除外),再按计划继续执行
+	// - multi:模型 emit_plan(multi) 触发短路,此处改走多代理看板流程
+	const result = await runSalesAgent(deps, { ...input, enablePlan: true, collectExecutedTools: true });
+	const plan = result.plan;
+
+	// 多代理:主代理把子任务提交到看板,子代理由后台消费者异步并行执行,前端轮询后调 multi-summary
+	if (plan?.mode === "multi") {
+		recordAgentPlan(deps.db, { runId, tenantId: deps.tenantId, threadId: input.threadId, goal: input.goal, plan });
+		if (input.onProgress) input.onProgress({ type: "plan", toolName: "emit_plan", label: "执行计划", payload: plan });
+		const submitted = await submitMultiAgentFlow(deps, input, plan, runId);
+		return { runId: submitted.runId, final: undefined, messages: [], plan, executedTools: ["kanban"] };
+	}
+
+	// 记录计划(简单任务无 plan,记 mode:none)
+	const effectivePlan = plan ?? { summary: "无需计划,直接执行", mode: "none" as const, steps: [], subtasks: [] };
+	recordAgentPlan(deps.db, { runId, tenantId: deps.tenantId, threadId: input.threadId, goal: input.goal, plan: effectivePlan });
+	if (plan && input.onProgress) input.onProgress({ type: "plan", toolName: "emit_plan", label: "执行计划", payload: plan });
+
+	if (plan) {
+		updateAgentPlan(deps.db, deps.tenantId, runId, { status: "executed", executedTools: result.executedTools });
+		const verification = verifyPlan(plan, result.executedTools ?? []);
+		updateAgentPlan(deps.db, deps.tenantId, runId, { status: "verified", verification });
+		if (input.onProgress) input.onProgress({ type: "verified", toolName: "verify", label: "执行验证", payload: verification });
+		return { ...result, runId, plan, verification };
+	}
+
+	// 无计划(简单任务):直接返回,不做验证
+	updateAgentPlan(deps.db, deps.tenantId, runId, { status: "executed", executedTools: result.executedTools });
+	return { ...result, runId, plan: effectivePlan, verification: { planned: 0, executed: result.executedTools ?? [], coveredTools: [], missingTools: [], summary: "简单任务,无需计划,直接执行。" } };
+}

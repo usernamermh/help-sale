@@ -1,0 +1,19 @@
+# 召回率评测:100 条中文 query(每条至少 3 个期望工具)
+
+语料: 85 个工具(中文池 40 个 / 英文池 45 个);索引构建 4365ms
+参数: 每段返回 8 条,语义下限 zh 0.45 / en 0.6(来自配置)
+分值口径:recall@N = 期望工具落在「中文段前 N ∪ 英文段前 N」的比例,再对同组 query 取平均;分母固定 100 条 query
+
+| 组 | query 数 | 期望工具数 | recall@1 | recall@3 | recall@5 | recall@8 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 纯中文工具 | 30 | 91 | 30.8% | 78.1% | 91.1% | 95.6% |
+| 纯英文工具 | 30 | 90 | 27.8% | 63.3% | 72.2% | 83.3% |
+| 中英混合 | 40 | 120 | 40.8% | 72.5% | 80.8% | 87.5% |
+| **合计** | 100 | 301 | 33.9% | 71.4% | 81.3% | 88.7% |
+
+recall@8 最低的 5 条:
+- en-05[en] recall@8=0.00 漏掉:mcp_support_list_tickets, mcp_support_get_ticket, mcp_support_update_ticket_status ← 客户抱怨挺多:把还没关掉的工单列出来,挑几条看看详情和处理时限,已经处理完的直接改成已解决
+- mix-36[mix] recall@8=0.00 漏掉:mcp_support_list_tickets, mcp_support_get_ticket, mcp_support_update_ticket_status ← 工单时限风险:列出工单看有没有超时风险、取详情确认、把紧急的直接改状态并同步
+- en-01[en] recall@8=0.33 漏掉:mcp_crm_list_customers, mcp_crm_list_activities ← 把本季度新进的客户拉出来,看看每个人的负责销售和当前阶段,再把最近的活动记录一起调出来
+- en-09[en] recall@8=0.33 漏掉:mcp_calendar_list_events, mcp_calendar_create_event ← 下周要见几位客户:先看看日历上已经有什么安排、找几个大家都有空的时段、把见面先约上
+- en-17[en] recall@8=0.33 漏掉:mcp_task_complete_task, mcp_notify_send_webhook ← 帮我盯一下手上的事:列出还没做完的按到期时间排一下、做完的那些直接关掉、再把结果同步到群里

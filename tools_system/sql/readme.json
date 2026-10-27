@@ -1,0 +1,38 @@
+{
+  "name": "sql",
+  "label": "操作业务数据库",
+  "description": "Run SQL against the business database selected by data.mode (local = SQLite, mysql = remote MySQL; the config picks one, so it cannot hit the wrong database); read-only by default, writes need readOnly=false + confirmWrite=true, and dangerous statements (DROP, UPDATE/DELETE without WHERE) are blocked and audited by rules.",
+  "description_language": "en",
+  "category": "数据库",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "sql"
+    ],
+    "properties": {
+      "sql": {
+        "type": "string",
+        "description": "单条 SQL,如 SELECT * FROM customers WHERE tenant_id = ?"
+      },
+      "values": {
+        "type": "array",
+        "description": "values for the SQL ? placeholders"
+      },
+      "readOnly": {
+        "type": "boolean",
+        "default": true,
+        "description": "read-only by default: write statements (INSERT/UPDATE/DELETE, ...) must pass false explicitly"
+      },
+      "confirmWrite": {
+        "type": "boolean",
+        "default": false,
+        "description": "dangerous writes need true to confirm; rules block DROP/TRUNCATE/ALTER and require WHERE on UPDATE/DELETE"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

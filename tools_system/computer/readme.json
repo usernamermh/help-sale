@@ -1,0 +1,28 @@
+{
+  "name": "computer",
+  "label": "数值计算",
+  "description": "Evaluate a numeric expression safely (numbers, the operators + - * / % and parentheses only, with variable substitution); no code is executed.",
+  "description_language": "en",
+  "category": "数值计算",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "expression"
+    ],
+    "properties": {
+      "expression": {
+        "type": "string",
+        "description": "numeric expression, e.g. (a+b)*2/3"
+      },
+      "variables": {
+        "type": "object",
+        "description": "variable name -> value, e.g. {a:10,b:20}"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

@@ -1,0 +1,21 @@
+{
+	// 仓库级兜底配置:当前只覆盖已迁移的 backend/(其权威配置是 backend/tsconfig.json,选项与此保持一致)。
+	// tools/ 与 tools_system/ 仍引用 ../../apps/api/src/...(尚未迁移到 backend/),等改指向后再纳入 include。
+	"compilerOptions": {
+		"target": "ES2023",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"lib": ["ES2023"],
+		"types": ["node"],
+		"strict": true,
+		"noEmit": true,
+		// opimize 下的评测脚本用 tsx 直跑,内部 import 带 .ts 后缀(与 backend 的 .js 约定不同,只在这一层开)
+		"allowImportingTsExtensions": true,
+		"skipLibCheck": true,
+		"incremental": true,
+		"assumeChangesOnlyAffectDirectDependencies": true,
+		"tsBuildInfoFile": ".tsbuildinfo"
+	},
+	"include": ["backend", "opimize"],
+	"exclude": ["node_modules", "dist", "build"]
+}

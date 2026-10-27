@@ -1,0 +1,482 @@
+[
+  {
+    "name": "workflow_zh_001",
+    "label": "工作流:客户画像梳理",
+    "description": "执行已沉淀的工作流「客户画像梳理」:读取客户档案、最近会话与标签,输出一份客户画像摘要。可传参数:customerKey/days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_002",
+    "label": "工作流:客户分层",
+    "description": "执行已沉淀的工作流「客户分层」:按成交金额、跟进频次与活跃度把客户分成 A/B/C 三档,输出分层清单。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_003",
+    "label": "工作流:客户流失预警",
+    "description": "执行已沉淀的工作流「客户流失预警」:扫描近 30 天没有任何互动的客户,输出需要唤醒的名单与建议动作。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_004",
+    "label": "工作流:客户生日关怀",
+    "description": "执行已沉淀的工作流「客户生日关怀」:找出近期生日的客户并生成关怀话术与提醒。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_005",
+    "label": "工作流:客户回访安排",
+    "description": "执行已沉淀的工作流「客户回访安排」:根据上次沟通结论,为指定客户生成下一次回访时间与议题。可传参数:customerKey。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_006",
+    "label": "工作流:会话质检",
+    "description": "执行已沉淀的工作流「会话质检」:按质检标准检查会话原文,输出不合规的对话片段与问题清单。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_007",
+    "label": "工作流:会话摘要",
+    "description": "执行已沉淀的工作流「会话摘要」:把指定会话压缩成结构化摘要:客户诉求、异议、结论与待办。可传参数:conversationId。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_008",
+    "label": "工作流:会话意图归类",
+    "description": "执行已沉淀的工作流「会话意图归类」:把最近会话按意图归类(询价/比价/售后/投诉),输出各类占比。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_009",
+    "label": "工作流:会话敏感词排查",
+    "description": "执行已沉淀的工作流「会话敏感词排查」:扫描会话原文中的敏感承诺与违规表述,输出命中位置。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_010",
+    "label": "工作流:话术命中检查",
+    "description": "执行已沉淀的工作流「话术命中检查」:用会话原文中销售的发言比对标准话术库,输出命中明细与覆盖率。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_011",
+    "label": "工作流:话术更新建议",
+    "description": "执行已沉淀的工作流「话术更新建议」:找出长期没被命中或命中率过低的话术,给出改写建议。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_012",
+    "label": "工作流:话术培训计划",
+    "description": "执行已沉淀的工作流「话术培训计划」:按命中率短板生成一份话术培训计划与练习题目。可传参数:team。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_013",
+    "label": "工作流:话术覆盖率统计",
+    "description": "执行已沉淀的工作流「话术覆盖率统计」:按销售/门店统计话术覆盖率并排序,输出短板名单。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_014",
+    "label": "工作流:知识库补充建议",
+    "description": "执行已沉淀的工作流「知识库补充建议」:找出知识库缺口(客户常问但检索不到的问题),给出补充清单。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_015",
+    "label": "工作流:知识查重",
+    "description": "执行已沉淀的工作流「知识查重」:对候选知识点两两比对相似度,输出重复与可合并项。可传参数:category。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_016",
+    "label": "工作流:政策变更同步",
+    "description": "执行已沉淀的工作流「政策变更同步」:比对最新价格政策与知识库里的旧版本,输出需要更新的条目。可传参数:policy。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_017",
+    "label": "工作流:FAQ 梳理",
+    "description": "执行已沉淀的工作流「FAQ 梳理」:把售后高频问题整理成 FAQ 草稿并按类别归档。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_018",
+    "label": "工作流:待办清单整理",
+    "description": "执行已沉淀的工作流「待办清单整理」:把散落的跟进动作合并成一份按优先级排序的待办清单。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_019",
+    "label": "工作流:逾期任务提醒",
+    "description": "执行已沉淀的工作流「逾期任务提醒」:找出已过期或即将到期的任务,生成提醒话术。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_020",
+    "label": "工作流:拜访计划生成",
+    "description": "执行已沉淀的工作流「拜访计划生成」:按客户分层结果生成本周拜访计划与路线建议。可传参数:weekStart。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_021",
+    "label": "工作流:周报生成",
+    "description": "执行已沉淀的工作流「周报生成」:按周统计成交、跟进与话术命中情况,产出一份可发群的周报。可传参数:weekStart。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_022",
+    "label": "工作流:月度复盘",
+    "description": "执行已沉淀的工作流「月度复盘」:汇总当月经营数据、任务完成率与客户变化,输出复盘结论。可传参数:month。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_023",
+    "label": "工作流:门店业绩预警",
+    "description": "执行已沉淀的工作流「门店业绩预警」:对比门店目标与实际完成情况,输出需要预警的门店清单。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_024",
+    "label": "工作流:销售排名汇总",
+    "description": "执行已沉淀的工作流「销售排名汇总」:按销售维度汇总成交与跟进数据并排名。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_025",
+    "label": "工作流:成交漏斗分析",
+    "description": "执行已沉淀的工作流「成交漏斗分析」:按漏斗阶段统计客户流转与流失,输出各阶段转化率。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_026",
+    "label": "工作流:竞品政策比对",
+    "description": "执行已沉淀的工作流「竞品政策比对」:把竞品资料与本店价格政策逐条比对,输出差异清单。可传参数:competitor。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_027",
+    "label": "工作流:竞品动态摘要",
+    "description": "执行已沉淀的工作流「竞品动态摘要」:汇总最近竞品的新动作(降价/活动/新车),输出摘要与应对建议。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_028",
+    "label": "工作流:竞品话术拆解",
+    "description": "执行已沉淀的工作流「竞品话术拆解」:拆解竞品公开话术中的卖点与攻击点,给出应答口径。可传参数:competitor。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_029",
+    "label": "工作流:报价审批核对",
+    "description": "执行已沉淀的工作流「报价审批核对」:核对报价单是否命中当前价格政策与折扣权限,输出异常项。可传参数:quoteId。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_030",
+    "label": "工作流:价格政策校验",
+    "description": "执行已沉淀的工作流「价格政策校验」:校验一批报价是否符合政策,列出越权折扣。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_031",
+    "label": "工作流:折扣异常排查",
+    "description": "执行已沉淀的工作流「折扣异常排查」:找出明显低于底价的成交与折扣,输出可疑清单。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_032",
+    "label": "工作流:新人带教计划",
+    "description": "执行已沉淀的工作流「新人带教计划」:按新人当前短板生成两周带教计划与练习安排。可传参数:trainer。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_033",
+    "label": "工作流:话术演练出题",
+    "description": "执行已沉淀的工作流「话术演练出题」:根据标准话术生成对练题目与评分标准。可传参数:category。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_034",
+    "label": "工作流:库存核对",
+    "description": "执行已沉淀的工作流「库存核对」:核对在售车型库存与订单占用,输出可售与紧缺清单。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_035",
+    "label": "工作流:交付排期核对",
+    "description": "执行已沉淀的工作流「交付排期核对」:核对订单交付时间与库存到货计划,输出可能延期的订单。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_036",
+    "label": "工作流:门店排班",
+    "description": "执行已沉淀的工作流「门店排班」:按客流预测与人员在岗情况生成一周排班表。可传参数:weekStart。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_037",
+    "label": "工作流:线索分配",
+    "description": "执行已沉淀的工作流「线索分配」:把新入线索按门店产能与销售活跃度自动分配。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_038",
+    "label": "工作流:活动效果复盘",
+    "description": "执行已沉淀的工作流「活动效果复盘」:按活动口径统计到店、试驾与成交转化,输出效果结论。可传参数:activity。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_039",
+    "label": "工作流:客户异议汇总",
+    "description": "执行已沉淀的工作流「客户异议汇总」:汇总近期客户异议(价格/交付/售后)并给出应对话术。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  },
+  {
+    "name": "workflow_zh_040",
+    "label": "工作流:流失原因分析",
+    "description": "执行已沉淀的工作流「流失原因分析」:按流失原因归类近期流失客户,输出主要原因与改进项。可传参数:days。",
+    "steps": [
+      {
+        "name": "main",
+        "params": {},
+        "tool": "conversation_query"
+      }
+    ]
+  }
+]

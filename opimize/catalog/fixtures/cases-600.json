@@ -1,0 +1,4802 @@
+[
+  {
+    "id": "mcp-001-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "列出仓库",
+    "en": "list repositories",
+    "expect": "mcp_acme_list_repositories"
+  },
+  {
+    "id": "mcp-001-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "列出仓库",
+    "en": "show me all the repositories",
+    "expect": "mcp_acme_list_repositories"
+  },
+  {
+    "id": "mcp-001-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "列出仓库",
+    "en": "pull up everything under repositories",
+    "expect": "mcp_acme_list_repositories"
+  },
+  {
+    "id": "mcp-002-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "查看仓库",
+    "en": "get repository",
+    "expect": "mcp_acme_get_repository"
+  },
+  {
+    "id": "mcp-002-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "查看仓库",
+    "en": "pull up one repository",
+    "expect": "mcp_acme_get_repository"
+  },
+  {
+    "id": "mcp-002-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "查看仓库",
+    "en": "look into a single repository",
+    "expect": "mcp_acme_get_repository"
+  },
+  {
+    "id": "mcp-003-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "创建仓库",
+    "en": "create a repository",
+    "expect": "mcp_acme_create_repository"
+  },
+  {
+    "id": "mcp-003-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "创建仓库",
+    "en": "open a new repository",
+    "expect": "mcp_acme_create_repository"
+  },
+  {
+    "id": "mcp-003-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "创建仓库",
+    "en": "start a fresh repository",
+    "expect": "mcp_acme_create_repository"
+  },
+  {
+    "id": "mcp-004-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "更新仓库",
+    "en": "update repository",
+    "expect": "mcp_acme_update_repository"
+  },
+  {
+    "id": "mcp-004-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "更新仓库",
+    "en": "change something on an existing repository",
+    "expect": "mcp_acme_update_repository"
+  },
+  {
+    "id": "mcp-004-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "更新仓库",
+    "en": "edit the fields of a repository",
+    "expect": "mcp_acme_update_repository"
+  },
+  {
+    "id": "mcp-005-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "删除仓库",
+    "en": "delete repository",
+    "expect": "mcp_acme_delete_repository"
+  },
+  {
+    "id": "mcp-005-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "删除仓库",
+    "en": "wipe a repository out for good",
+    "expect": "mcp_acme_delete_repository"
+  },
+  {
+    "id": "mcp-005-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "删除仓库",
+    "en": "get rid of a repository completely",
+    "expect": "mcp_acme_delete_repository"
+  },
+  {
+    "id": "mcp-006-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "搜索仓库",
+    "en": "search repositories",
+    "expect": "mcp_acme_search_repository"
+  },
+  {
+    "id": "mcp-006-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "搜索仓库",
+    "en": "find repositories that match a keyword",
+    "expect": "mcp_acme_search_repository"
+  },
+  {
+    "id": "mcp-006-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "搜索仓库",
+    "en": "look through repositories for a word",
+    "expect": "mcp_acme_search_repository"
+  },
+  {
+    "id": "mcp-007-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "归档仓库",
+    "en": "archive a repository",
+    "expect": "mcp_acme_archive_repository"
+  },
+  {
+    "id": "mcp-007-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "归档仓库",
+    "en": "put a repository away so it leaves the active list",
+    "expect": "mcp_acme_archive_repository"
+  },
+  {
+    "id": "mcp-007-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "归档仓库",
+    "en": "set a repository aside, no longer in use",
+    "expect": "mcp_acme_archive_repository"
+  },
+  {
+    "id": "mcp-008-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "恢复仓库",
+    "en": "restore a repository",
+    "expect": "mcp_acme_restore_repository"
+  },
+  {
+    "id": "mcp-008-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "恢复仓库",
+    "en": "bring a repository back",
+    "expect": "mcp_acme_restore_repository"
+  },
+  {
+    "id": "mcp-008-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "恢复仓库",
+    "en": "put a repository back in use again",
+    "expect": "mcp_acme_restore_repository"
+  },
+  {
+    "id": "mcp-009-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "导出仓库",
+    "en": "export a repository",
+    "expect": "mcp_acme_export_repository"
+  },
+  {
+    "id": "mcp-009-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "导出仓库",
+    "en": "save a repository to a file",
+    "expect": "mcp_acme_export_repository"
+  },
+  {
+    "id": "mcp-009-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "导出仓库",
+    "en": "give me a downloadable dump of a repository",
+    "expect": "mcp_acme_export_repository"
+  },
+  {
+    "id": "mcp-010-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "复制仓库",
+    "en": "duplicate a repository",
+    "expect": "mcp_acme_duplicate_repository"
+  },
+  {
+    "id": "mcp-010-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "复制仓库",
+    "en": "copy a repository somewhere else",
+    "expect": "mcp_acme_duplicate_repository"
+  },
+  {
+    "id": "mcp-010-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "复制仓库",
+    "en": "make a second copy of a repository in another space",
+    "expect": "mcp_acme_duplicate_repository"
+  },
+  {
+    "id": "mcp-011-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "列出问题单",
+    "en": "list issues",
+    "expect": "mcp_acme_list_issues"
+  },
+  {
+    "id": "mcp-011-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "列出问题单",
+    "en": "show me all the issues",
+    "expect": "mcp_acme_list_issues"
+  },
+  {
+    "id": "mcp-011-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "列出问题单",
+    "en": "pull up everything under issues",
+    "expect": "mcp_acme_list_issues"
+  },
+  {
+    "id": "mcp-012-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "查看问题单",
+    "en": "get issue",
+    "expect": "mcp_acme_get_issue"
+  },
+  {
+    "id": "mcp-012-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "查看问题单",
+    "en": "pull up one issue",
+    "expect": "mcp_acme_get_issue"
+  },
+  {
+    "id": "mcp-012-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "查看问题单",
+    "en": "look into a single issue",
+    "expect": "mcp_acme_get_issue"
+  },
+  {
+    "id": "mcp-013-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "创建问题单",
+    "en": "create a issue",
+    "expect": "mcp_acme_create_issue"
+  },
+  {
+    "id": "mcp-013-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "创建问题单",
+    "en": "open a new issue",
+    "expect": "mcp_acme_create_issue"
+  },
+  {
+    "id": "mcp-013-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "创建问题单",
+    "en": "start a fresh issue",
+    "expect": "mcp_acme_create_issue"
+  },
+  {
+    "id": "mcp-014-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "更新问题单",
+    "en": "update issue",
+    "expect": "mcp_acme_update_issue"
+  },
+  {
+    "id": "mcp-014-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "更新问题单",
+    "en": "change something on an existing issue",
+    "expect": "mcp_acme_update_issue"
+  },
+  {
+    "id": "mcp-014-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "更新问题单",
+    "en": "edit the fields of a issue",
+    "expect": "mcp_acme_update_issue"
+  },
+  {
+    "id": "mcp-015-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "删除问题单",
+    "en": "delete issue",
+    "expect": "mcp_acme_delete_issue"
+  },
+  {
+    "id": "mcp-015-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "删除问题单",
+    "en": "wipe a issue out for good",
+    "expect": "mcp_acme_delete_issue"
+  },
+  {
+    "id": "mcp-015-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "删除问题单",
+    "en": "get rid of a issue completely",
+    "expect": "mcp_acme_delete_issue"
+  },
+  {
+    "id": "mcp-016-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "搜索问题单",
+    "en": "search issues",
+    "expect": "mcp_acme_search_issue"
+  },
+  {
+    "id": "mcp-016-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "搜索问题单",
+    "en": "find issues that match a keyword",
+    "expect": "mcp_acme_search_issue"
+  },
+  {
+    "id": "mcp-016-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "搜索问题单",
+    "en": "look through issues for a word",
+    "expect": "mcp_acme_search_issue"
+  },
+  {
+    "id": "mcp-017-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "归档问题单",
+    "en": "archive a issue",
+    "expect": "mcp_acme_archive_issue"
+  },
+  {
+    "id": "mcp-017-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "归档问题单",
+    "en": "put a issue away so it leaves the active list",
+    "expect": "mcp_acme_archive_issue"
+  },
+  {
+    "id": "mcp-017-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "归档问题单",
+    "en": "set a issue aside, no longer in use",
+    "expect": "mcp_acme_archive_issue"
+  },
+  {
+    "id": "mcp-018-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "恢复问题单",
+    "en": "restore a issue",
+    "expect": "mcp_acme_restore_issue"
+  },
+  {
+    "id": "mcp-018-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "恢复问题单",
+    "en": "bring a issue back",
+    "expect": "mcp_acme_restore_issue"
+  },
+  {
+    "id": "mcp-018-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "恢复问题单",
+    "en": "put a issue back in use again",
+    "expect": "mcp_acme_restore_issue"
+  },
+  {
+    "id": "mcp-019-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "导出问题单",
+    "en": "export a issue",
+    "expect": "mcp_acme_export_issue"
+  },
+  {
+    "id": "mcp-019-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "导出问题单",
+    "en": "save a issue to a file",
+    "expect": "mcp_acme_export_issue"
+  },
+  {
+    "id": "mcp-019-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "导出问题单",
+    "en": "give me a downloadable dump of a issue",
+    "expect": "mcp_acme_export_issue"
+  },
+  {
+    "id": "mcp-020-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "复制问题单",
+    "en": "duplicate a issue",
+    "expect": "mcp_acme_duplicate_issue"
+  },
+  {
+    "id": "mcp-020-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "复制问题单",
+    "en": "copy a issue somewhere else",
+    "expect": "mcp_acme_duplicate_issue"
+  },
+  {
+    "id": "mcp-020-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "复制问题单",
+    "en": "make a second copy of a issue in another space",
+    "expect": "mcp_acme_duplicate_issue"
+  },
+  {
+    "id": "mcp-021-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "列出拉取请求",
+    "en": "list pull requests",
+    "expect": "mcp_acme_list_pull_requests"
+  },
+  {
+    "id": "mcp-021-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "列出拉取请求",
+    "en": "show me all the pull requests",
+    "expect": "mcp_acme_list_pull_requests"
+  },
+  {
+    "id": "mcp-021-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "列出拉取请求",
+    "en": "pull up everything under pull requests",
+    "expect": "mcp_acme_list_pull_requests"
+  },
+  {
+    "id": "mcp-022-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "查看拉取请求",
+    "en": "get pull request",
+    "expect": "mcp_acme_get_pull_request"
+  },
+  {
+    "id": "mcp-022-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "查看拉取请求",
+    "en": "pull up one pull request",
+    "expect": "mcp_acme_get_pull_request"
+  },
+  {
+    "id": "mcp-022-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "查看拉取请求",
+    "en": "look into a single pull request",
+    "expect": "mcp_acme_get_pull_request"
+  },
+  {
+    "id": "mcp-023-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "创建拉取请求",
+    "en": "create a pull request",
+    "expect": "mcp_acme_create_pull_request"
+  },
+  {
+    "id": "mcp-023-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "创建拉取请求",
+    "en": "open a new pull request",
+    "expect": "mcp_acme_create_pull_request"
+  },
+  {
+    "id": "mcp-023-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "创建拉取请求",
+    "en": "start a fresh pull request",
+    "expect": "mcp_acme_create_pull_request"
+  },
+  {
+    "id": "mcp-024-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "更新拉取请求",
+    "en": "update pull request",
+    "expect": "mcp_acme_update_pull_request"
+  },
+  {
+    "id": "mcp-024-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "更新拉取请求",
+    "en": "change something on an existing pull request",
+    "expect": "mcp_acme_update_pull_request"
+  },
+  {
+    "id": "mcp-024-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "更新拉取请求",
+    "en": "edit the fields of a pull request",
+    "expect": "mcp_acme_update_pull_request"
+  },
+  {
+    "id": "mcp-025-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "删除拉取请求",
+    "en": "delete pull request",
+    "expect": "mcp_acme_delete_pull_request"
+  },
+  {
+    "id": "mcp-025-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "删除拉取请求",
+    "en": "wipe a pull request out for good",
+    "expect": "mcp_acme_delete_pull_request"
+  },
+  {
+    "id": "mcp-025-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "删除拉取请求",
+    "en": "get rid of a pull request completely",
+    "expect": "mcp_acme_delete_pull_request"
+  },
+  {
+    "id": "mcp-026-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "搜索拉取请求",
+    "en": "search pull requests",
+    "expect": "mcp_acme_search_pull_request"
+  },
+  {
+    "id": "mcp-026-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "搜索拉取请求",
+    "en": "find pull requests that match a keyword",
+    "expect": "mcp_acme_search_pull_request"
+  },
+  {
+    "id": "mcp-026-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "搜索拉取请求",
+    "en": "look through pull requests for a word",
+    "expect": "mcp_acme_search_pull_request"
+  },
+  {
+    "id": "mcp-027-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "归档拉取请求",
+    "en": "archive a pull request",
+    "expect": "mcp_acme_archive_pull_request"
+  },
+  {
+    "id": "mcp-027-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "归档拉取请求",
+    "en": "put a pull request away so it leaves the active list",
+    "expect": "mcp_acme_archive_pull_request"
+  },
+  {
+    "id": "mcp-027-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "归档拉取请求",
+    "en": "set a pull request aside, no longer in use",
+    "expect": "mcp_acme_archive_pull_request"
+  },
+  {
+    "id": "mcp-028-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "恢复拉取请求",
+    "en": "restore a pull request",
+    "expect": "mcp_acme_restore_pull_request"
+  },
+  {
+    "id": "mcp-028-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "恢复拉取请求",
+    "en": "bring a pull request back",
+    "expect": "mcp_acme_restore_pull_request"
+  },
+  {
+    "id": "mcp-028-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "恢复拉取请求",
+    "en": "put a pull request back in use again",
+    "expect": "mcp_acme_restore_pull_request"
+  },
+  {
+    "id": "mcp-029-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "导出拉取请求",
+    "en": "export a pull request",
+    "expect": "mcp_acme_export_pull_request"
+  },
+  {
+    "id": "mcp-029-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "导出拉取请求",
+    "en": "save a pull request to a file",
+    "expect": "mcp_acme_export_pull_request"
+  },
+  {
+    "id": "mcp-029-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "导出拉取请求",
+    "en": "give me a downloadable dump of a pull request",
+    "expect": "mcp_acme_export_pull_request"
+  },
+  {
+    "id": "mcp-030-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "复制拉取请求",
+    "en": "duplicate a pull request",
+    "expect": "mcp_acme_duplicate_pull_request"
+  },
+  {
+    "id": "mcp-030-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "复制拉取请求",
+    "en": "copy a pull request somewhere else",
+    "expect": "mcp_acme_duplicate_pull_request"
+  },
+  {
+    "id": "mcp-030-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "复制拉取请求",
+    "en": "make a second copy of a pull request in another space",
+    "expect": "mcp_acme_duplicate_pull_request"
+  },
+  {
+    "id": "mcp-031-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "列出发布版本",
+    "en": "list releases",
+    "expect": "mcp_acme_list_releases"
+  },
+  {
+    "id": "mcp-031-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "列出发布版本",
+    "en": "show me all the releases",
+    "expect": "mcp_acme_list_releases"
+  },
+  {
+    "id": "mcp-031-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "列出发布版本",
+    "en": "pull up everything under releases",
+    "expect": "mcp_acme_list_releases"
+  },
+  {
+    "id": "mcp-032-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "查看发布版本",
+    "en": "get release",
+    "expect": "mcp_acme_get_release"
+  },
+  {
+    "id": "mcp-032-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "查看发布版本",
+    "en": "pull up one release",
+    "expect": "mcp_acme_get_release"
+  },
+  {
+    "id": "mcp-032-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "查看发布版本",
+    "en": "look into a single release",
+    "expect": "mcp_acme_get_release"
+  },
+  {
+    "id": "mcp-033-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "创建发布版本",
+    "en": "create a release",
+    "expect": "mcp_acme_create_release"
+  },
+  {
+    "id": "mcp-033-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "创建发布版本",
+    "en": "open a new release",
+    "expect": "mcp_acme_create_release"
+  },
+  {
+    "id": "mcp-033-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "创建发布版本",
+    "en": "start a fresh release",
+    "expect": "mcp_acme_create_release"
+  },
+  {
+    "id": "mcp-034-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "更新发布版本",
+    "en": "update release",
+    "expect": "mcp_acme_update_release"
+  },
+  {
+    "id": "mcp-034-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "更新发布版本",
+    "en": "change something on an existing release",
+    "expect": "mcp_acme_update_release"
+  },
+  {
+    "id": "mcp-034-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "更新发布版本",
+    "en": "edit the fields of a release",
+    "expect": "mcp_acme_update_release"
+  },
+  {
+    "id": "mcp-035-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "删除发布版本",
+    "en": "delete release",
+    "expect": "mcp_acme_delete_release"
+  },
+  {
+    "id": "mcp-035-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "删除发布版本",
+    "en": "wipe a release out for good",
+    "expect": "mcp_acme_delete_release"
+  },
+  {
+    "id": "mcp-035-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "删除发布版本",
+    "en": "get rid of a release completely",
+    "expect": "mcp_acme_delete_release"
+  },
+  {
+    "id": "mcp-036-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "搜索发布版本",
+    "en": "search releases",
+    "expect": "mcp_acme_search_release"
+  },
+  {
+    "id": "mcp-036-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "搜索发布版本",
+    "en": "find releases that match a keyword",
+    "expect": "mcp_acme_search_release"
+  },
+  {
+    "id": "mcp-036-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "搜索发布版本",
+    "en": "look through releases for a word",
+    "expect": "mcp_acme_search_release"
+  },
+  {
+    "id": "mcp-037-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "归档发布版本",
+    "en": "archive a release",
+    "expect": "mcp_acme_archive_release"
+  },
+  {
+    "id": "mcp-037-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "归档发布版本",
+    "en": "put a release away so it leaves the active list",
+    "expect": "mcp_acme_archive_release"
+  },
+  {
+    "id": "mcp-037-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "归档发布版本",
+    "en": "set a release aside, no longer in use",
+    "expect": "mcp_acme_archive_release"
+  },
+  {
+    "id": "mcp-038-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "恢复发布版本",
+    "en": "restore a release",
+    "expect": "mcp_acme_restore_release"
+  },
+  {
+    "id": "mcp-038-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "恢复发布版本",
+    "en": "bring a release back",
+    "expect": "mcp_acme_restore_release"
+  },
+  {
+    "id": "mcp-038-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "恢复发布版本",
+    "en": "put a release back in use again",
+    "expect": "mcp_acme_restore_release"
+  },
+  {
+    "id": "mcp-039-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "导出发布版本",
+    "en": "export a release",
+    "expect": "mcp_acme_export_release"
+  },
+  {
+    "id": "mcp-039-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "导出发布版本",
+    "en": "save a release to a file",
+    "expect": "mcp_acme_export_release"
+  },
+  {
+    "id": "mcp-039-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "导出发布版本",
+    "en": "give me a downloadable dump of a release",
+    "expect": "mcp_acme_export_release"
+  },
+  {
+    "id": "mcp-040-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "复制发布版本",
+    "en": "duplicate a release",
+    "expect": "mcp_acme_duplicate_release"
+  },
+  {
+    "id": "mcp-040-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "复制发布版本",
+    "en": "copy a release somewhere else",
+    "expect": "mcp_acme_duplicate_release"
+  },
+  {
+    "id": "mcp-040-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "复制发布版本",
+    "en": "make a second copy of a release in another space",
+    "expect": "mcp_acme_duplicate_release"
+  },
+  {
+    "id": "mcp-041-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "列出流水线运行",
+    "en": "list workflow runs",
+    "expect": "mcp_acme_list_workflow_runs"
+  },
+  {
+    "id": "mcp-041-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "列出流水线运行",
+    "en": "show me all the workflow runs",
+    "expect": "mcp_acme_list_workflow_runs"
+  },
+  {
+    "id": "mcp-041-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "列出流水线运行",
+    "en": "pull up everything under workflow runs",
+    "expect": "mcp_acme_list_workflow_runs"
+  },
+  {
+    "id": "mcp-042-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "查看流水线运行",
+    "en": "get workflow run",
+    "expect": "mcp_acme_get_workflow_run"
+  },
+  {
+    "id": "mcp-042-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "查看流水线运行",
+    "en": "pull up one workflow run",
+    "expect": "mcp_acme_get_workflow_run"
+  },
+  {
+    "id": "mcp-042-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "查看流水线运行",
+    "en": "look into a single workflow run",
+    "expect": "mcp_acme_get_workflow_run"
+  },
+  {
+    "id": "mcp-043-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "创建流水线运行",
+    "en": "create a workflow run",
+    "expect": "mcp_acme_create_workflow_run"
+  },
+  {
+    "id": "mcp-043-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "创建流水线运行",
+    "en": "open a new workflow run",
+    "expect": "mcp_acme_create_workflow_run"
+  },
+  {
+    "id": "mcp-043-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "创建流水线运行",
+    "en": "start a fresh workflow run",
+    "expect": "mcp_acme_create_workflow_run"
+  },
+  {
+    "id": "mcp-044-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "更新流水线运行",
+    "en": "update workflow run",
+    "expect": "mcp_acme_update_workflow_run"
+  },
+  {
+    "id": "mcp-044-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "更新流水线运行",
+    "en": "change something on an existing workflow run",
+    "expect": "mcp_acme_update_workflow_run"
+  },
+  {
+    "id": "mcp-044-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "更新流水线运行",
+    "en": "edit the fields of a workflow run",
+    "expect": "mcp_acme_update_workflow_run"
+  },
+  {
+    "id": "mcp-045-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "删除流水线运行",
+    "en": "delete workflow run",
+    "expect": "mcp_acme_delete_workflow_run"
+  },
+  {
+    "id": "mcp-045-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "删除流水线运行",
+    "en": "wipe a workflow run out for good",
+    "expect": "mcp_acme_delete_workflow_run"
+  },
+  {
+    "id": "mcp-045-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "删除流水线运行",
+    "en": "get rid of a workflow run completely",
+    "expect": "mcp_acme_delete_workflow_run"
+  },
+  {
+    "id": "mcp-046-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "搜索流水线运行",
+    "en": "search workflow runs",
+    "expect": "mcp_acme_search_workflow_run"
+  },
+  {
+    "id": "mcp-046-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "搜索流水线运行",
+    "en": "find workflow runs that match a keyword",
+    "expect": "mcp_acme_search_workflow_run"
+  },
+  {
+    "id": "mcp-046-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "搜索流水线运行",
+    "en": "look through workflow runs for a word",
+    "expect": "mcp_acme_search_workflow_run"
+  },
+  {
+    "id": "mcp-047-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "归档流水线运行",
+    "en": "archive a workflow run",
+    "expect": "mcp_acme_archive_workflow_run"
+  },
+  {
+    "id": "mcp-047-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "归档流水线运行",
+    "en": "put a workflow run away so it leaves the active list",
+    "expect": "mcp_acme_archive_workflow_run"
+  },
+  {
+    "id": "mcp-047-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "归档流水线运行",
+    "en": "set a workflow run aside, no longer in use",
+    "expect": "mcp_acme_archive_workflow_run"
+  },
+  {
+    "id": "mcp-048-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "恢复流水线运行",
+    "en": "restore a workflow run",
+    "expect": "mcp_acme_restore_workflow_run"
+  },
+  {
+    "id": "mcp-048-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "恢复流水线运行",
+    "en": "bring a workflow run back",
+    "expect": "mcp_acme_restore_workflow_run"
+  },
+  {
+    "id": "mcp-048-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "恢复流水线运行",
+    "en": "put a workflow run back in use again",
+    "expect": "mcp_acme_restore_workflow_run"
+  },
+  {
+    "id": "mcp-049-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "导出流水线运行",
+    "en": "export a workflow run",
+    "expect": "mcp_acme_export_workflow_run"
+  },
+  {
+    "id": "mcp-049-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "导出流水线运行",
+    "en": "save a workflow run to a file",
+    "expect": "mcp_acme_export_workflow_run"
+  },
+  {
+    "id": "mcp-049-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "导出流水线运行",
+    "en": "give me a downloadable dump of a workflow run",
+    "expect": "mcp_acme_export_workflow_run"
+  },
+  {
+    "id": "mcp-050-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "复制流水线运行",
+    "en": "duplicate a workflow run",
+    "expect": "mcp_acme_duplicate_workflow_run"
+  },
+  {
+    "id": "mcp-050-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "复制流水线运行",
+    "en": "copy a workflow run somewhere else",
+    "expect": "mcp_acme_duplicate_workflow_run"
+  },
+  {
+    "id": "mcp-050-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "复制流水线运行",
+    "en": "make a second copy of a workflow run in another space",
+    "expect": "mcp_acme_duplicate_workflow_run"
+  },
+  {
+    "id": "mcp-051-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "列出构建产物",
+    "en": "list packages",
+    "expect": "mcp_acme_list_packages"
+  },
+  {
+    "id": "mcp-051-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "列出构建产物",
+    "en": "show me all the packages",
+    "expect": "mcp_acme_list_packages"
+  },
+  {
+    "id": "mcp-051-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "列出构建产物",
+    "en": "pull up everything under packages",
+    "expect": "mcp_acme_list_packages"
+  },
+  {
+    "id": "mcp-052-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "查看构建产物",
+    "en": "get package",
+    "expect": "mcp_acme_get_package"
+  },
+  {
+    "id": "mcp-052-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "查看构建产物",
+    "en": "pull up one package",
+    "expect": "mcp_acme_get_package"
+  },
+  {
+    "id": "mcp-052-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "查看构建产物",
+    "en": "look into a single package",
+    "expect": "mcp_acme_get_package"
+  },
+  {
+    "id": "mcp-053-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "创建构建产物",
+    "en": "create a package",
+    "expect": "mcp_acme_create_package"
+  },
+  {
+    "id": "mcp-053-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "创建构建产物",
+    "en": "open a new package",
+    "expect": "mcp_acme_create_package"
+  },
+  {
+    "id": "mcp-053-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "创建构建产物",
+    "en": "start a fresh package",
+    "expect": "mcp_acme_create_package"
+  },
+  {
+    "id": "mcp-054-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "更新构建产物",
+    "en": "update package",
+    "expect": "mcp_acme_update_package"
+  },
+  {
+    "id": "mcp-054-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "更新构建产物",
+    "en": "change something on an existing package",
+    "expect": "mcp_acme_update_package"
+  },
+  {
+    "id": "mcp-054-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "更新构建产物",
+    "en": "edit the fields of a package",
+    "expect": "mcp_acme_update_package"
+  },
+  {
+    "id": "mcp-055-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "删除构建产物",
+    "en": "delete package",
+    "expect": "mcp_acme_delete_package"
+  },
+  {
+    "id": "mcp-055-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "删除构建产物",
+    "en": "wipe a package out for good",
+    "expect": "mcp_acme_delete_package"
+  },
+  {
+    "id": "mcp-055-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "删除构建产物",
+    "en": "get rid of a package completely",
+    "expect": "mcp_acme_delete_package"
+  },
+  {
+    "id": "mcp-056-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "搜索构建产物",
+    "en": "search packages",
+    "expect": "mcp_acme_search_package"
+  },
+  {
+    "id": "mcp-056-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "搜索构建产物",
+    "en": "find packages that match a keyword",
+    "expect": "mcp_acme_search_package"
+  },
+  {
+    "id": "mcp-056-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "搜索构建产物",
+    "en": "look through packages for a word",
+    "expect": "mcp_acme_search_package"
+  },
+  {
+    "id": "mcp-057-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "归档构建产物",
+    "en": "archive a package",
+    "expect": "mcp_acme_archive_package"
+  },
+  {
+    "id": "mcp-057-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "归档构建产物",
+    "en": "put a package away so it leaves the active list",
+    "expect": "mcp_acme_archive_package"
+  },
+  {
+    "id": "mcp-057-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "归档构建产物",
+    "en": "set a package aside, no longer in use",
+    "expect": "mcp_acme_archive_package"
+  },
+  {
+    "id": "mcp-058-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "恢复构建产物",
+    "en": "restore a package",
+    "expect": "mcp_acme_restore_package"
+  },
+  {
+    "id": "mcp-058-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "恢复构建产物",
+    "en": "bring a package back",
+    "expect": "mcp_acme_restore_package"
+  },
+  {
+    "id": "mcp-058-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "恢复构建产物",
+    "en": "put a package back in use again",
+    "expect": "mcp_acme_restore_package"
+  },
+  {
+    "id": "mcp-059-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "导出构建产物",
+    "en": "export a package",
+    "expect": "mcp_acme_export_package"
+  },
+  {
+    "id": "mcp-059-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "导出构建产物",
+    "en": "save a package to a file",
+    "expect": "mcp_acme_export_package"
+  },
+  {
+    "id": "mcp-059-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "导出构建产物",
+    "en": "give me a downloadable dump of a package",
+    "expect": "mcp_acme_export_package"
+  },
+  {
+    "id": "mcp-060-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "复制构建产物",
+    "en": "duplicate a package",
+    "expect": "mcp_acme_duplicate_package"
+  },
+  {
+    "id": "mcp-060-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "复制构建产物",
+    "en": "copy a package somewhere else",
+    "expect": "mcp_acme_duplicate_package"
+  },
+  {
+    "id": "mcp-060-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "复制构建产物",
+    "en": "make a second copy of a package in another space",
+    "expect": "mcp_acme_duplicate_package"
+  },
+  {
+    "id": "mcp-061-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "列出密钥",
+    "en": "list secrets",
+    "expect": "mcp_acme_list_secrets"
+  },
+  {
+    "id": "mcp-061-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "列出密钥",
+    "en": "show me all the secrets",
+    "expect": "mcp_acme_list_secrets"
+  },
+  {
+    "id": "mcp-061-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "列出密钥",
+    "en": "pull up everything under secrets",
+    "expect": "mcp_acme_list_secrets"
+  },
+  {
+    "id": "mcp-062-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "查看密钥",
+    "en": "get secret",
+    "expect": "mcp_acme_get_secret"
+  },
+  {
+    "id": "mcp-062-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "查看密钥",
+    "en": "pull up one secret",
+    "expect": "mcp_acme_get_secret"
+  },
+  {
+    "id": "mcp-062-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "查看密钥",
+    "en": "look into a single secret",
+    "expect": "mcp_acme_get_secret"
+  },
+  {
+    "id": "mcp-063-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "创建密钥",
+    "en": "create a secret",
+    "expect": "mcp_acme_create_secret"
+  },
+  {
+    "id": "mcp-063-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "创建密钥",
+    "en": "open a new secret",
+    "expect": "mcp_acme_create_secret"
+  },
+  {
+    "id": "mcp-063-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "创建密钥",
+    "en": "start a fresh secret",
+    "expect": "mcp_acme_create_secret"
+  },
+  {
+    "id": "mcp-064-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "更新密钥",
+    "en": "update secret",
+    "expect": "mcp_acme_update_secret"
+  },
+  {
+    "id": "mcp-064-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "更新密钥",
+    "en": "change something on an existing secret",
+    "expect": "mcp_acme_update_secret"
+  },
+  {
+    "id": "mcp-064-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "更新密钥",
+    "en": "edit the fields of a secret",
+    "expect": "mcp_acme_update_secret"
+  },
+  {
+    "id": "mcp-065-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "删除密钥",
+    "en": "delete secret",
+    "expect": "mcp_acme_delete_secret"
+  },
+  {
+    "id": "mcp-065-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "删除密钥",
+    "en": "wipe a secret out for good",
+    "expect": "mcp_acme_delete_secret"
+  },
+  {
+    "id": "mcp-065-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "删除密钥",
+    "en": "get rid of a secret completely",
+    "expect": "mcp_acme_delete_secret"
+  },
+  {
+    "id": "mcp-066-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "搜索密钥",
+    "en": "search secrets",
+    "expect": "mcp_acme_search_secret"
+  },
+  {
+    "id": "mcp-066-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "搜索密钥",
+    "en": "find secrets that match a keyword",
+    "expect": "mcp_acme_search_secret"
+  },
+  {
+    "id": "mcp-066-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "搜索密钥",
+    "en": "look through secrets for a word",
+    "expect": "mcp_acme_search_secret"
+  },
+  {
+    "id": "mcp-067-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "归档密钥",
+    "en": "archive a secret",
+    "expect": "mcp_acme_archive_secret"
+  },
+  {
+    "id": "mcp-067-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "归档密钥",
+    "en": "put a secret away so it leaves the active list",
+    "expect": "mcp_acme_archive_secret"
+  },
+  {
+    "id": "mcp-067-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "归档密钥",
+    "en": "set a secret aside, no longer in use",
+    "expect": "mcp_acme_archive_secret"
+  },
+  {
+    "id": "mcp-068-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "恢复密钥",
+    "en": "restore a secret",
+    "expect": "mcp_acme_restore_secret"
+  },
+  {
+    "id": "mcp-068-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "恢复密钥",
+    "en": "bring a secret back",
+    "expect": "mcp_acme_restore_secret"
+  },
+  {
+    "id": "mcp-068-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "恢复密钥",
+    "en": "put a secret back in use again",
+    "expect": "mcp_acme_restore_secret"
+  },
+  {
+    "id": "mcp-069-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "导出密钥",
+    "en": "export a secret",
+    "expect": "mcp_acme_export_secret"
+  },
+  {
+    "id": "mcp-069-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "导出密钥",
+    "en": "save a secret to a file",
+    "expect": "mcp_acme_export_secret"
+  },
+  {
+    "id": "mcp-069-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "导出密钥",
+    "en": "give me a downloadable dump of a secret",
+    "expect": "mcp_acme_export_secret"
+  },
+  {
+    "id": "mcp-070-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "复制密钥",
+    "en": "duplicate a secret",
+    "expect": "mcp_acme_duplicate_secret"
+  },
+  {
+    "id": "mcp-070-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "复制密钥",
+    "en": "copy a secret somewhere else",
+    "expect": "mcp_acme_duplicate_secret"
+  },
+  {
+    "id": "mcp-070-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "复制密钥",
+    "en": "make a second copy of a secret in another space",
+    "expect": "mcp_acme_duplicate_secret"
+  },
+  {
+    "id": "mcp-071-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "列出团队",
+    "en": "list teams",
+    "expect": "mcp_acme_list_teams"
+  },
+  {
+    "id": "mcp-071-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "列出团队",
+    "en": "show me all the teams",
+    "expect": "mcp_acme_list_teams"
+  },
+  {
+    "id": "mcp-071-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "列出团队",
+    "en": "pull up everything under teams",
+    "expect": "mcp_acme_list_teams"
+  },
+  {
+    "id": "mcp-072-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "查看团队",
+    "en": "get team",
+    "expect": "mcp_acme_get_team"
+  },
+  {
+    "id": "mcp-072-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "查看团队",
+    "en": "pull up one team",
+    "expect": "mcp_acme_get_team"
+  },
+  {
+    "id": "mcp-072-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "查看团队",
+    "en": "look into a single team",
+    "expect": "mcp_acme_get_team"
+  },
+  {
+    "id": "mcp-073-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "创建团队",
+    "en": "create a team",
+    "expect": "mcp_acme_create_team"
+  },
+  {
+    "id": "mcp-073-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "创建团队",
+    "en": "open a new team",
+    "expect": "mcp_acme_create_team"
+  },
+  {
+    "id": "mcp-073-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "创建团队",
+    "en": "start a fresh team",
+    "expect": "mcp_acme_create_team"
+  },
+  {
+    "id": "mcp-074-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "更新团队",
+    "en": "update team",
+    "expect": "mcp_acme_update_team"
+  },
+  {
+    "id": "mcp-074-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "更新团队",
+    "en": "change something on an existing team",
+    "expect": "mcp_acme_update_team"
+  },
+  {
+    "id": "mcp-074-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "更新团队",
+    "en": "edit the fields of a team",
+    "expect": "mcp_acme_update_team"
+  },
+  {
+    "id": "mcp-075-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "删除团队",
+    "en": "delete team",
+    "expect": "mcp_acme_delete_team"
+  },
+  {
+    "id": "mcp-075-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "删除团队",
+    "en": "wipe a team out for good",
+    "expect": "mcp_acme_delete_team"
+  },
+  {
+    "id": "mcp-075-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "删除团队",
+    "en": "get rid of a team completely",
+    "expect": "mcp_acme_delete_team"
+  },
+  {
+    "id": "mcp-076-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "搜索团队",
+    "en": "search teams",
+    "expect": "mcp_acme_search_team"
+  },
+  {
+    "id": "mcp-076-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "搜索团队",
+    "en": "find teams that match a keyword",
+    "expect": "mcp_acme_search_team"
+  },
+  {
+    "id": "mcp-076-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "搜索团队",
+    "en": "look through teams for a word",
+    "expect": "mcp_acme_search_team"
+  },
+  {
+    "id": "mcp-077-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "归档团队",
+    "en": "archive a team",
+    "expect": "mcp_acme_archive_team"
+  },
+  {
+    "id": "mcp-077-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "归档团队",
+    "en": "put a team away so it leaves the active list",
+    "expect": "mcp_acme_archive_team"
+  },
+  {
+    "id": "mcp-077-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "归档团队",
+    "en": "set a team aside, no longer in use",
+    "expect": "mcp_acme_archive_team"
+  },
+  {
+    "id": "mcp-078-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "恢复团队",
+    "en": "restore a team",
+    "expect": "mcp_acme_restore_team"
+  },
+  {
+    "id": "mcp-078-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "恢复团队",
+    "en": "bring a team back",
+    "expect": "mcp_acme_restore_team"
+  },
+  {
+    "id": "mcp-078-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "恢复团队",
+    "en": "put a team back in use again",
+    "expect": "mcp_acme_restore_team"
+  },
+  {
+    "id": "mcp-079-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "导出团队",
+    "en": "export a team",
+    "expect": "mcp_acme_export_team"
+  },
+  {
+    "id": "mcp-079-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "导出团队",
+    "en": "save a team to a file",
+    "expect": "mcp_acme_export_team"
+  },
+  {
+    "id": "mcp-079-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "导出团队",
+    "en": "give me a downloadable dump of a team",
+    "expect": "mcp_acme_export_team"
+  },
+  {
+    "id": "mcp-080-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "复制团队",
+    "en": "duplicate a team",
+    "expect": "mcp_acme_duplicate_team"
+  },
+  {
+    "id": "mcp-080-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "复制团队",
+    "en": "copy a team somewhere else",
+    "expect": "mcp_acme_duplicate_team"
+  },
+  {
+    "id": "mcp-080-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "复制团队",
+    "en": "make a second copy of a team in another space",
+    "expect": "mcp_acme_duplicate_team"
+  },
+  {
+    "id": "mcp-081-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "列出项目看板",
+    "en": "list project boards",
+    "expect": "mcp_acme_list_project_boards"
+  },
+  {
+    "id": "mcp-081-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "列出项目看板",
+    "en": "show me all the project boards",
+    "expect": "mcp_acme_list_project_boards"
+  },
+  {
+    "id": "mcp-081-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "列出项目看板",
+    "en": "pull up everything under project boards",
+    "expect": "mcp_acme_list_project_boards"
+  },
+  {
+    "id": "mcp-082-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "查看项目看板",
+    "en": "get project board",
+    "expect": "mcp_acme_get_project_board"
+  },
+  {
+    "id": "mcp-082-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "查看项目看板",
+    "en": "pull up one project board",
+    "expect": "mcp_acme_get_project_board"
+  },
+  {
+    "id": "mcp-082-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "查看项目看板",
+    "en": "look into a single project board",
+    "expect": "mcp_acme_get_project_board"
+  },
+  {
+    "id": "mcp-083-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "创建项目看板",
+    "en": "create a project board",
+    "expect": "mcp_acme_create_project_board"
+  },
+  {
+    "id": "mcp-083-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "创建项目看板",
+    "en": "open a new project board",
+    "expect": "mcp_acme_create_project_board"
+  },
+  {
+    "id": "mcp-083-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "创建项目看板",
+    "en": "start a fresh project board",
+    "expect": "mcp_acme_create_project_board"
+  },
+  {
+    "id": "mcp-084-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "更新项目看板",
+    "en": "update project board",
+    "expect": "mcp_acme_update_project_board"
+  },
+  {
+    "id": "mcp-084-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "更新项目看板",
+    "en": "change something on an existing project board",
+    "expect": "mcp_acme_update_project_board"
+  },
+  {
+    "id": "mcp-084-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "更新项目看板",
+    "en": "edit the fields of a project board",
+    "expect": "mcp_acme_update_project_board"
+  },
+  {
+    "id": "mcp-085-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "删除项目看板",
+    "en": "delete project board",
+    "expect": "mcp_acme_delete_project_board"
+  },
+  {
+    "id": "mcp-085-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "删除项目看板",
+    "en": "wipe a project board out for good",
+    "expect": "mcp_acme_delete_project_board"
+  },
+  {
+    "id": "mcp-085-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "删除项目看板",
+    "en": "get rid of a project board completely",
+    "expect": "mcp_acme_delete_project_board"
+  },
+  {
+    "id": "mcp-086-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "搜索项目看板",
+    "en": "search project boards",
+    "expect": "mcp_acme_search_project_board"
+  },
+  {
+    "id": "mcp-086-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "搜索项目看板",
+    "en": "find project boards that match a keyword",
+    "expect": "mcp_acme_search_project_board"
+  },
+  {
+    "id": "mcp-086-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "搜索项目看板",
+    "en": "look through project boards for a word",
+    "expect": "mcp_acme_search_project_board"
+  },
+  {
+    "id": "mcp-087-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "归档项目看板",
+    "en": "archive a project board",
+    "expect": "mcp_acme_archive_project_board"
+  },
+  {
+    "id": "mcp-087-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "归档项目看板",
+    "en": "put a project board away so it leaves the active list",
+    "expect": "mcp_acme_archive_project_board"
+  },
+  {
+    "id": "mcp-087-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "归档项目看板",
+    "en": "set a project board aside, no longer in use",
+    "expect": "mcp_acme_archive_project_board"
+  },
+  {
+    "id": "mcp-088-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "恢复项目看板",
+    "en": "restore a project board",
+    "expect": "mcp_acme_restore_project_board"
+  },
+  {
+    "id": "mcp-088-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "恢复项目看板",
+    "en": "bring a project board back",
+    "expect": "mcp_acme_restore_project_board"
+  },
+  {
+    "id": "mcp-088-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "恢复项目看板",
+    "en": "put a project board back in use again",
+    "expect": "mcp_acme_restore_project_board"
+  },
+  {
+    "id": "mcp-089-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "导出项目看板",
+    "en": "export a project board",
+    "expect": "mcp_acme_export_project_board"
+  },
+  {
+    "id": "mcp-089-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "导出项目看板",
+    "en": "save a project board to a file",
+    "expect": "mcp_acme_export_project_board"
+  },
+  {
+    "id": "mcp-089-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "导出项目看板",
+    "en": "give me a downloadable dump of a project board",
+    "expect": "mcp_acme_export_project_board"
+  },
+  {
+    "id": "mcp-090-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "复制项目看板",
+    "en": "duplicate a project board",
+    "expect": "mcp_acme_duplicate_project_board"
+  },
+  {
+    "id": "mcp-090-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "复制项目看板",
+    "en": "copy a project board somewhere else",
+    "expect": "mcp_acme_duplicate_project_board"
+  },
+  {
+    "id": "mcp-090-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "复制项目看板",
+    "en": "make a second copy of a project board in another space",
+    "expect": "mcp_acme_duplicate_project_board"
+  },
+  {
+    "id": "mcp-091-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "列出代码片段",
+    "en": "list gists",
+    "expect": "mcp_acme_list_gists"
+  },
+  {
+    "id": "mcp-091-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "列出代码片段",
+    "en": "show me all the gists",
+    "expect": "mcp_acme_list_gists"
+  },
+  {
+    "id": "mcp-091-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "列出代码片段",
+    "en": "pull up everything under gists",
+    "expect": "mcp_acme_list_gists"
+  },
+  {
+    "id": "mcp-092-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "查看代码片段",
+    "en": "get gist",
+    "expect": "mcp_acme_get_gist"
+  },
+  {
+    "id": "mcp-092-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "查看代码片段",
+    "en": "pull up one gist",
+    "expect": "mcp_acme_get_gist"
+  },
+  {
+    "id": "mcp-092-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "查看代码片段",
+    "en": "look into a single gist",
+    "expect": "mcp_acme_get_gist"
+  },
+  {
+    "id": "mcp-093-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "创建代码片段",
+    "en": "create a gist",
+    "expect": "mcp_acme_create_gist"
+  },
+  {
+    "id": "mcp-093-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "创建代码片段",
+    "en": "open a new gist",
+    "expect": "mcp_acme_create_gist"
+  },
+  {
+    "id": "mcp-093-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "创建代码片段",
+    "en": "start a fresh gist",
+    "expect": "mcp_acme_create_gist"
+  },
+  {
+    "id": "mcp-094-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "更新代码片段",
+    "en": "update gist",
+    "expect": "mcp_acme_update_gist"
+  },
+  {
+    "id": "mcp-094-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "更新代码片段",
+    "en": "change something on an existing gist",
+    "expect": "mcp_acme_update_gist"
+  },
+  {
+    "id": "mcp-094-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "更新代码片段",
+    "en": "edit the fields of a gist",
+    "expect": "mcp_acme_update_gist"
+  },
+  {
+    "id": "mcp-095-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "删除代码片段",
+    "en": "delete gist",
+    "expect": "mcp_acme_delete_gist"
+  },
+  {
+    "id": "mcp-095-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "删除代码片段",
+    "en": "wipe a gist out for good",
+    "expect": "mcp_acme_delete_gist"
+  },
+  {
+    "id": "mcp-095-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "删除代码片段",
+    "en": "get rid of a gist completely",
+    "expect": "mcp_acme_delete_gist"
+  },
+  {
+    "id": "mcp-096-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "搜索代码片段",
+    "en": "search gists",
+    "expect": "mcp_acme_search_gist"
+  },
+  {
+    "id": "mcp-096-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "搜索代码片段",
+    "en": "find gists that match a keyword",
+    "expect": "mcp_acme_search_gist"
+  },
+  {
+    "id": "mcp-096-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "搜索代码片段",
+    "en": "look through gists for a word",
+    "expect": "mcp_acme_search_gist"
+  },
+  {
+    "id": "mcp-097-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "归档代码片段",
+    "en": "archive a gist",
+    "expect": "mcp_acme_archive_gist"
+  },
+  {
+    "id": "mcp-097-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "归档代码片段",
+    "en": "put a gist away so it leaves the active list",
+    "expect": "mcp_acme_archive_gist"
+  },
+  {
+    "id": "mcp-097-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "归档代码片段",
+    "en": "set a gist aside, no longer in use",
+    "expect": "mcp_acme_archive_gist"
+  },
+  {
+    "id": "mcp-098-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "恢复代码片段",
+    "en": "restore a gist",
+    "expect": "mcp_acme_restore_gist"
+  },
+  {
+    "id": "mcp-098-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "恢复代码片段",
+    "en": "bring a gist back",
+    "expect": "mcp_acme_restore_gist"
+  },
+  {
+    "id": "mcp-098-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "恢复代码片段",
+    "en": "put a gist back in use again",
+    "expect": "mcp_acme_restore_gist"
+  },
+  {
+    "id": "mcp-099-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "导出代码片段",
+    "en": "export a gist",
+    "expect": "mcp_acme_export_gist"
+  },
+  {
+    "id": "mcp-099-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "导出代码片段",
+    "en": "save a gist to a file",
+    "expect": "mcp_acme_export_gist"
+  },
+  {
+    "id": "mcp-099-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "导出代码片段",
+    "en": "give me a downloadable dump of a gist",
+    "expect": "mcp_acme_export_gist"
+  },
+  {
+    "id": "mcp-100-literal",
+    "group": "mcp",
+    "style": "literal",
+    "zh": "复制代码片段",
+    "en": "duplicate a gist",
+    "expect": "mcp_acme_duplicate_gist"
+  },
+  {
+    "id": "mcp-100-casual",
+    "group": "mcp",
+    "style": "casual",
+    "zh": "复制代码片段",
+    "en": "copy a gist somewhere else",
+    "expect": "mcp_acme_duplicate_gist"
+  },
+  {
+    "id": "mcp-100-synonym",
+    "group": "mcp",
+    "style": "synonym",
+    "zh": "复制代码片段",
+    "en": "make a second copy of a gist in another space",
+    "expect": "mcp_acme_duplicate_gist"
+  },
+  {
+    "id": "wf-001-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "跑一下客户复盘",
+    "en": "run the customer review workflow",
+    "expect": "workflow_customer_review"
+  },
+  {
+    "id": "wf-001-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把客户最近的情况过一遍",
+    "en": "run the customer review workflow",
+    "expect": "workflow_customer_review"
+  },
+  {
+    "id": "wf-001-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "回顾一下客户的情况",
+    "en": "run the customer review workflow",
+    "expect": "workflow_customer_review"
+  },
+  {
+    "id": "wf-002-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "客户汇总跑一遍",
+    "en": "generate the customer summary workflow",
+    "expect": "workflow_customer_summary"
+  },
+  {
+    "id": "wf-002-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把客户整理成一份汇总",
+    "en": "generate the customer summary workflow",
+    "expect": "workflow_customer_summary"
+  },
+  {
+    "id": "wf-002-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "出一份客户的统计报告",
+    "en": "generate the customer summary workflow",
+    "expect": "workflow_customer_summary"
+  },
+  {
+    "id": "wf-003-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "客户预警跑一下",
+    "en": "run the customer alert workflow",
+    "expect": "workflow_customer_alert"
+  },
+  {
+    "id": "wf-003-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "看看客户有没有要提醒的",
+    "en": "run the customer alert workflow",
+    "expect": "workflow_customer_alert"
+  },
+  {
+    "id": "wf-003-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给客户做个风险提示",
+    "en": "run the customer alert workflow",
+    "expect": "workflow_customer_alert"
+  },
+  {
+    "id": "wf-004-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "客户对比跑一下",
+    "en": "run the customer comparison workflow",
+    "expect": "workflow_customer_comparison"
+  },
+  {
+    "id": "wf-004-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把客户和我们自己的比一比",
+    "en": "run the customer comparison workflow",
+    "expect": "workflow_customer_comparison"
+  },
+  {
+    "id": "wf-004-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "做个客户的差异分析",
+    "en": "run the customer comparison workflow",
+    "expect": "workflow_customer_comparison"
+  },
+  {
+    "id": "wf-005-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "客户归档",
+    "en": "run the customer archive workflow",
+    "expect": "workflow_customer_archive"
+  },
+  {
+    "id": "wf-005-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把客户收进归档",
+    "en": "run the customer archive workflow",
+    "expect": "workflow_customer_archive"
+  },
+  {
+    "id": "wf-005-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "让客户下线,不再使用",
+    "en": "run the customer archive workflow",
+    "expect": "workflow_customer_archive"
+  },
+  {
+    "id": "wf-006-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "客户质检跑一遍",
+    "en": "run the customer quality check workflow",
+    "expect": "workflow_customer_quality_check"
+  },
+  {
+    "id": "wf-006-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "检查一下客户合不合规",
+    "en": "run the customer quality check workflow",
+    "expect": "workflow_customer_quality_check"
+  },
+  {
+    "id": "wf-006-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给客户做一次合规自查",
+    "en": "run the customer quality check workflow",
+    "expect": "workflow_customer_quality_check"
+  },
+  {
+    "id": "wf-007-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "客户跟进安排一下",
+    "en": "run the customer follow-up workflow",
+    "expect": "workflow_customer_follow-up"
+  },
+  {
+    "id": "wf-007-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给客户安排下一步动作",
+    "en": "run the customer follow-up workflow",
+    "expect": "workflow_customer_follow-up"
+  },
+  {
+    "id": "wf-007-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "为客户排一个后续计划",
+    "en": "run the customer follow-up workflow",
+    "expect": "workflow_customer_follow-up"
+  },
+  {
+    "id": "wf-008-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "客户清理一下",
+    "en": "run the customer cleanup workflow",
+    "expect": "workflow_customer_cleanup"
+  },
+  {
+    "id": "wf-008-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把客户里的重复内容清掉",
+    "en": "run the customer cleanup workflow",
+    "expect": "workflow_customer_cleanup"
+  },
+  {
+    "id": "wf-008-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "整理客户,删掉重复与失效的",
+    "en": "run the customer cleanup workflow",
+    "expect": "workflow_customer_cleanup"
+  },
+  {
+    "id": "wf-009-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "客户明细拉一下",
+    "en": "run the customer extract workflow",
+    "expect": "workflow_customer_extract"
+  },
+  {
+    "id": "wf-009-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把客户的明细拉出来",
+    "en": "run the customer extract workflow",
+    "expect": "workflow_customer_extract"
+  },
+  {
+    "id": "wf-009-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "取一份客户的数据",
+    "en": "run the customer extract workflow",
+    "expect": "workflow_customer_extract"
+  },
+  {
+    "id": "wf-010-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "客户打个分",
+    "en": "run the customer scoring workflow",
+    "expect": "workflow_customer_scoring"
+  },
+  {
+    "id": "wf-010-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给客户评个分",
+    "en": "run the customer scoring workflow",
+    "expect": "workflow_customer_scoring"
+  },
+  {
+    "id": "wf-010-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "对客户做个质量评分",
+    "en": "run the customer scoring workflow",
+    "expect": "workflow_customer_scoring"
+  },
+  {
+    "id": "wf-011-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "跑一下会话复盘",
+    "en": "run the conversation review workflow",
+    "expect": "workflow_conversation_review"
+  },
+  {
+    "id": "wf-011-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把会话最近的情况过一遍",
+    "en": "run the conversation review workflow",
+    "expect": "workflow_conversation_review"
+  },
+  {
+    "id": "wf-011-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "回顾一下会话的情况",
+    "en": "run the conversation review workflow",
+    "expect": "workflow_conversation_review"
+  },
+  {
+    "id": "wf-012-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "会话汇总跑一遍",
+    "en": "generate the conversation summary workflow",
+    "expect": "workflow_conversation_summary"
+  },
+  {
+    "id": "wf-012-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把会话整理成一份汇总",
+    "en": "generate the conversation summary workflow",
+    "expect": "workflow_conversation_summary"
+  },
+  {
+    "id": "wf-012-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "出一份会话的统计报告",
+    "en": "generate the conversation summary workflow",
+    "expect": "workflow_conversation_summary"
+  },
+  {
+    "id": "wf-013-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "会话预警跑一下",
+    "en": "run the conversation alert workflow",
+    "expect": "workflow_conversation_alert"
+  },
+  {
+    "id": "wf-013-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "看看会话有没有要提醒的",
+    "en": "run the conversation alert workflow",
+    "expect": "workflow_conversation_alert"
+  },
+  {
+    "id": "wf-013-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给会话做个风险提示",
+    "en": "run the conversation alert workflow",
+    "expect": "workflow_conversation_alert"
+  },
+  {
+    "id": "wf-014-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "会话对比跑一下",
+    "en": "run the conversation comparison workflow",
+    "expect": "workflow_conversation_comparison"
+  },
+  {
+    "id": "wf-014-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把会话和我们自己的比一比",
+    "en": "run the conversation comparison workflow",
+    "expect": "workflow_conversation_comparison"
+  },
+  {
+    "id": "wf-014-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "做个会话的差异分析",
+    "en": "run the conversation comparison workflow",
+    "expect": "workflow_conversation_comparison"
+  },
+  {
+    "id": "wf-015-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "会话归档",
+    "en": "run the conversation archive workflow",
+    "expect": "workflow_conversation_archive"
+  },
+  {
+    "id": "wf-015-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把会话收进归档",
+    "en": "run the conversation archive workflow",
+    "expect": "workflow_conversation_archive"
+  },
+  {
+    "id": "wf-015-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "让会话下线,不再使用",
+    "en": "run the conversation archive workflow",
+    "expect": "workflow_conversation_archive"
+  },
+  {
+    "id": "wf-016-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "会话质检跑一遍",
+    "en": "run the conversation quality check workflow",
+    "expect": "workflow_conversation_quality_check"
+  },
+  {
+    "id": "wf-016-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "检查一下会话合不合规",
+    "en": "run the conversation quality check workflow",
+    "expect": "workflow_conversation_quality_check"
+  },
+  {
+    "id": "wf-016-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给会话做一次合规自查",
+    "en": "run the conversation quality check workflow",
+    "expect": "workflow_conversation_quality_check"
+  },
+  {
+    "id": "wf-017-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "会话跟进安排一下",
+    "en": "run the conversation follow-up workflow",
+    "expect": "workflow_conversation_follow-up"
+  },
+  {
+    "id": "wf-017-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给会话安排下一步动作",
+    "en": "run the conversation follow-up workflow",
+    "expect": "workflow_conversation_follow-up"
+  },
+  {
+    "id": "wf-017-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "为会话排一个后续计划",
+    "en": "run the conversation follow-up workflow",
+    "expect": "workflow_conversation_follow-up"
+  },
+  {
+    "id": "wf-018-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "会话清理一下",
+    "en": "run the conversation cleanup workflow",
+    "expect": "workflow_conversation_cleanup"
+  },
+  {
+    "id": "wf-018-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把会话里的重复内容清掉",
+    "en": "run the conversation cleanup workflow",
+    "expect": "workflow_conversation_cleanup"
+  },
+  {
+    "id": "wf-018-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "整理会话,删掉重复与失效的",
+    "en": "run the conversation cleanup workflow",
+    "expect": "workflow_conversation_cleanup"
+  },
+  {
+    "id": "wf-019-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "会话明细拉一下",
+    "en": "run the conversation extract workflow",
+    "expect": "workflow_conversation_extract"
+  },
+  {
+    "id": "wf-019-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把会话的明细拉出来",
+    "en": "run the conversation extract workflow",
+    "expect": "workflow_conversation_extract"
+  },
+  {
+    "id": "wf-019-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "取一份会话的数据",
+    "en": "run the conversation extract workflow",
+    "expect": "workflow_conversation_extract"
+  },
+  {
+    "id": "wf-020-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "会话打个分",
+    "en": "run the conversation scoring workflow",
+    "expect": "workflow_conversation_scoring"
+  },
+  {
+    "id": "wf-020-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给会话评个分",
+    "en": "run the conversation scoring workflow",
+    "expect": "workflow_conversation_scoring"
+  },
+  {
+    "id": "wf-020-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "对会话做个质量评分",
+    "en": "run the conversation scoring workflow",
+    "expect": "workflow_conversation_scoring"
+  },
+  {
+    "id": "wf-021-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "跑一下话术复盘",
+    "en": "run the sales script review workflow",
+    "expect": "workflow_sales_script_review"
+  },
+  {
+    "id": "wf-021-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把话术最近的情况过一遍",
+    "en": "run the sales script review workflow",
+    "expect": "workflow_sales_script_review"
+  },
+  {
+    "id": "wf-021-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "回顾一下话术的情况",
+    "en": "run the sales script review workflow",
+    "expect": "workflow_sales_script_review"
+  },
+  {
+    "id": "wf-022-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "话术汇总跑一遍",
+    "en": "generate the sales script summary workflow",
+    "expect": "workflow_sales_script_summary"
+  },
+  {
+    "id": "wf-022-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把话术整理成一份汇总",
+    "en": "generate the sales script summary workflow",
+    "expect": "workflow_sales_script_summary"
+  },
+  {
+    "id": "wf-022-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "出一份话术的统计报告",
+    "en": "generate the sales script summary workflow",
+    "expect": "workflow_sales_script_summary"
+  },
+  {
+    "id": "wf-023-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "话术预警跑一下",
+    "en": "run the sales script alert workflow",
+    "expect": "workflow_sales_script_alert"
+  },
+  {
+    "id": "wf-023-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "看看话术有没有要提醒的",
+    "en": "run the sales script alert workflow",
+    "expect": "workflow_sales_script_alert"
+  },
+  {
+    "id": "wf-023-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给话术做个风险提示",
+    "en": "run the sales script alert workflow",
+    "expect": "workflow_sales_script_alert"
+  },
+  {
+    "id": "wf-024-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "话术对比跑一下",
+    "en": "run the sales script comparison workflow",
+    "expect": "workflow_sales_script_comparison"
+  },
+  {
+    "id": "wf-024-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把话术和我们自己的比一比",
+    "en": "run the sales script comparison workflow",
+    "expect": "workflow_sales_script_comparison"
+  },
+  {
+    "id": "wf-024-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "做个话术的差异分析",
+    "en": "run the sales script comparison workflow",
+    "expect": "workflow_sales_script_comparison"
+  },
+  {
+    "id": "wf-025-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "话术归档",
+    "en": "run the sales script archive workflow",
+    "expect": "workflow_sales_script_archive"
+  },
+  {
+    "id": "wf-025-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把话术收进归档",
+    "en": "run the sales script archive workflow",
+    "expect": "workflow_sales_script_archive"
+  },
+  {
+    "id": "wf-025-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "让话术下线,不再使用",
+    "en": "run the sales script archive workflow",
+    "expect": "workflow_sales_script_archive"
+  },
+  {
+    "id": "wf-026-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "话术质检跑一遍",
+    "en": "run the sales script quality check workflow",
+    "expect": "workflow_sales_script_quality_check"
+  },
+  {
+    "id": "wf-026-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "检查一下话术合不合规",
+    "en": "run the sales script quality check workflow",
+    "expect": "workflow_sales_script_quality_check"
+  },
+  {
+    "id": "wf-026-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给话术做一次合规自查",
+    "en": "run the sales script quality check workflow",
+    "expect": "workflow_sales_script_quality_check"
+  },
+  {
+    "id": "wf-027-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "话术跟进安排一下",
+    "en": "run the sales script follow-up workflow",
+    "expect": "workflow_sales_script_follow-up"
+  },
+  {
+    "id": "wf-027-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给话术安排下一步动作",
+    "en": "run the sales script follow-up workflow",
+    "expect": "workflow_sales_script_follow-up"
+  },
+  {
+    "id": "wf-027-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "为话术排一个后续计划",
+    "en": "run the sales script follow-up workflow",
+    "expect": "workflow_sales_script_follow-up"
+  },
+  {
+    "id": "wf-028-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "话术清理一下",
+    "en": "run the sales script cleanup workflow",
+    "expect": "workflow_sales_script_cleanup"
+  },
+  {
+    "id": "wf-028-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把话术里的重复内容清掉",
+    "en": "run the sales script cleanup workflow",
+    "expect": "workflow_sales_script_cleanup"
+  },
+  {
+    "id": "wf-028-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "整理话术,删掉重复与失效的",
+    "en": "run the sales script cleanup workflow",
+    "expect": "workflow_sales_script_cleanup"
+  },
+  {
+    "id": "wf-029-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "话术明细拉一下",
+    "en": "run the sales script extract workflow",
+    "expect": "workflow_sales_script_extract"
+  },
+  {
+    "id": "wf-029-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把话术的明细拉出来",
+    "en": "run the sales script extract workflow",
+    "expect": "workflow_sales_script_extract"
+  },
+  {
+    "id": "wf-029-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "取一份话术的数据",
+    "en": "run the sales script extract workflow",
+    "expect": "workflow_sales_script_extract"
+  },
+  {
+    "id": "wf-030-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "话术打个分",
+    "en": "run the sales script scoring workflow",
+    "expect": "workflow_sales_script_scoring"
+  },
+  {
+    "id": "wf-030-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给话术评个分",
+    "en": "run the sales script scoring workflow",
+    "expect": "workflow_sales_script_scoring"
+  },
+  {
+    "id": "wf-030-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "对话术做个质量评分",
+    "en": "run the sales script scoring workflow",
+    "expect": "workflow_sales_script_scoring"
+  },
+  {
+    "id": "wf-031-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "跑一下待办复盘",
+    "en": "run the task review workflow",
+    "expect": "workflow_task_review"
+  },
+  {
+    "id": "wf-031-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把待办最近的情况过一遍",
+    "en": "run the task review workflow",
+    "expect": "workflow_task_review"
+  },
+  {
+    "id": "wf-031-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "回顾一下待办的情况",
+    "en": "run the task review workflow",
+    "expect": "workflow_task_review"
+  },
+  {
+    "id": "wf-032-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "待办汇总跑一遍",
+    "en": "generate the task summary workflow",
+    "expect": "workflow_task_summary"
+  },
+  {
+    "id": "wf-032-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把待办整理成一份汇总",
+    "en": "generate the task summary workflow",
+    "expect": "workflow_task_summary"
+  },
+  {
+    "id": "wf-032-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "出一份待办的统计报告",
+    "en": "generate the task summary workflow",
+    "expect": "workflow_task_summary"
+  },
+  {
+    "id": "wf-033-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "待办预警跑一下",
+    "en": "run the task alert workflow",
+    "expect": "workflow_task_alert"
+  },
+  {
+    "id": "wf-033-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "看看待办有没有要提醒的",
+    "en": "run the task alert workflow",
+    "expect": "workflow_task_alert"
+  },
+  {
+    "id": "wf-033-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给待办做个风险提示",
+    "en": "run the task alert workflow",
+    "expect": "workflow_task_alert"
+  },
+  {
+    "id": "wf-034-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "待办对比跑一下",
+    "en": "run the task comparison workflow",
+    "expect": "workflow_task_comparison"
+  },
+  {
+    "id": "wf-034-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把待办和我们自己的比一比",
+    "en": "run the task comparison workflow",
+    "expect": "workflow_task_comparison"
+  },
+  {
+    "id": "wf-034-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "做个待办的差异分析",
+    "en": "run the task comparison workflow",
+    "expect": "workflow_task_comparison"
+  },
+  {
+    "id": "wf-035-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "待办归档",
+    "en": "run the task archive workflow",
+    "expect": "workflow_task_archive"
+  },
+  {
+    "id": "wf-035-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把待办收进归档",
+    "en": "run the task archive workflow",
+    "expect": "workflow_task_archive"
+  },
+  {
+    "id": "wf-035-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "让待办下线,不再使用",
+    "en": "run the task archive workflow",
+    "expect": "workflow_task_archive"
+  },
+  {
+    "id": "wf-036-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "待办质检跑一遍",
+    "en": "run the task quality check workflow",
+    "expect": "workflow_task_quality_check"
+  },
+  {
+    "id": "wf-036-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "检查一下待办合不合规",
+    "en": "run the task quality check workflow",
+    "expect": "workflow_task_quality_check"
+  },
+  {
+    "id": "wf-036-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给待办做一次合规自查",
+    "en": "run the task quality check workflow",
+    "expect": "workflow_task_quality_check"
+  },
+  {
+    "id": "wf-037-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "待办跟进安排一下",
+    "en": "run the task follow-up workflow",
+    "expect": "workflow_task_follow-up"
+  },
+  {
+    "id": "wf-037-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给待办安排下一步动作",
+    "en": "run the task follow-up workflow",
+    "expect": "workflow_task_follow-up"
+  },
+  {
+    "id": "wf-037-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "为待办排一个后续计划",
+    "en": "run the task follow-up workflow",
+    "expect": "workflow_task_follow-up"
+  },
+  {
+    "id": "wf-038-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "待办清理一下",
+    "en": "run the task cleanup workflow",
+    "expect": "workflow_task_cleanup"
+  },
+  {
+    "id": "wf-038-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把待办里的重复内容清掉",
+    "en": "run the task cleanup workflow",
+    "expect": "workflow_task_cleanup"
+  },
+  {
+    "id": "wf-038-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "整理待办,删掉重复与失效的",
+    "en": "run the task cleanup workflow",
+    "expect": "workflow_task_cleanup"
+  },
+  {
+    "id": "wf-039-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "待办明细拉一下",
+    "en": "run the task extract workflow",
+    "expect": "workflow_task_extract"
+  },
+  {
+    "id": "wf-039-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把待办的明细拉出来",
+    "en": "run the task extract workflow",
+    "expect": "workflow_task_extract"
+  },
+  {
+    "id": "wf-039-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "取一份待办的数据",
+    "en": "run the task extract workflow",
+    "expect": "workflow_task_extract"
+  },
+  {
+    "id": "wf-040-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "待办打个分",
+    "en": "run the task scoring workflow",
+    "expect": "workflow_task_scoring"
+  },
+  {
+    "id": "wf-040-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给待办评个分",
+    "en": "run the task scoring workflow",
+    "expect": "workflow_task_scoring"
+  },
+  {
+    "id": "wf-040-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "对待办做个质量评分",
+    "en": "run the task scoring workflow",
+    "expect": "workflow_task_scoring"
+  },
+  {
+    "id": "wf-041-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "跑一下知识库复盘",
+    "en": "run the knowledge base review workflow",
+    "expect": "workflow_knowledge_base_review"
+  },
+  {
+    "id": "wf-041-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把知识库最近的情况过一遍",
+    "en": "run the knowledge base review workflow",
+    "expect": "workflow_knowledge_base_review"
+  },
+  {
+    "id": "wf-041-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "回顾一下知识库的情况",
+    "en": "run the knowledge base review workflow",
+    "expect": "workflow_knowledge_base_review"
+  },
+  {
+    "id": "wf-042-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "知识库汇总跑一遍",
+    "en": "generate the knowledge base summary workflow",
+    "expect": "workflow_knowledge_base_summary"
+  },
+  {
+    "id": "wf-042-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把知识库整理成一份汇总",
+    "en": "generate the knowledge base summary workflow",
+    "expect": "workflow_knowledge_base_summary"
+  },
+  {
+    "id": "wf-042-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "出一份知识库的统计报告",
+    "en": "generate the knowledge base summary workflow",
+    "expect": "workflow_knowledge_base_summary"
+  },
+  {
+    "id": "wf-043-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "知识库预警跑一下",
+    "en": "run the knowledge base alert workflow",
+    "expect": "workflow_knowledge_base_alert"
+  },
+  {
+    "id": "wf-043-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "看看知识库有没有要提醒的",
+    "en": "run the knowledge base alert workflow",
+    "expect": "workflow_knowledge_base_alert"
+  },
+  {
+    "id": "wf-043-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给知识库做个风险提示",
+    "en": "run the knowledge base alert workflow",
+    "expect": "workflow_knowledge_base_alert"
+  },
+  {
+    "id": "wf-044-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "知识库对比跑一下",
+    "en": "run the knowledge base comparison workflow",
+    "expect": "workflow_knowledge_base_comparison"
+  },
+  {
+    "id": "wf-044-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把知识库和我们自己的比一比",
+    "en": "run the knowledge base comparison workflow",
+    "expect": "workflow_knowledge_base_comparison"
+  },
+  {
+    "id": "wf-044-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "做个知识库的差异分析",
+    "en": "run the knowledge base comparison workflow",
+    "expect": "workflow_knowledge_base_comparison"
+  },
+  {
+    "id": "wf-045-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "知识库归档",
+    "en": "run the knowledge base archive workflow",
+    "expect": "workflow_knowledge_base_archive"
+  },
+  {
+    "id": "wf-045-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把知识库收进归档",
+    "en": "run the knowledge base archive workflow",
+    "expect": "workflow_knowledge_base_archive"
+  },
+  {
+    "id": "wf-045-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "让知识库下线,不再使用",
+    "en": "run the knowledge base archive workflow",
+    "expect": "workflow_knowledge_base_archive"
+  },
+  {
+    "id": "wf-046-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "知识库质检跑一遍",
+    "en": "run the knowledge base quality check workflow",
+    "expect": "workflow_knowledge_base_quality_check"
+  },
+  {
+    "id": "wf-046-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "检查一下知识库合不合规",
+    "en": "run the knowledge base quality check workflow",
+    "expect": "workflow_knowledge_base_quality_check"
+  },
+  {
+    "id": "wf-046-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给知识库做一次合规自查",
+    "en": "run the knowledge base quality check workflow",
+    "expect": "workflow_knowledge_base_quality_check"
+  },
+  {
+    "id": "wf-047-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "知识库跟进安排一下",
+    "en": "run the knowledge base follow-up workflow",
+    "expect": "workflow_knowledge_base_follow-up"
+  },
+  {
+    "id": "wf-047-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给知识库安排下一步动作",
+    "en": "run the knowledge base follow-up workflow",
+    "expect": "workflow_knowledge_base_follow-up"
+  },
+  {
+    "id": "wf-047-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "为知识库排一个后续计划",
+    "en": "run the knowledge base follow-up workflow",
+    "expect": "workflow_knowledge_base_follow-up"
+  },
+  {
+    "id": "wf-048-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "知识库清理一下",
+    "en": "run the knowledge base cleanup workflow",
+    "expect": "workflow_knowledge_base_cleanup"
+  },
+  {
+    "id": "wf-048-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把知识库里的重复内容清掉",
+    "en": "run the knowledge base cleanup workflow",
+    "expect": "workflow_knowledge_base_cleanup"
+  },
+  {
+    "id": "wf-048-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "整理知识库,删掉重复与失效的",
+    "en": "run the knowledge base cleanup workflow",
+    "expect": "workflow_knowledge_base_cleanup"
+  },
+  {
+    "id": "wf-049-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "知识库明细拉一下",
+    "en": "run the knowledge base extract workflow",
+    "expect": "workflow_knowledge_base_extract"
+  },
+  {
+    "id": "wf-049-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把知识库的明细拉出来",
+    "en": "run the knowledge base extract workflow",
+    "expect": "workflow_knowledge_base_extract"
+  },
+  {
+    "id": "wf-049-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "取一份知识库的数据",
+    "en": "run the knowledge base extract workflow",
+    "expect": "workflow_knowledge_base_extract"
+  },
+  {
+    "id": "wf-050-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "知识库打个分",
+    "en": "run the knowledge base scoring workflow",
+    "expect": "workflow_knowledge_base_scoring"
+  },
+  {
+    "id": "wf-050-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给知识库评个分",
+    "en": "run the knowledge base scoring workflow",
+    "expect": "workflow_knowledge_base_scoring"
+  },
+  {
+    "id": "wf-050-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "对知识库做个质量评分",
+    "en": "run the knowledge base scoring workflow",
+    "expect": "workflow_knowledge_base_scoring"
+  },
+  {
+    "id": "wf-051-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "跑一下成交复盘",
+    "en": "run the deal review workflow",
+    "expect": "workflow_deal_review"
+  },
+  {
+    "id": "wf-051-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把成交最近的情况过一遍",
+    "en": "run the deal review workflow",
+    "expect": "workflow_deal_review"
+  },
+  {
+    "id": "wf-051-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "回顾一下成交的情况",
+    "en": "run the deal review workflow",
+    "expect": "workflow_deal_review"
+  },
+  {
+    "id": "wf-052-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "成交汇总跑一遍",
+    "en": "generate the deal summary workflow",
+    "expect": "workflow_deal_summary"
+  },
+  {
+    "id": "wf-052-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把成交整理成一份汇总",
+    "en": "generate the deal summary workflow",
+    "expect": "workflow_deal_summary"
+  },
+  {
+    "id": "wf-052-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "出一份成交的统计报告",
+    "en": "generate the deal summary workflow",
+    "expect": "workflow_deal_summary"
+  },
+  {
+    "id": "wf-053-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "成交预警跑一下",
+    "en": "run the deal alert workflow",
+    "expect": "workflow_deal_alert"
+  },
+  {
+    "id": "wf-053-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "看看成交有没有要提醒的",
+    "en": "run the deal alert workflow",
+    "expect": "workflow_deal_alert"
+  },
+  {
+    "id": "wf-053-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给成交做个风险提示",
+    "en": "run the deal alert workflow",
+    "expect": "workflow_deal_alert"
+  },
+  {
+    "id": "wf-054-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "成交对比跑一下",
+    "en": "run the deal comparison workflow",
+    "expect": "workflow_deal_comparison"
+  },
+  {
+    "id": "wf-054-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把成交和我们自己的比一比",
+    "en": "run the deal comparison workflow",
+    "expect": "workflow_deal_comparison"
+  },
+  {
+    "id": "wf-054-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "做个成交的差异分析",
+    "en": "run the deal comparison workflow",
+    "expect": "workflow_deal_comparison"
+  },
+  {
+    "id": "wf-055-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "成交归档",
+    "en": "run the deal archive workflow",
+    "expect": "workflow_deal_archive"
+  },
+  {
+    "id": "wf-055-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把成交收进归档",
+    "en": "run the deal archive workflow",
+    "expect": "workflow_deal_archive"
+  },
+  {
+    "id": "wf-055-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "让成交下线,不再使用",
+    "en": "run the deal archive workflow",
+    "expect": "workflow_deal_archive"
+  },
+  {
+    "id": "wf-056-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "成交质检跑一遍",
+    "en": "run the deal quality check workflow",
+    "expect": "workflow_deal_quality_check"
+  },
+  {
+    "id": "wf-056-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "检查一下成交合不合规",
+    "en": "run the deal quality check workflow",
+    "expect": "workflow_deal_quality_check"
+  },
+  {
+    "id": "wf-056-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给成交做一次合规自查",
+    "en": "run the deal quality check workflow",
+    "expect": "workflow_deal_quality_check"
+  },
+  {
+    "id": "wf-057-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "成交跟进安排一下",
+    "en": "run the deal follow-up workflow",
+    "expect": "workflow_deal_follow-up"
+  },
+  {
+    "id": "wf-057-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给成交安排下一步动作",
+    "en": "run the deal follow-up workflow",
+    "expect": "workflow_deal_follow-up"
+  },
+  {
+    "id": "wf-057-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "为成交排一个后续计划",
+    "en": "run the deal follow-up workflow",
+    "expect": "workflow_deal_follow-up"
+  },
+  {
+    "id": "wf-058-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "成交清理一下",
+    "en": "run the deal cleanup workflow",
+    "expect": "workflow_deal_cleanup"
+  },
+  {
+    "id": "wf-058-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把成交里的重复内容清掉",
+    "en": "run the deal cleanup workflow",
+    "expect": "workflow_deal_cleanup"
+  },
+  {
+    "id": "wf-058-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "整理成交,删掉重复与失效的",
+    "en": "run the deal cleanup workflow",
+    "expect": "workflow_deal_cleanup"
+  },
+  {
+    "id": "wf-059-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "成交明细拉一下",
+    "en": "run the deal extract workflow",
+    "expect": "workflow_deal_extract"
+  },
+  {
+    "id": "wf-059-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把成交的明细拉出来",
+    "en": "run the deal extract workflow",
+    "expect": "workflow_deal_extract"
+  },
+  {
+    "id": "wf-059-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "取一份成交的数据",
+    "en": "run the deal extract workflow",
+    "expect": "workflow_deal_extract"
+  },
+  {
+    "id": "wf-060-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "成交打个分",
+    "en": "run the deal scoring workflow",
+    "expect": "workflow_deal_scoring"
+  },
+  {
+    "id": "wf-060-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给成交评个分",
+    "en": "run the deal scoring workflow",
+    "expect": "workflow_deal_scoring"
+  },
+  {
+    "id": "wf-060-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "对成交做个质量评分",
+    "en": "run the deal scoring workflow",
+    "expect": "workflow_deal_scoring"
+  },
+  {
+    "id": "wf-061-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "跑一下门店复盘",
+    "en": "run the store review workflow",
+    "expect": "workflow_store_review"
+  },
+  {
+    "id": "wf-061-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把门店最近的情况过一遍",
+    "en": "run the store review workflow",
+    "expect": "workflow_store_review"
+  },
+  {
+    "id": "wf-061-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "回顾一下门店的情况",
+    "en": "run the store review workflow",
+    "expect": "workflow_store_review"
+  },
+  {
+    "id": "wf-062-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "门店汇总跑一遍",
+    "en": "generate the store summary workflow",
+    "expect": "workflow_store_summary"
+  },
+  {
+    "id": "wf-062-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把门店整理成一份汇总",
+    "en": "generate the store summary workflow",
+    "expect": "workflow_store_summary"
+  },
+  {
+    "id": "wf-062-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "出一份门店的统计报告",
+    "en": "generate the store summary workflow",
+    "expect": "workflow_store_summary"
+  },
+  {
+    "id": "wf-063-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "门店预警跑一下",
+    "en": "run the store alert workflow",
+    "expect": "workflow_store_alert"
+  },
+  {
+    "id": "wf-063-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "看看门店有没有要提醒的",
+    "en": "run the store alert workflow",
+    "expect": "workflow_store_alert"
+  },
+  {
+    "id": "wf-063-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给门店做个风险提示",
+    "en": "run the store alert workflow",
+    "expect": "workflow_store_alert"
+  },
+  {
+    "id": "wf-064-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "门店对比跑一下",
+    "en": "run the store comparison workflow",
+    "expect": "workflow_store_comparison"
+  },
+  {
+    "id": "wf-064-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把门店和我们自己的比一比",
+    "en": "run the store comparison workflow",
+    "expect": "workflow_store_comparison"
+  },
+  {
+    "id": "wf-064-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "做个门店的差异分析",
+    "en": "run the store comparison workflow",
+    "expect": "workflow_store_comparison"
+  },
+  {
+    "id": "wf-065-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "门店归档",
+    "en": "run the store archive workflow",
+    "expect": "workflow_store_archive"
+  },
+  {
+    "id": "wf-065-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把门店收进归档",
+    "en": "run the store archive workflow",
+    "expect": "workflow_store_archive"
+  },
+  {
+    "id": "wf-065-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "让门店下线,不再使用",
+    "en": "run the store archive workflow",
+    "expect": "workflow_store_archive"
+  },
+  {
+    "id": "wf-066-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "门店质检跑一遍",
+    "en": "run the store quality check workflow",
+    "expect": "workflow_store_quality_check"
+  },
+  {
+    "id": "wf-066-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "检查一下门店合不合规",
+    "en": "run the store quality check workflow",
+    "expect": "workflow_store_quality_check"
+  },
+  {
+    "id": "wf-066-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给门店做一次合规自查",
+    "en": "run the store quality check workflow",
+    "expect": "workflow_store_quality_check"
+  },
+  {
+    "id": "wf-067-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "门店跟进安排一下",
+    "en": "run the store follow-up workflow",
+    "expect": "workflow_store_follow-up"
+  },
+  {
+    "id": "wf-067-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给门店安排下一步动作",
+    "en": "run the store follow-up workflow",
+    "expect": "workflow_store_follow-up"
+  },
+  {
+    "id": "wf-067-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "为门店排一个后续计划",
+    "en": "run the store follow-up workflow",
+    "expect": "workflow_store_follow-up"
+  },
+  {
+    "id": "wf-068-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "门店清理一下",
+    "en": "run the store cleanup workflow",
+    "expect": "workflow_store_cleanup"
+  },
+  {
+    "id": "wf-068-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把门店里的重复内容清掉",
+    "en": "run the store cleanup workflow",
+    "expect": "workflow_store_cleanup"
+  },
+  {
+    "id": "wf-068-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "整理门店,删掉重复与失效的",
+    "en": "run the store cleanup workflow",
+    "expect": "workflow_store_cleanup"
+  },
+  {
+    "id": "wf-069-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "门店明细拉一下",
+    "en": "run the store extract workflow",
+    "expect": "workflow_store_extract"
+  },
+  {
+    "id": "wf-069-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把门店的明细拉出来",
+    "en": "run the store extract workflow",
+    "expect": "workflow_store_extract"
+  },
+  {
+    "id": "wf-069-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "取一份门店的数据",
+    "en": "run the store extract workflow",
+    "expect": "workflow_store_extract"
+  },
+  {
+    "id": "wf-070-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "门店打个分",
+    "en": "run the store scoring workflow",
+    "expect": "workflow_store_scoring"
+  },
+  {
+    "id": "wf-070-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给门店评个分",
+    "en": "run the store scoring workflow",
+    "expect": "workflow_store_scoring"
+  },
+  {
+    "id": "wf-070-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "对门店做个质量评分",
+    "en": "run the store scoring workflow",
+    "expect": "workflow_store_scoring"
+  },
+  {
+    "id": "wf-071-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "跑一下竞品复盘",
+    "en": "run the competitor review workflow",
+    "expect": "workflow_competitor_review"
+  },
+  {
+    "id": "wf-071-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把竞品最近的情况过一遍",
+    "en": "run the competitor review workflow",
+    "expect": "workflow_competitor_review"
+  },
+  {
+    "id": "wf-071-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "回顾一下竞品的情况",
+    "en": "run the competitor review workflow",
+    "expect": "workflow_competitor_review"
+  },
+  {
+    "id": "wf-072-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "竞品汇总跑一遍",
+    "en": "generate the competitor summary workflow",
+    "expect": "workflow_competitor_summary"
+  },
+  {
+    "id": "wf-072-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把竞品整理成一份汇总",
+    "en": "generate the competitor summary workflow",
+    "expect": "workflow_competitor_summary"
+  },
+  {
+    "id": "wf-072-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "出一份竞品的统计报告",
+    "en": "generate the competitor summary workflow",
+    "expect": "workflow_competitor_summary"
+  },
+  {
+    "id": "wf-073-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "竞品预警跑一下",
+    "en": "run the competitor alert workflow",
+    "expect": "workflow_competitor_alert"
+  },
+  {
+    "id": "wf-073-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "看看竞品有没有要提醒的",
+    "en": "run the competitor alert workflow",
+    "expect": "workflow_competitor_alert"
+  },
+  {
+    "id": "wf-073-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给竞品做个风险提示",
+    "en": "run the competitor alert workflow",
+    "expect": "workflow_competitor_alert"
+  },
+  {
+    "id": "wf-074-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "竞品对比跑一下",
+    "en": "run the competitor comparison workflow",
+    "expect": "workflow_competitor_comparison"
+  },
+  {
+    "id": "wf-074-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把竞品和我们自己的比一比",
+    "en": "run the competitor comparison workflow",
+    "expect": "workflow_competitor_comparison"
+  },
+  {
+    "id": "wf-074-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "做个竞品的差异分析",
+    "en": "run the competitor comparison workflow",
+    "expect": "workflow_competitor_comparison"
+  },
+  {
+    "id": "wf-075-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "竞品归档",
+    "en": "run the competitor archive workflow",
+    "expect": "workflow_competitor_archive"
+  },
+  {
+    "id": "wf-075-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把竞品收进归档",
+    "en": "run the competitor archive workflow",
+    "expect": "workflow_competitor_archive"
+  },
+  {
+    "id": "wf-075-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "让竞品下线,不再使用",
+    "en": "run the competitor archive workflow",
+    "expect": "workflow_competitor_archive"
+  },
+  {
+    "id": "wf-076-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "竞品质检跑一遍",
+    "en": "run the competitor quality check workflow",
+    "expect": "workflow_competitor_quality_check"
+  },
+  {
+    "id": "wf-076-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "检查一下竞品合不合规",
+    "en": "run the competitor quality check workflow",
+    "expect": "workflow_competitor_quality_check"
+  },
+  {
+    "id": "wf-076-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给竞品做一次合规自查",
+    "en": "run the competitor quality check workflow",
+    "expect": "workflow_competitor_quality_check"
+  },
+  {
+    "id": "wf-077-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "竞品跟进安排一下",
+    "en": "run the competitor follow-up workflow",
+    "expect": "workflow_competitor_follow-up"
+  },
+  {
+    "id": "wf-077-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给竞品安排下一步动作",
+    "en": "run the competitor follow-up workflow",
+    "expect": "workflow_competitor_follow-up"
+  },
+  {
+    "id": "wf-077-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "为竞品排一个后续计划",
+    "en": "run the competitor follow-up workflow",
+    "expect": "workflow_competitor_follow-up"
+  },
+  {
+    "id": "wf-078-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "竞品清理一下",
+    "en": "run the competitor cleanup workflow",
+    "expect": "workflow_competitor_cleanup"
+  },
+  {
+    "id": "wf-078-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把竞品里的重复内容清掉",
+    "en": "run the competitor cleanup workflow",
+    "expect": "workflow_competitor_cleanup"
+  },
+  {
+    "id": "wf-078-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "整理竞品,删掉重复与失效的",
+    "en": "run the competitor cleanup workflow",
+    "expect": "workflow_competitor_cleanup"
+  },
+  {
+    "id": "wf-079-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "竞品明细拉一下",
+    "en": "run the competitor extract workflow",
+    "expect": "workflow_competitor_extract"
+  },
+  {
+    "id": "wf-079-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把竞品的明细拉出来",
+    "en": "run the competitor extract workflow",
+    "expect": "workflow_competitor_extract"
+  },
+  {
+    "id": "wf-079-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "取一份竞品的数据",
+    "en": "run the competitor extract workflow",
+    "expect": "workflow_competitor_extract"
+  },
+  {
+    "id": "wf-080-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "竞品打个分",
+    "en": "run the competitor scoring workflow",
+    "expect": "workflow_competitor_scoring"
+  },
+  {
+    "id": "wf-080-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给竞品评个分",
+    "en": "run the competitor scoring workflow",
+    "expect": "workflow_competitor_scoring"
+  },
+  {
+    "id": "wf-080-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "对竞品做个质量评分",
+    "en": "run the competitor scoring workflow",
+    "expect": "workflow_competitor_scoring"
+  },
+  {
+    "id": "wf-081-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "跑一下报价复盘",
+    "en": "run the quote review workflow",
+    "expect": "workflow_quote_review"
+  },
+  {
+    "id": "wf-081-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把报价最近的情况过一遍",
+    "en": "run the quote review workflow",
+    "expect": "workflow_quote_review"
+  },
+  {
+    "id": "wf-081-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "回顾一下报价的情况",
+    "en": "run the quote review workflow",
+    "expect": "workflow_quote_review"
+  },
+  {
+    "id": "wf-082-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "报价汇总跑一遍",
+    "en": "generate the quote summary workflow",
+    "expect": "workflow_quote_summary"
+  },
+  {
+    "id": "wf-082-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把报价整理成一份汇总",
+    "en": "generate the quote summary workflow",
+    "expect": "workflow_quote_summary"
+  },
+  {
+    "id": "wf-082-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "出一份报价的统计报告",
+    "en": "generate the quote summary workflow",
+    "expect": "workflow_quote_summary"
+  },
+  {
+    "id": "wf-083-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "报价预警跑一下",
+    "en": "run the quote alert workflow",
+    "expect": "workflow_quote_alert"
+  },
+  {
+    "id": "wf-083-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "看看报价有没有要提醒的",
+    "en": "run the quote alert workflow",
+    "expect": "workflow_quote_alert"
+  },
+  {
+    "id": "wf-083-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给报价做个风险提示",
+    "en": "run the quote alert workflow",
+    "expect": "workflow_quote_alert"
+  },
+  {
+    "id": "wf-084-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "报价对比跑一下",
+    "en": "run the quote comparison workflow",
+    "expect": "workflow_quote_comparison"
+  },
+  {
+    "id": "wf-084-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把报价和我们自己的比一比",
+    "en": "run the quote comparison workflow",
+    "expect": "workflow_quote_comparison"
+  },
+  {
+    "id": "wf-084-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "做个报价的差异分析",
+    "en": "run the quote comparison workflow",
+    "expect": "workflow_quote_comparison"
+  },
+  {
+    "id": "wf-085-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "报价归档",
+    "en": "run the quote archive workflow",
+    "expect": "workflow_quote_archive"
+  },
+  {
+    "id": "wf-085-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把报价收进归档",
+    "en": "run the quote archive workflow",
+    "expect": "workflow_quote_archive"
+  },
+  {
+    "id": "wf-085-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "让报价下线,不再使用",
+    "en": "run the quote archive workflow",
+    "expect": "workflow_quote_archive"
+  },
+  {
+    "id": "wf-086-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "报价质检跑一遍",
+    "en": "run the quote quality check workflow",
+    "expect": "workflow_quote_quality_check"
+  },
+  {
+    "id": "wf-086-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "检查一下报价合不合规",
+    "en": "run the quote quality check workflow",
+    "expect": "workflow_quote_quality_check"
+  },
+  {
+    "id": "wf-086-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给报价做一次合规自查",
+    "en": "run the quote quality check workflow",
+    "expect": "workflow_quote_quality_check"
+  },
+  {
+    "id": "wf-087-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "报价跟进安排一下",
+    "en": "run the quote follow-up workflow",
+    "expect": "workflow_quote_follow-up"
+  },
+  {
+    "id": "wf-087-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给报价安排下一步动作",
+    "en": "run the quote follow-up workflow",
+    "expect": "workflow_quote_follow-up"
+  },
+  {
+    "id": "wf-087-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "为报价排一个后续计划",
+    "en": "run the quote follow-up workflow",
+    "expect": "workflow_quote_follow-up"
+  },
+  {
+    "id": "wf-088-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "报价清理一下",
+    "en": "run the quote cleanup workflow",
+    "expect": "workflow_quote_cleanup"
+  },
+  {
+    "id": "wf-088-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把报价里的重复内容清掉",
+    "en": "run the quote cleanup workflow",
+    "expect": "workflow_quote_cleanup"
+  },
+  {
+    "id": "wf-088-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "整理报价,删掉重复与失效的",
+    "en": "run the quote cleanup workflow",
+    "expect": "workflow_quote_cleanup"
+  },
+  {
+    "id": "wf-089-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "报价明细拉一下",
+    "en": "run the quote extract workflow",
+    "expect": "workflow_quote_extract"
+  },
+  {
+    "id": "wf-089-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把报价的明细拉出来",
+    "en": "run the quote extract workflow",
+    "expect": "workflow_quote_extract"
+  },
+  {
+    "id": "wf-089-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "取一份报价的数据",
+    "en": "run the quote extract workflow",
+    "expect": "workflow_quote_extract"
+  },
+  {
+    "id": "wf-090-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "报价打个分",
+    "en": "run the quote scoring workflow",
+    "expect": "workflow_quote_scoring"
+  },
+  {
+    "id": "wf-090-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给报价评个分",
+    "en": "run the quote scoring workflow",
+    "expect": "workflow_quote_scoring"
+  },
+  {
+    "id": "wf-090-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "对报价做个质量评分",
+    "en": "run the quote scoring workflow",
+    "expect": "workflow_quote_scoring"
+  },
+  {
+    "id": "wf-091-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "跑一下周报复盘",
+    "en": "run the weekly report review workflow",
+    "expect": "workflow_weekly_report_review"
+  },
+  {
+    "id": "wf-091-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把周报最近的情况过一遍",
+    "en": "run the weekly report review workflow",
+    "expect": "workflow_weekly_report_review"
+  },
+  {
+    "id": "wf-091-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "回顾一下周报的情况",
+    "en": "run the weekly report review workflow",
+    "expect": "workflow_weekly_report_review"
+  },
+  {
+    "id": "wf-092-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "周报汇总跑一遍",
+    "en": "generate the weekly report summary workflow",
+    "expect": "workflow_weekly_report_summary"
+  },
+  {
+    "id": "wf-092-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把周报整理成一份汇总",
+    "en": "generate the weekly report summary workflow",
+    "expect": "workflow_weekly_report_summary"
+  },
+  {
+    "id": "wf-092-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "出一份周报的统计报告",
+    "en": "generate the weekly report summary workflow",
+    "expect": "workflow_weekly_report_summary"
+  },
+  {
+    "id": "wf-093-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "周报预警跑一下",
+    "en": "run the weekly report alert workflow",
+    "expect": "workflow_weekly_report_alert"
+  },
+  {
+    "id": "wf-093-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "看看周报有没有要提醒的",
+    "en": "run the weekly report alert workflow",
+    "expect": "workflow_weekly_report_alert"
+  },
+  {
+    "id": "wf-093-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给周报做个风险提示",
+    "en": "run the weekly report alert workflow",
+    "expect": "workflow_weekly_report_alert"
+  },
+  {
+    "id": "wf-094-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "周报对比跑一下",
+    "en": "run the weekly report comparison workflow",
+    "expect": "workflow_weekly_report_comparison"
+  },
+  {
+    "id": "wf-094-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把周报和我们自己的比一比",
+    "en": "run the weekly report comparison workflow",
+    "expect": "workflow_weekly_report_comparison"
+  },
+  {
+    "id": "wf-094-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "做个周报的差异分析",
+    "en": "run the weekly report comparison workflow",
+    "expect": "workflow_weekly_report_comparison"
+  },
+  {
+    "id": "wf-095-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "周报归档",
+    "en": "run the weekly report archive workflow",
+    "expect": "workflow_weekly_report_archive"
+  },
+  {
+    "id": "wf-095-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把周报收进归档",
+    "en": "run the weekly report archive workflow",
+    "expect": "workflow_weekly_report_archive"
+  },
+  {
+    "id": "wf-095-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "让周报下线,不再使用",
+    "en": "run the weekly report archive workflow",
+    "expect": "workflow_weekly_report_archive"
+  },
+  {
+    "id": "wf-096-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "周报质检跑一遍",
+    "en": "run the weekly report quality check workflow",
+    "expect": "workflow_weekly_report_quality_check"
+  },
+  {
+    "id": "wf-096-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "检查一下周报合不合规",
+    "en": "run the weekly report quality check workflow",
+    "expect": "workflow_weekly_report_quality_check"
+  },
+  {
+    "id": "wf-096-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "给周报做一次合规自查",
+    "en": "run the weekly report quality check workflow",
+    "expect": "workflow_weekly_report_quality_check"
+  },
+  {
+    "id": "wf-097-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "周报跟进安排一下",
+    "en": "run the weekly report follow-up workflow",
+    "expect": "workflow_weekly_report_follow-up"
+  },
+  {
+    "id": "wf-097-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给周报安排下一步动作",
+    "en": "run the weekly report follow-up workflow",
+    "expect": "workflow_weekly_report_follow-up"
+  },
+  {
+    "id": "wf-097-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "为周报排一个后续计划",
+    "en": "run the weekly report follow-up workflow",
+    "expect": "workflow_weekly_report_follow-up"
+  },
+  {
+    "id": "wf-098-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "周报清理一下",
+    "en": "run the weekly report cleanup workflow",
+    "expect": "workflow_weekly_report_cleanup"
+  },
+  {
+    "id": "wf-098-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把周报里的重复内容清掉",
+    "en": "run the weekly report cleanup workflow",
+    "expect": "workflow_weekly_report_cleanup"
+  },
+  {
+    "id": "wf-098-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "整理周报,删掉重复与失效的",
+    "en": "run the weekly report cleanup workflow",
+    "expect": "workflow_weekly_report_cleanup"
+  },
+  {
+    "id": "wf-099-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "周报明细拉一下",
+    "en": "run the weekly report extract workflow",
+    "expect": "workflow_weekly_report_extract"
+  },
+  {
+    "id": "wf-099-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "把周报的明细拉出来",
+    "en": "run the weekly report extract workflow",
+    "expect": "workflow_weekly_report_extract"
+  },
+  {
+    "id": "wf-099-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "取一份周报的数据",
+    "en": "run the weekly report extract workflow",
+    "expect": "workflow_weekly_report_extract"
+  },
+  {
+    "id": "wf-100-literal",
+    "group": "workflow",
+    "style": "literal",
+    "zh": "周报打个分",
+    "en": "run the weekly report scoring workflow",
+    "expect": "workflow_weekly_report_scoring"
+  },
+  {
+    "id": "wf-100-casual",
+    "group": "workflow",
+    "style": "casual",
+    "zh": "给周报评个分",
+    "en": "run the weekly report scoring workflow",
+    "expect": "workflow_weekly_report_scoring"
+  },
+  {
+    "id": "wf-100-synonym",
+    "group": "workflow",
+    "style": "synonym",
+    "zh": "对周报做个质量评分",
+    "en": "run the weekly report scoring workflow",
+    "expect": "workflow_weekly_report_scoring"
+  }
+]

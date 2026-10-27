@@ -1,0 +1,39 @@
+{
+  "name": "terminal",
+  "label": "终端执行",
+  "description": "Run a terminal command on this machine and return the output (15s timeout by default). Dangerous commands (delete/format/shutdown, ...) are blocked by a blacklist. Use it only when it is clearly safe and necessary, preferring read-only commands (query/list/inspect).",
+  "description_language": "en",
+  "category": "系统",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "command"
+    ],
+    "properties": {
+      "command": {
+        "type": "string",
+        "description": "command to run, e.g. dir / pwd / ls / git status"
+      },
+      "timeoutMs": {
+        "type": "number",
+        "default": 15000,
+        "maximum": 60000,
+        "description": "timeout in milliseconds"
+      },
+      "shell": {
+        "type": "string",
+        "description": "shell to use (defaults to cmd on Windows, sh elsewhere)"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "requires": [
+    {
+      "kind": "always"
+    }
+  ],
+  "toggleable": true
+}

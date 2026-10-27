@@ -1,0 +1,62 @@
+{
+  "name": "redis",
+  "label": "操作 Redis",
+  "description": "Connect using the redis section of the config file; supports get/set/del/keys/ttl/expire/incr/zadd/zrange (whitelisted operations); connection failures return an explicit error.",
+  "description_language": "en",
+  "category": "存储",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "op",
+      "key"
+    ],
+    "properties": {
+      "op": {
+        "type": "string",
+        "enum": [
+          "get",
+          "set",
+          "del",
+          "keys",
+          "ttl",
+          "expire",
+          "incr",
+          "zadd",
+          "zrange"
+        ]
+      },
+      "key": {
+        "type": "string"
+      },
+      "value": {
+        "type": "string",
+        "description": "value for set"
+      },
+      "expireSeconds": {
+        "type": "number",
+        "description": "expiry in seconds for set/expire"
+      },
+      "score": {
+        "type": "number",
+        "description": "zadd score"
+      },
+      "member": {
+        "type": "string",
+        "description": "zadd member"
+      },
+      "start": {
+        "type": "number",
+        "default": 0
+      },
+      "stop": {
+        "type": "number",
+        "default": -1
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

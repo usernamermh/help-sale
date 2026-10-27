@@ -1,0 +1,54 @@
+{
+  "name": "chart_generate",
+  "label": "生成统计图",
+  "description": "Render a polished ECharts chart (any chart type); the frontend renders it. Requirements: concise title; meaningful category/stage and series names; a chart type that fits the data (funnel for stages, pie for share, line for trends, bar for comparison); complete legend, tooltip, data labels and axis names; numbers formatted with thousand separators or percentages; harmonious colors; real data only, never empty series. A full option object gives the most control; otherwise pass type/title/categories/series and let the tool assemble it.",
+  "description_language": "en",
+  "category": "呈现",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "option": {
+        "type": "object",
+        "description": "full ECharts option (any chart type): include title/tooltip/legend/series, colors via a color array, numbers via formatter; use either this or type/categories/series"
+      },
+      "type": {
+        "type": "string",
+        "description": "chart type (bar/line/pie/funnel/radar, ...); optional when option is given"
+      },
+      "title": {
+        "type": "string",
+        "description": "chart title"
+      },
+      "categories": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "category or stage names (e.g. date/vehicle model/intent)"
+      },
+      "series": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "data series; multiple series can be compared"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

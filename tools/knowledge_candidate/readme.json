@@ -1,0 +1,36 @@
+{
+  "name": "knowledge_candidate",
+  "label": "话术质检",
+  "description": "Review pending knowledge candidates (each carries a backend suggestion: add/replace/skip), approve them into the knowledge base or reject them; approval follows the suggestion - add creates a new entry, replace overwrites the old version, skip stores nothing.",
+  "description_language": "en",
+  "category": "话术",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "op": {
+        "type": "string",
+        "enum": [
+          "list",
+          "approve",
+          "reject"
+        ],
+        "default": "list",
+        "description": "operation kind"
+      },
+      "candidateId": {
+        "type": "string",
+        "description": "candidate id (for approve/reject)"
+      },
+      "limit": {
+        "type": "number",
+        "maximum": 100,
+        "description": "maximum number of rows"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

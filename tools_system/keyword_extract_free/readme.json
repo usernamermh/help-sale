@@ -1,0 +1,30 @@
+{
+  "name": "keyword_extract_free",
+  "label": "自由抽取标签",
+  "description": "Extract frequent free-form keywords from a conversation or text as tags (2-6 character n-gram frequency with stopword filtering, no external dependency).",
+  "description_language": "en",
+  "category": "文本算法",
+  "parameters": {
+    "type": "object",
+    "required": [
+      "text"
+    ],
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "text to extract tags from"
+      },
+      "maxKeywords": {
+        "type": "number",
+        "default": 5,
+        "maximum": 20,
+        "description": "maximum number of tags"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}

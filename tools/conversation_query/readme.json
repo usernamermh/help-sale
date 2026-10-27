@@ -1,0 +1,40 @@
+{
+  "name": "conversation_query",
+  "label": "会话查询",
+  "description": "List recent conversations (10 rows per page, pageable; the table is rendered as-is by the frontend), or load the full transcript of one conversation by conversation id, to analyze what was discussed with a customer.",
+  "description_language": "en",
+  "category": "查询",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "view": {
+        "type": "string",
+        "enum": [
+          "list",
+          "load"
+        ],
+        "default": "list",
+        "description": "query kind"
+      },
+      "conversationId": {
+        "type": "string",
+        "description": "conversation id (for load)"
+      },
+      "page": {
+        "type": "number",
+        "default": 1,
+        "description": "page number, at most 10 rows per page; page 1 by default, pass this only when the user explicitly asks for more"
+      },
+      "limit": {
+        "type": "number",
+        "maximum": 100,
+        "description": "maximum number of rows"
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": [
+    "main.execute"
+  ],
+  "toggleable": true
+}
