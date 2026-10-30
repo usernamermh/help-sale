@@ -67,6 +67,7 @@ textarea { resize:vertical; }
 <button class="tab active" data-panel="cap">能力</button>
 <button class="tab" data-panel="wf">工作流</button>
 <button class="tab" data-panel="logs">日志</button>
+<button class="tab" data-panel="wx">微信</button>
 </div>
 <main>
 <section class="panel active" id="panel-cap">
@@ -103,7 +104,35 @@ textarea { resize:vertical; }
 <div id="logList">加载中…</div>
 </div>
 </section>
+<section class="panel" id="panel-wx">
+<div class="card">
+<h2>微信通道</h2><p class="hint">扫码登录一个 iLink 机器人账号后，微信里发来的消息会走同一条 agent 链路，回答再发回微信。</p>
+<div id="wxStatus" class="hint">加载中…</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+<button class="btn" id="wxLoginBtn">获取登录二维码</button>
+<button class="btn ghost" id="wxRefreshBtn">刷新状态</button>
+<button class="btn ghost" id="wxLogoutBtn">退出微信登录</button>
+</div>
+<div id="wxQrBox" style="display:none;margin-top:14px">
+<canvas id="wxQr" style="border:1px solid var(--line);border-radius:12px;background:#fff;max-width:100%"></canvas>
+<div class="hint" id="wxQrHint" style="margin-top:8px"></div>
+<div class="hint">二维码链接（手机上也可直接打开）：<a id="wxQrLink" target="_blank" rel="noreferrer"></a></div>
+</div>
+</div>
+<div class="card" style="margin-top:14px">
+<h2>微信联系人</h2><p class="hint">绑定后，该联系人提问时会带上“是谁在问”的上下文（销售工号 / 客户 key）。</p>
+<div id="wxUsers">加载中…</div>
+<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:12px">
+<label>联系人 openid</label><input id="wxBindOpenid" placeholder="从上面的列表里复制 openid">
+<label>绑定到</label>
+<select id="wxBindKind"><option value="sales">销售（sales）</option><option value="customers">客户（customers）</option></select>
+<label>绑定对象 ID</label><input id="wxBindId" placeholder="销售工号 / 客户 key">
+<button class="btn" id="wxBindBtn" style="margin-top:12px">保存绑定</button>
+</div>
+</div>
+</section>
 </main>
+<script src="/vendor/qrcode.js"></script>
 <script>const $ = (id) => document.getElementById(id);
 function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 async function api(path, opt) {
@@ -120,6 +149,7 @@ document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () 
   t.classList.add("active");
   $("panel-" + t.dataset.panel).classList.add("active");
   if (t.dataset.panel === "logs") loadLogs();
+  if (t.dataset.panel === "wx") { loadWeixinStatus(); loadWeixinUsers(); }
 }));
 let allCaps = [];
 async function loadCapabilities() {
@@ -233,6 +263,117 @@ async function loadLogs() {
 $("logSearch").addEventListener("click", loadLogs);
 $("logReset").addEventListener("click", () => { $("logCat").value = "all"; $("logQ").value = ""; loadLogs(); });
 $("logQ").addEventListener("keydown", (e) => { if (e.key === "Enter") loadLogs(); });
+// ── 微信通道：状态、扫码登录、联系人绑定 ──
+let wxLoginId = null;
+let wxPollTimer = null;
+function wxStamp(iso) { return iso ? new Date(iso).toLocaleString() : "—"; }
+async function loadWeixinStatus() {
+  const box = $("wxStatus");
+  try {
+    const s = await api("/api/v1/weixin/status");
+    if (!s.enabled) {
+      box.innerHTML = '<span class="badge" style="background:#94a3b8">未启用</span> 在 help-sale.config.yaml 把 weixin.enabled 设为 true 后重启服务。';
+      return s;
+    }
+    const dot = s.loggedIn ? '<span class="badge" style="background:#16a34a">已登录</span>' : '<span class="badge" style="background:#d97706">未登录</span>';
+    const polling = s.polling ? '<span class="badge" style="background:#2563eb">轮询中</span>' : '<span class="badge" style="background:#94a3b8">未轮询</span>';
+    box.innerHTML = dot + " " + polling
+      + '<div style="margin-top:6px">账号：' + escapeHtml(s.accountId || "—")
+      + "　租户：" + escapeHtml(s.tenantId)
+      + "　已处理：" + escapeHtml(String(s.handled)) + " 条"
+      + "　最近轮询：" + escapeHtml(wxStamp(s.lastPollAt)) + "</div>"
+      + '<div style="margin-top:4px">入口：' + escapeHtml(s.baseUrl)
+      + "　自动回复：" + (s.autoReply ? "开" : "关")
+      + "　白名单：" + (s.allowFromCount ? s.allowFromCount + " 人" : "不限") + "</div>"
+      + (s.lastError ? '<div style="margin-top:6px;color:#dc2626">最近错误：' + escapeHtml(s.lastError) + "</div>" : "");
+    return s;
+  } catch (e) { box.innerHTML = "加载失败：" + escapeHtml(e.message); return null; }
+}
+function drawWeixinQr(ticket) {
+  const canvas = $("wxQr");
+  try {
+    QRLite.drawToCanvas(canvas, ticket.qrcodeUrl, { ecc: "M", scale: 6, quietZone: 3 });
+    $("wxQrBox").style.display = "block";
+    $("wxQrHint").textContent = "用微信扫码并在手机上确认；二维码状态每秒刷新。";
+  } catch (e) {
+    $("wxQrHint").textContent = "二维码渲染失败：" + e.message + "（可直接打开下面的链接）";
+  }
+  const link = $("wxQrLink");
+  link.href = ticket.qrcodeUrl;
+  link.textContent = "在手机微信中打开登录链接";
+}
+function stopWeixinPoll() { if (wxPollTimer) { clearInterval(wxPollTimer); wxPollTimer = null; } }
+async function pollWeixinLogin() {
+  if (!wxLoginId) return;
+  try {
+    const t = await api("/api/v1/weixin/login/" + encodeURIComponent(wxLoginId));
+    if (t.status === "confirmed") {
+      stopWeixinPoll();
+      $("wxQrHint").textContent = "已登录，账号 " + t.accountId + "；开始轮询微信消息。";
+      $("wxQrBox").style.display = "none";
+      loadWeixinStatus(); loadWeixinUsers();
+    } else if (t.status === "expired" || t.status === "failed") {
+      stopWeixinPoll();
+      $("wxQrHint").textContent = t.error || "二维码已失效，请重新获取。";
+    } else if (t.status === "scaned") {
+      $("wxQrHint").textContent = "已扫码，请在微信里确认…";
+    }
+  } catch (e) { /* 单次轮询失败不打断，等下一轮 */ }
+}
+async function startWeixinLogin() {
+  stopWeixinPoll();
+  const btn = $("wxLoginBtn");
+  btn.disabled = true;
+  try {
+    const ticket = await api("/api/v1/weixin/login");
+    wxLoginId = ticket.id;
+    drawWeixinQr(ticket);
+    wxPollTimer = setInterval(pollWeixinLogin, 1000);
+  } catch (e) {
+    alert("获取二维码失败：" + e.message);
+  } finally { btn.disabled = false; }
+}
+async function loadWeixinUsers() {
+  const box = $("wxUsers");
+  try {
+    const r = await api("/api/v1/weixin/users?limit=20");
+    const users = r.users || [];
+    if (!users.length) { box.innerHTML = '<div class="hint">还没有微信联系人给系统发过消息。</div>'; return; }
+    box.innerHTML = "";
+    for (const u of users) {
+      const row = document.createElement("div"); row.className = "cap-row";
+      const main = document.createElement("div"); main.className = "cap-main";
+      main.innerHTML = '<div><span class="cap-name">' + escapeHtml(u.openid) + "</span>"
+        + (u.boundId ? '<span class="cap-cat">已绑定 ' + escapeHtml(u.boundKind) + "：" + escapeHtml(u.boundId) + "</span>" : '<span class="cap-cat" style="color:#d97706">未绑定</span>')
+        + '</div><div class="cap-desc">最近活跃 ' + escapeHtml(wxStamp(u.lastActiveAt)) + "　线程 " + escapeHtml(u.threadId || "—") + "</div>";
+      const pick = document.createElement("button");
+      pick.className = "btn ghost"; pick.textContent = "填入下方";
+      pick.addEventListener("click", () => { $("wxBindOpenid").value = u.openid; });
+      row.appendChild(main); row.appendChild(pick);
+      box.appendChild(row);
+    }
+  } catch (e) { box.innerHTML = "加载失败：" + escapeHtml(e.message); }
+}
+$("wxRefreshBtn").addEventListener("click", () => { loadWeixinStatus(); loadWeixinUsers(); });
+$("wxLoginBtn").addEventListener("click", startWeixinLogin);
+$("wxLogoutBtn").addEventListener("click", async () => {
+  stopWeixinPoll();
+  try { await api("/api/v1/weixin/logout", { method: "POST", body: "{}" }); } catch (e) { alert("退出失败：" + e.message); }
+  $("wxQrBox").style.display = "none";
+  loadWeixinStatus();
+});
+$("wxBindBtn").addEventListener("click", async () => {
+  const openid = $("wxBindOpenid").value.trim();
+  const kind = $("wxBindKind").value;
+  const id = $("wxBindId").value.trim();
+  if (!openid || !id) { alert("openid 与绑定对象 ID 都要填"); return; }
+  try {
+    await api("/api/v1/weixin/bind", { method: "POST", body: JSON.stringify({ openid, kind, id }) });
+    $("wxBindId").value = "";
+    loadWeixinUsers();
+  } catch (e) { alert("绑定失败：" + e.message); }
+});
+loadWeixinStatus(); loadWeixinUsers();
 loadCapabilities(); loadWorkflows(); loadLogs();
 </script>
 </body>

@@ -16,6 +16,6 @@
 		"assumeChangesOnlyAffectDirectDependencies": true,
 		"tsBuildInfoFile": ".tsbuildinfo"
 	},
-	"include": ["backend", "opimize"],
+	"include": ["backend", "opimize", "front"],
 	"exclude": ["node_modules", "dist", "build"]
 }

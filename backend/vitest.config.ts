@@ -4,8 +4,8 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
 	test: {
 		environment: "node",
-		// 3party/ 下的第三方接入与 backend 平级,测试就放在模块旁边一起跑
-		include: ["**/*.test.ts", "../3party/**/*.test.ts"],
+		// 3party/ 与 front/ 与 backend 平级:测试就放在模块/资源旁边一起跑
+		include: ["**/*.test.ts", "../3party/**/*.test.ts", "../front/**/*.test.ts"],
 		exclude: ["node_modules/**"],
 		pool: "forks",
 		hookTimeout: 30_000,

@@ -78,7 +78,7 @@ backend/
   mcp/                      MCP 客户端 + 工具编目 + 检索(词面 BM25 + 语义 BGE)+ 双语 query 改写
 tools/ tools_system/        目录契约工具(readme.json + main.ts),新增工具只需加目录
 3party/weixin/              微信 iLink 接入:扫码登录、长轮询收消息、发送、绑定与审计
-front/                      前端页面(client.html 业务端 / console.html 控制台)
+front/                      前端页面(client.html 业务端 / console.html 控制台,含微信登录入口) + vendor(echarts/mermaid/marked/purify/qrcode)
 scripts/                    启动、模型下载、数据导入
 opimize/catalog/            检索评测:语料、跑分脚本、报告
 ```
@@ -90,7 +90,7 @@ npm ci --prefix pi --ignore-scripts
 node scripts/gen-minimal-model-data.mjs        # 离线模型数据(models.dev 不可达时)
 npm run build:offline --prefix pi
 npm install --ignore-scripts                    # 根 workspace 链接 pi 包
-npm test                                        # 28 个测试文件 / 191 个用例
+npm test                                        # 29 个测试文件 / 195 个用例
 npm run typecheck && npm run typecheck:eval
 ```
 
@@ -326,15 +326,17 @@ tools:
 `3party/weixin` 把微信接到同一条 agent 链路上:扫码登录一个 iLink 机器人账号,长轮询收微信消息,跑一轮 agent,再把回答发回微信。收发都走 `ilink/bot/*` 协议,不依赖公众号后台配置。
 
 三步用起来:
+控制台(**/console**)的「微信」标签页就是入口:顶部显示是否登录、是否在轮询、账号、已处理条数与最近错误,一键获取登录二维码、刷新状态、退出登录,下方列出联系过的微信用户并可直接绑定销售或客户。二维码由页面内置的 `front/vendor/qrcode.js` 本地渲染,不调用任何外部服务。
+
+命令行等价操作:
 
 1. `weixin.enabled: true`,其余键照常配齐(`baseUrl`、`tenantId`、分片长度、超时、允许的联系人);
-2. `GET /api/v1/weixin/login` 拿二维码(`qrcodeUrl` 直接用微信扫),前端轮询 `GET /api/v1/weixin/login/:id` 到 `status=confirmed`,凭据落盘 `data/weixin/account.json`,轮询器自动启动;
-3. 在微信里给这个账号发消息,系统按"一条微信消息 → 一条 agent 线程 → 一条回复"处理。
+2. `GET /api/v1/weixin/login` 拿二维码(`qrcodeUrl` 直接用微信扫),轮询 `GET /api/v1/weixin/login/:id` 到 `status=confirmed`,凭据落盘 `data/weixin/account.json`,轮询器自动启动;3. 在微信里给这个账号发消息,系统按"一条微信消息 → 一条 agent 线程 → 一条回复"处理。
 
 | 接口 | 作用 |
 | --- | --- |
 | `GET /api/v1/weixin/status` | 是否启用、是否已登录、轮询是否在跑、最近一次轮询时间与错误 |
-| `GET\|POST /api/v1/weixin/login` | 取登录二维码 |
+| `GET\|POST /api/v1/weixin/login` | 取登录二维码(控制台按钮走这条路) |
 | `GET /api/v1/weixin/login/:id` | 轮询扫码状态(wait / scaned / confirmed / expired) |
 | `POST /api/v1/weixin/logout` | 停掉轮询并清空内存里的账号 |
 | `POST /api/v1/weixin/send` | 主动发消息:`{ to, text }` |
@@ -406,7 +408,7 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 # 测试与评测
 
 ```bash
-npm test                 # 28 个测试文件 / 191 个用例
+npm test                 # 29 个测试文件 / 195 个用例
 npm run typecheck        # backend 业务代码
 npm run typecheck:eval   # 仓库根,额外覆盖 opimize/ 下的评测脚本
 ```
