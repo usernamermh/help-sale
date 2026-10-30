@@ -49,6 +49,13 @@ describe("密钥文件合并", () => {
 		expect(plaintextKeys).toContain("model.apiKey");
 	});
 
+	it("写成占位不算明文,不产生迁移告警", () => {
+		const secrets = { raw: { model: { apiKey: "sk-x" }, mysql: { password: "s3cret" } } };
+		const raw: Record<string, unknown> = { model: { apiKey: "${SECRETS:model.apiKey}" }, mysql: { password: "${ENV:MYSQL_PASSWORD}" } };
+		const { plaintextKeys } = mergeSecrets(raw, secrets);
+		expect(plaintextKeys).toEqual([]);
+	});
+
 	it("MCP 的 PAT 按 server 名从密钥文件映射", () => {
 		const secrets = { raw: { mcp: { servers: { github: "ghp_x" } } } };
 		const raw: Record<string, unknown> = { mcp: { servers: [{ name: "github", url: "https://example/mcp" }] } };

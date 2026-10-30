@@ -112,6 +112,8 @@ export interface AppConfig {
 	// 子代理/多代理(subagents 段)
 	subagentMaxConcurrency: number;
 	subagentPollIntervalMs: number;
+	/** 空闲兜底扫描间隔(ms):0 = 完全事件驱动,不空转 */
+	subagentIdleSweepIntervalMs: number;
 	subagentTimeoutMs: number;
 	subagentDefaultTools: string[];
 	automationEnabled: boolean;
@@ -198,7 +200,7 @@ export type DefaultsConfig = Pick<AppConfig,
 	| "notificationScanLimit" | "remindersTakeLimit">;
 /** subagents + automation + workflows.mine + client 段:多代理、定时任务与工作流挖掘。 */
 export type FeaturesConfig = Pick<AppConfig,
-	| "subagentMaxConcurrency" | "subagentPollIntervalMs" | "subagentTimeoutMs" | "subagentDefaultTools"
+	| "subagentMaxConcurrency" | "subagentPollIntervalMs" | "subagentTimeoutMs" | "subagentIdleSweepIntervalMs" | "subagentDefaultTools"
 	| "automationEnabled" | "morningDigestTime" | "weeklyReportWeekday" | "weeklyReportTime"
 	| "silentCustomerDays" | "silentWakeupEnabled" | "wakeupTaskTime"
 	| "workflowMineDays" | "workflowMineMinWindow" | "workflowMineMaxWindow" | "workflowMineMinCount"

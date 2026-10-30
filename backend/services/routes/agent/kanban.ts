@@ -1,3 +1,4 @@
+import { notifySubagentWork } from "./subagent-signal.js";
 // 看板卡片存储:多代理协作的 kanban_cards 表读写(原 v1 services/kanban-store.ts)
 import type { DatabaseSync } from "node:sqlite";
 
@@ -54,7 +55,10 @@ export function createKanbanTask(db: DatabaseSync, input: { tenantId: string; th
 	db.prepare(
 		"INSERT INTO kanban_cards (id, tenant_id, thread_id, title, description, status, goal, tools_json, share_enabled, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
 	).run(id, input.tenantId, input.threadId, input.title, input.description ?? null, input.status ?? "pending", input.goal, input.tools ? JSON.stringify(input.tools) : null, input.shareEnabled === true ? 1 : 0, now, now);
-	return getKanbanCard(db, input.tenantId, id)!;
+	const created = getKanbanCard(db, input.tenantId, id)!;
+	// 有新任务进 pending 就唤醒消费者(而不是等下一次轮询)
+	if (created.status === "pending") notifySubagentWork();
+	return created;
 }
 
 /** 读取卡片。 */
@@ -82,7 +86,10 @@ export function updateKanbanCard(db: DatabaseSync, tenantId: string, id: string,
 	db.prepare(
 		"UPDATE kanban_cards SET title = ?, description = ?, status = ?, goal = ?, tools_json = ?, result = ?, error = ?, share_enabled = ?, updated_at = ? WHERE id = ? AND tenant_id = ?",
 	).run(next.title, next.description ?? null, next.status, next.goal ?? null, next.tools ? JSON.stringify(next.tools) : null, next.result ?? null, next.error ?? null, next.shareEnabled === true ? 1 : 0, next.updatedAt, id, tenantId);
-	return getKanbanCard(db, tenantId, id);
+	const saved = getKanbanCard(db, tenantId, id);
+	// 卡片被改回 pending(重试/重新排队)同样要唤醒消费者
+	if (saved?.status === "pending") notifySubagentWork();
+	return saved;
 }
 
 /** 心跳:刷新卡片 updated_at(供主代理监督子代理是否仍在执行)。 */

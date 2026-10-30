@@ -110,6 +110,7 @@ export interface FileConfig {
 	subagents?: {
 		maxConcurrency?: number;
 		pollIntervalMs?: number;
+		idleSweepIntervalMs?: number;
 		timeoutMs?: number;
 		defaultTools?: string[];
 	};

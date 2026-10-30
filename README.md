@@ -90,7 +90,7 @@ npm ci --prefix pi --ignore-scripts
 node scripts/gen-minimal-model-data.mjs        # 离线模型数据(models.dev 不可达时)
 npm run build:offline --prefix pi
 npm install --ignore-scripts                    # 根 workspace 链接 pi 包
-npm test                                        # 33 个测试文件 / 224 个用例
+npm test                                        # 34 个测试文件 / 228 个用例
 npm run typecheck && npm run typecheck:eval
 ```
 
@@ -446,6 +446,8 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 - 规划器提示词决定 `single` / `multi`;协调者提示词负责汇总看板结果;
 - 并发、轮询间隔、超时、子代理默认工具都在 `subagents` 段配置。
 
+子代理执行者是**事件驱动**的:新建 pending 卡片(或把卡片改回 pending)会立刻唤醒消费者;消费者只在"确实有待执行的卡"时按 `subagents.pollIntervalMs` 的节奏连续扫描,没活立刻退出 —— **空闲时不轮询**。`subagents.idleSweepIntervalMs` 控制可选的低频兜底扫描(默认 0 = 完全事件驱动),它用于跨进程/崩溃恢复:多实例部署时应设为大于 0,或改用 Redis 总线。
+
 # 知识与话术
 
 - `knowledge_search` / `knowledge_ingest` / `knowledge_candidate`:知识库检索、沉淀候选、审批入库;入库时按 `chunker` 分块并写入 FTS5 trigram 全文索引;
@@ -481,7 +483,7 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 # 测试与评测
 
 ```bash
-npm test                 # 33 个测试文件 / 224 个用例
+npm test                 # 34 个测试文件 / 228 个用例
 npm run typecheck        # backend 业务代码
 npm run typecheck:eval   # 仓库根,额外覆盖 opimize/ 下的评测脚本
 ```

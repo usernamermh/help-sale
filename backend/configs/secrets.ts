@@ -144,6 +144,8 @@ export function mergeSecrets(
 			writePath(raw, dotted, fromSecrets);
 			return;
 		}
+		// 已经是 ${ENV:X} / ${SECRETS:X} 占位:值来自密钥文件或环境变量,不算明文
+		if (typeof current === "string" && PLACEHOLDER_RE.test(current.trim())) return;
 		plaintextKeys.push(dotted);
 	};
 

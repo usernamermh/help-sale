@@ -11,6 +11,7 @@ export function loadFeaturesConfig(file: FileConfig): FeaturesConfig {
 	return {
 		subagentMaxConcurrency: num(file.subagents?.maxConcurrency, "subagents.maxConcurrency"),
 		subagentPollIntervalMs: num(file.subagents?.pollIntervalMs, "subagents.pollIntervalMs"),
+		subagentIdleSweepIntervalMs: num(file.subagents?.idleSweepIntervalMs, "subagents.idleSweepIntervalMs"),
 		subagentTimeoutMs: num(file.subagents?.timeoutMs, "subagents.timeoutMs"),
 		subagentDefaultTools: strList(file.subagents?.defaultTools, "subagents.defaultTools"),
 		automationEnabled: bool(file.automation?.enabled, "automation.enabled"),

@@ -7,6 +7,7 @@ import { getSubagentPrompt } from "../../../prompts/multi-agent.js";
 import { loadExternalAgentTools, externalToolPaths } from "../../external-tools.js";
 import { applyToolPolicy } from "../../../integrations_pi/agent-tools.js";
 import { listTenantIds } from "../../../integrations_pi/tables/automation/runs.js";
+import { registerSubagentWorker, unregisterSubagentWorker } from "./subagent-signal.js";
 import { listCapabilityStates } from "../../../integrations_pi/tables/agents/capabilities.js";
 import { isStopped } from "../../stop-signal.js";
 import { createTimelineRecorder } from "../../timeline.js";
@@ -124,34 +125,89 @@ export async function consumeKanbanSubagents(deps: SubagentRunnerDeps, tenantId:
 	return results;
 }
 
-/** 启动子代理消费者:按轮询间隔扫描看板,消费全部线程的 pending 卡片(含多代理任务)。 */
-export function startSubagentConsumer(deps: SubagentRunnerDeps, tenantIds: string[] = []): () => void {
-	const timer = setInterval(() => {
-		// 清理陈旧 inprogress 卡:子代理进程被中断/重启后,已领取但长期未完成的卡标记 error,避免前端一直等待
+/** 一次扫描:清理孤儿卡 + 消费各租户的 pending 卡;返回"是否还有活"。 */
+async function sweepKanban(deps: SubagentRunnerDeps, tenantIds: string[]): Promise<boolean> {
+	// 清理陈旧 inprogress 卡:子代理进程被中断/重启后,已领取但长期未完成的卡标记 error,避免前端一直等待
+	try {
+		const staleCutoff = new Date(Date.now() - config.subagentTimeoutMs).toISOString();
+		deps.db.prepare("UPDATE kanban_cards SET status = 'error', error = '子代理执行中断(超时或服务重启)', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE status = 'inprogress' AND updated_at < ?").run(staleCutoff);
+	} catch (error) {
+		console.warn("[subagents] 清理陈旧卡片失败:", error instanceof Error ? error.message : String(error));
+	}
+	// 不传就枚举库里的全部租户:后台任务不能只服务"配置里的那个租户"
+	const tenants = tenantIds.length > 0 ? tenantIds : listTenantIds(deps.db);
+	let hadWork = false;
+	for (const tenantId of tenants) {
+		// 整段都要兜住:轮询里的数据库异常若不接住会从定时器冒出去,直接把服务带崩
 		try {
-			const staleCutoff = new Date(Date.now() - config.subagentTimeoutMs).toISOString();
-			deps.db.prepare("UPDATE kanban_cards SET status = 'error', error = '子代理执行中断(超时或服务重启)', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE status = 'inprogress' AND updated_at < ?").run(staleCutoff);
-		} catch (error) {
-			console.warn("[subagents] 清理陈旧卡片失败:", error instanceof Error ? error.message : String(error));
-		}
-		// 不传就枚举库里的全部租户:后台任务不能只服务"配置里的那个租户"
-		const tenants = tenantIds.length > 0 ? tenantIds : listTenantIds(deps.db);
-		for (const tenantId of tenants) {
-			// 整段都要兜住:轮询里的数据库异常若不接住会从定时器冒出去,直接把服务带崩
-			try {
-				// 按线程分组取 pending 卡片,逐线程消费(每个线程并发上限 MAX_CONCURRENCY)
-				const pending = listKanbanCards(deps.db, tenantId, { status: "pending" });
-				const threadIds = [...new Set(pending.map((c) => c.threadId))];
-				for (const threadId of threadIds) {
-					consumeKanbanSubagents(deps, tenantId, { limit: MAX_CONCURRENCY, threadId }).catch((error) => {
-						console.warn(`[subagents] 消费失败(${tenantId}/${threadId}): ${error instanceof Error ? error.message : String(error)}`);
-					});
-				}
-			} catch (error) {
-				console.warn(`[subagents] 轮询失败(${tenantId}): ${error instanceof Error ? error.message : String(error)}`);
+			// 按线程分组取 pending 卡片,逐线程消费(每个线程并发上限 MAX_CONCURRENCY)
+			const pending = listKanbanCards(deps.db, tenantId, { status: "pending" });
+			if (pending.length === 0) continue;
+			hadWork = true;
+			const threadIds = [...new Set(pending.map((c) => c.threadId))];
+			for (const threadId of threadIds) {
+				consumeKanbanSubagents(deps, tenantId, { limit: MAX_CONCURRENCY, threadId }).catch((error) => {
+					console.warn(`[subagents] 消费失败(${tenantId}/${threadId}): ${error instanceof Error ? error.message : String(error)}`);
+				});
 			}
+		} catch (error) {
+			console.warn(`[subagents] 轮询失败(${tenantId}): ${error instanceof Error ? error.message : String(error)}`);
 		}
-	}, config.subagentPollIntervalMs);
-	timer.unref?.();
-	return () => clearInterval(timer);
+	}
+	return hadWork;
+}
+
+/**
+ * 子代理消费者:事件驱动,**空闲不轮询**。
+ *   · 启动扫一次:恢复上个进程遗留的 pending,并清理孤儿 inprogress 卡;
+ *   · 之后由 notifySubagentWork() 唤醒(建卡、或把卡改回 pending 时触发);
+ *   · 被唤醒后只要还有活,就按 subagents.pollIntervalMs 的节奏连续扫;没活立刻退出;
+ *   · subagents.idleSweepIntervalMs > 0 时保留一条低频兜底扫描(跨进程/崩溃恢复用),设 0 即完全事件驱动。
+ */
+export function startSubagentConsumer(deps: SubagentRunnerDeps, tenantIds: string[] = []): () => void {
+	let stopped = false;
+	let draining = false;
+	let scheduled: NodeJS.Timeout | undefined;
+	let idleTimer: NodeJS.Timeout | undefined;
+
+	const drain = async (): Promise<void> => {
+		if (stopped || draining) return;
+		draining = true;
+		try {
+			let rounds = 0;
+			for (;;) {
+				const hadWork = await sweepKanban(deps, tenantIds);
+				rounds += 1;
+				if (stopped || !hadWork) break;
+				await new Promise((resolve) => setTimeout(resolve, Math.max(100, config.subagentPollIntervalMs)));
+			}
+			if (rounds > 1) console.log(`[subagents] 本轮消费结束(扫描 ${rounds} 次)`);
+		} finally {
+			draining = false;
+		}
+	};
+
+	// 事件唤醒:合并同一批多次通知,避免一次提交触发 N 次扫描
+	const kick = (): void => {
+		if (stopped || scheduled) return;
+		scheduled = setTimeout(() => {
+			scheduled = undefined;
+			void drain();
+		}, 0);
+		scheduled.unref?.();
+	};
+
+	registerSubagentWorker(kick);
+	void drain(); // 启动即扫一次(恢复遗留任务)
+	if (config.subagentIdleSweepIntervalMs > 0) {
+		idleTimer = setInterval(() => void drain(), config.subagentIdleSweepIntervalMs);
+		idleTimer.unref?.();
+	}
+
+	return () => {
+		stopped = true;
+		unregisterSubagentWorker();
+		if (scheduled) clearTimeout(scheduled);
+		if (idleTimer) clearInterval(idleTimer);
+	};
 }

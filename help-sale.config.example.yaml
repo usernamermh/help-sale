@@ -229,7 +229,10 @@ logging:
   maxBytes: 8388608
 subagents:
   maxConcurrency: 2
+  # 有任务在跑时的扫描间隔(毫秒);空闲时不轮询
   pollIntervalMs: 2000
+  # 空闲兜底扫描间隔(毫秒):0 = 完全事件驱动(新建卡片会立即唤醒消费者)
+  idleSweepIntervalMs: 0
   timeoutMs: 600000
   defaultTools:
     - knowledge_search
