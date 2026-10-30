@@ -443,3 +443,15 @@ CREATE TABLE IF NOT EXISTS weixin_messages (
 	KEY idx_wxm_tenant (tenant_id, created_at),
 	KEY idx_wxm_msgid (tenant_id, direction, message_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS weixin_threads (
+	id VARCHAR(64) PRIMARY KEY,
+	tenant_id VARCHAR(64) NOT NULL,
+	openid VARCHAR(128) NOT NULL,
+	thread_id VARCHAR(64) NOT NULL,
+	title VARCHAR(255),
+	last_active_at VARCHAR(40),
+	created_at VARCHAR(40) NOT NULL DEFAULT '',
+	UNIQUE KEY uq_wxt_owner (tenant_id, openid, thread_id),
+	KEY idx_wxt_tenant (tenant_id, openid, last_active_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

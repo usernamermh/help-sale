@@ -111,3 +111,38 @@ export function listWeixinMessages(db: DatabaseSync, tenantId: string, limit: nu
 		.prepare("SELECT * FROM weixin_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?")
 		.all(tenantId, Math.max(1, Math.min(limit, 200))) as Array<Record<string, unknown>>;
 }
+export interface WeixinThreadRow {
+	threadId: string;
+	title: string;
+	lastActiveAt: string | null;
+}
+
+/** 会话目录:一个联系人可以有多个会话(/sessions 列出来、/switch 切过去)。 */
+export function upsertWeixinThread(db: DatabaseSync, tenantId: string, openid: string, threadId: string, title?: string): void {
+	const existing = db
+		.prepare("SELECT id FROM weixin_threads WHERE tenant_id = ? AND openid = ? AND thread_id = ?")
+		.get(tenantId, openid, threadId) as { id?: string } | undefined;
+	if (existing?.id) {
+		if (title) db.prepare("UPDATE weixin_threads SET title = ?, last_active_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE tenant_id = ? AND openid = ? AND thread_id = ?").run(title, tenantId, openid, threadId);
+		else db.prepare("UPDATE weixin_threads SET last_active_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE tenant_id = ? AND openid = ? AND thread_id = ?").run(tenantId, openid, threadId);
+		return;
+	}
+	db.prepare("INSERT INTO weixin_threads (id, tenant_id, openid, thread_id, title, last_active_at) VALUES (?,?,?,?,?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))").run(
+		randomUUID(),
+		tenantId,
+		openid,
+		threadId,
+		title ?? null,
+	);
+}
+
+export function listWeixinThreads(db: DatabaseSync, tenantId: string, openid: string, limit: number): WeixinThreadRow[] {
+	const rows = db
+		.prepare("SELECT thread_id, title, last_active_at FROM weixin_threads WHERE tenant_id = ? AND openid = ? ORDER BY COALESCE(last_active_at, created_at) DESC LIMIT ?")
+		.all(tenantId, openid, Math.max(1, Math.min(limit, 50))) as Array<Record<string, unknown>>;
+	return rows.map((row) => ({
+		threadId: String(row.thread_id),
+		title: row.title === null || row.title === undefined ? "" : String(row.title),
+		lastActiveAt: row.last_active_at === null || row.last_active_at === undefined ? null : String(row.last_active_at),
+	}));
+}

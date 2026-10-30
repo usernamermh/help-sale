@@ -128,6 +128,8 @@ export interface FileConfig {
 		autoReply?: boolean;
 		ackText?: string;
 		unsupportedText?: string;
+		commandsEnabled?: boolean;
+		sessionsLimit?: number;
 		allowFrom?: string[];
 	};
 	userkey?: string;

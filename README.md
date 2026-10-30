@@ -90,7 +90,7 @@ npm ci --prefix pi --ignore-scripts
 node scripts/gen-minimal-model-data.mjs        # 离线模型数据(models.dev 不可达时)
 npm run build:offline --prefix pi
 npm install --ignore-scripts                    # 根 workspace 链接 pi 包
-npm test                                        # 29 个测试文件 / 195 个用例
+npm test                                        # 30 个测试文件 / 205 个用例
 npm run typecheck && npm run typecheck:eval
 ```
 
@@ -128,7 +128,7 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 | `tools.fileWrite` | 文件写入工具是否允许写到仓库之外(`allowOutsideRepo`) |
 | `tools.catalog` | 工具编目与召回,见下 |
 | `tools.sql` | SQL 工具的行数上限、执行超时、追加拦截关键字(见「SQL 执行策略」) |
-| `weixin` | 微信 iLink 通道:登录凭据、租户、分片长度、发送重试、轮询超时、去重窗口、agent 超时、确认语、兜底话术、允许的联系人(见「微信接入」) |
+| `weixin` | 微信 iLink 通道:登录凭据、租户、分片长度、发送重试、轮询超时、去重窗口、agent 超时、确认语、兜底话术、会话命令开关与条数、允许的联系人(见「微信接入」) |
 | `mcp.servers` | 外部 MCP Server 列表 |
 | `knowledge.searchLimit` | 知识检索默认条数 |
 | `vector` / `milvus_backend` / `milvus_docker_compose` | Milvus 旁路与单机部署参数 |
@@ -343,12 +343,15 @@ tools:
 | `GET /api/v1/weixin/users` | 最近联系过系统的微信用户及其绑定关系 |
 | `POST /api/v1/weixin/bind` | 把 openid 绑到销售或客户:`{ openid, kind: sales\|customers, id }` |
 | `GET /api/v1/weixin/messages` | 收发审计(方向、状态、线程、错误) |
+| `GET /api/v1/agent/threads/stream` | 会话事件流(SSE):微信侧写入消息/改标题时推给网页端 |
 
 行为约定:
 
 - **单 Agent 直答**:微信侧不启用规划与看板子代理,一条消息只跑一轮 agent 并直接出结果 —— 聊天渠道没有网页端那套流式界面,也没有人来触发多代理汇总;
 - **先确认再回答**:收到消息立刻回一条 `weixin.ackText`(留空则不回),agent 跑完再回正式答复。确认语在入队时就发,同一联系人连发多条也不会等到上一条跑完才有反馈;
 - **会话立刻可见**:线程在收到消息时就建好并写入本轮用户消息、用消息内容起标题,网页历史里点开就能看到提问,不用等 agent 结束;
+- **微信里的命令**:`/help`、`/new`、`/sessions`、`/switch <序号>`、`/compact`、`/clear`、`/stop`、`/status`、`/whoami`、`/bind <sales|customers>:<编号>`,中文别名同样可用(`/新会话`、`/会话`、`/压缩`…)。命令在入队前就处理,所以 agent 还在跑时 `/stop` 也能立刻生效;
+- **网页同步**:微信里发出的消息与系统回答会通过 `GET /api/v1/agent/threads/stream`(SSE)推给网页端 —— 历史列表自动刷新,正在打开的那条会话直接把新消息追加到对话里,不用手动刷新;
 - **按联系人串行**:同一个 openid 的消息排队处理,两条消息同时到也不会把一条线程写乱;
 - **幂等**:`message_id` 记在 `weixin_messages`,重投递直接跳过;
 - **context_token 回带**:每条出站消息带该联系人最新的 `context_token`;失效(-14 / -2 "unknown error")时自动去掉 token 重试一次;
@@ -411,7 +414,7 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 # 测试与评测
 
 ```bash
-npm test                 # 29 个测试文件 / 195 个用例
+npm test                 # 30 个测试文件 / 205 个用例
 npm run typecheck        # backend 业务代码
 npm run typecheck:eval   # 仓库根,额外覆盖 opimize/ 下的评测脚本
 ```

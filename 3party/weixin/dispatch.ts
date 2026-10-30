@@ -2,7 +2,8 @@ import type { DatabaseSync } from "node:sqlite";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import { appendThreadMessage, createThread, setThreadTitle } from "../../backend/integrations_pi/tables/agents/threads.js";
 import { extractText, maskId } from "./text.js";
-import { ensureWeixinUser, isMessageRecorded, recordWeixinMessage, setWeixinThread, getWeixinUser } from "./tables.js";
+import { ensureWeixinUser, isMessageRecorded, recordWeixinMessage, setWeixinThread, getWeixinUser, upsertWeixinThread } from "./tables.js";
+import { publishThreadEvent } from "../../backend/services/thread-events.js";
 import type { WeixinSendOptions } from "./send.js";
 import type { WeixinInbound } from "./types.js";
 import { sendWeixinText } from "./send.js";
@@ -35,6 +36,8 @@ export interface WeixinDispatchOptions {
 	ackText: string;
 	send: WeixinSendOptions;
 	runAgent: WeixinAgentRunner;
+	/** 会话命令(/help、/new、/sessions…):返回字符串表示已处理,返回 undefined 表示不是命令 */
+	handleCommand?: (input: { openid: string; text: string }) => Promise<string | undefined>;
 	/** 组装本轮之前的会话历史(在写入本轮用户消息之前调用) */
 	buildHistory?: (input: { tenantId: string; threadId: string; goal: string }) => Promise<AgentMessage[]>;
 	onLog?: (line: string) => void;
@@ -125,7 +128,10 @@ export function createWeixinDispatcher(options: WeixinDispatchOptions): (inbound
 
 		// 先把本轮消息落进线程:网页历史里这条会话立刻可见可打开,agent 还在跑也不会是空会话
 		const title = text.replace(/\s+/g, " ").trim();
-		setThreadTitle(options.db, options.tenantId, threadId, title.length > 24 ? `${title.slice(0, 24)}…` : title);
+		const finalTitle = title.length > 24 ? `${title.slice(0, 24)}…` : title;
+		setThreadTitle(options.db, options.tenantId, threadId, finalTitle);
+		upsertWeixinThread(options.db, options.tenantId, openid, threadId, finalTitle);
+		publishThreadEvent({ type: "title", tenantId: options.tenantId, threadId, title: finalTitle });
 		let history: AgentMessage[] = [];
 		if (options.buildHistory) {
 			try {
@@ -135,6 +141,7 @@ export function createWeixinDispatcher(options: WeixinDispatchOptions): (inbound
 			}
 		}
 		appendThreadMessage(options.db, options.tenantId, threadId, "user", [{ type: "text", text }]);
+		publishThreadEvent({ type: "message", tenantId: options.tenantId, threadId, role: "user", text });
 
 		let answer = "";
 		let runId: string | undefined;
@@ -184,6 +191,14 @@ export function createWeixinDispatcher(options: WeixinDispatchOptions): (inbound
 		const key = inbound.fromUserId || "unknown";
 		const text = admit(inbound);
 		if (text === undefined) return;
+		// 命令立刻处理:上一条消息的 agent 还在跑,/stop、/sessions 也不能等着
+		if (text && options.handleCommand) {
+			const commandReply = await options.handleCommand({ openid: key, text });
+			if (commandReply !== undefined) {
+				await reply(options, key, commandReply, undefined, undefined);
+				return;
+			}
+		}
 		await acknowledge(key, text);
 		const previous = chains.get(key) ?? Promise.resolve();
 		const next = previous.then(() => handle(inbound, text)).catch((error: unknown) => {

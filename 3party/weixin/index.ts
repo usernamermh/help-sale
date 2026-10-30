@@ -14,6 +14,8 @@ import { registerWeixinRoutes, type WeixinContext } from "./routes.js";
 import { sendWeixinText, type WeixinSendOptions } from "./send.js";
 import { maskId } from "./text.js";
 import { WeixinDedup, readAccount, readSyncBuf, setContextToken, writeSyncBuf } from "./store.js";
+import { runWeixinCommand } from "./commands.js";
+import { publishThreadEvent } from "../../backend/services/thread-events.js";
 import type { WeixinAccount, WeixinInbound } from "./types.js";
 
 /**
@@ -53,7 +55,10 @@ function createAgentRunner(deps: WeixinRuntimeDeps): WeixinAgentRunner {
 			{ goal, history, threadId },
 		);
 		const answer = result.final?.answer ?? "";
-		if (answer) appendThreadMessage(deps.db, tenantId, threadId, "assistant", [{ type: "text", text: answer }]);
+		if (answer) {
+			appendThreadMessage(deps.db, tenantId, threadId, "assistant", [{ type: "text", text: answer }]);
+			publishThreadEvent({ type: "message", tenantId, threadId, role: "assistant", text: answer });
+		}
 		return { runId: result.runId, answer };
 	};
 }
@@ -71,12 +76,12 @@ export function registerWeixin(app: FastifyInstance, deps: WeixinRuntimeDeps): (
 			db: deps.db,
 			status: () => ({ enabled: false, loggedIn: false, polling: false }),
 			startLogin: async () => {
-				throw new Error("微信通道未启用(weixin.enabled=false)");
+				throw new Error("微信通道未启用（weixin.enabled=false）。");
 			},
 			pollLogin: async () => {
-				throw new Error("微信通道未启用(weixin.enabled=false)");
+				throw new Error("微信通道未启用（weixin.enabled=false）。");
 			},
-			sendText: async () => ({ ok: false, chunks: 0, error: "微信通道未启用(weixin.enabled=false)" }),
+			sendText: async () => ({ ok: false, chunks: 0, error: "微信通道未启用（weixin.enabled=false）。" }),
 			logout: () => undefined,
 			stop: () => undefined,
 		});
@@ -141,6 +146,9 @@ export function registerWeixin(app: FastifyInstance, deps: WeixinRuntimeDeps): (
 			send: options,
 			runAgent: agentRunner,
 			buildHistory: weixinHistory(deps.db),
+			handleCommand: config.weixinCommandsEnabled
+				? (input) => runWeixinCommand({ db: deps.db, tenantId, openid: input.openid, sessionsLimit: config.weixinSessionsLimit, status: currentStatus }, input.text)
+				: undefined,
 			onLog: log,
 		});
 		await dispatcher(inbound);
@@ -216,11 +224,7 @@ export function registerWeixin(app: FastifyInstance, deps: WeixinRuntimeDeps): (
 	if (account) startPoller();
 	else log("[weixin] 尚未登录:调用 POST /api/v1/weixin/login 扫码后开始收消息");
 
-	const ctx: WeixinContext = {
-		enabled: true,
-		tenantId,
-		db: deps.db,
-		status: () => ({
+	const currentStatus = (): Record<string, unknown> => ({
 			enabled: true,
 			loggedIn: Boolean(account),
 			accountId: account ? maskId(account.accountId) : null,
@@ -231,8 +235,14 @@ export function registerWeixin(app: FastifyInstance, deps: WeixinRuntimeDeps): (
 			handled: state.handled,
 			autoReply: config.weixinAutoReply,
 			tenantId,
-			allowFromCount: config.weixinAllowFrom.length,
-		}),
+		allowFromCount: config.weixinAllowFrom.length,
+	});
+
+	const ctx: WeixinContext = {
+		enabled: true,
+		tenantId,
+		db: deps.db,
+		status: currentStatus,
 		startLogin: async () => {
 			const ticket = await login.start();
 			return ticket;
@@ -247,7 +257,7 @@ export function registerWeixin(app: FastifyInstance, deps: WeixinRuntimeDeps): (
 		},
 		sendText: async (to: string, text: string) => {
 			const options = sendOptions();
-			if (!options) return { ok: false, chunks: 0, error: "尚未登录微信(先扫码登录)" };
+			if (!options) return { ok: false, chunks: 0, error: "尚未登录微信，请先在控制台扫码登录。" };
 			return sendWeixinText(options, to, text);
 		},
 		logout: () => {

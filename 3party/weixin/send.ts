@@ -28,7 +28,7 @@ export async function sendWeixinText(
 	content: string,
 ): Promise<WeixinSendResult> {
 	const plain = toPlainText(content);
-	if (!plain) return { ok: false, chunks: 0, error: "内容为空" };
+	if (!plain) return { ok: false, chunks: 0, error: "内容为空。" };
 	const chunks = splitText(plain, options.maxLength);
 	const sleep = options.sleepImpl ?? defaultSleep;
 	let sent = 0;
@@ -52,7 +52,7 @@ async function sendChunk(
 	const attempts = Math.max(0, Math.floor(options.retries)) + 1;
 	let contextToken = readContextToken(options.dataDir, options.accountId, to);
 	let droppedToken = false;
-	let lastError = "发送失败";
+	let lastError = "发送失败。";
 	for (let attempt = 0; attempt < attempts; attempt++) {
 		let response: IlinkResponse | undefined;
 		try {

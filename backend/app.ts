@@ -112,7 +112,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const injectClientConfig = (html: string) =>
 		html.split("__CLIENT_CONFIG__").join(JSON.stringify({ tenantId: config.tenantId, workflowMineTimeoutMs: config.workflowMineTimeoutMs }));
 	const injectTenant = (html: string) => html.split("__APP_TENANT_ID__").join(JSON.stringify(config.tenantId));
-	const CLIENT_FUNC_FILES = ["base.js", "charts.js", "origin_dialog.js", "subagents_record.js", "current_turn_record.js", "function_supports.js", "history_dialogs.js", "keywords_manager.js", "ontime_tasks.js", "workflow.js", "init.js"];
+	const CLIENT_FUNC_FILES = ["base.js", "charts.js", "origin_dialog.js", "subagents_record.js", "current_turn_record.js", "function_supports.js", "history_dialogs.js", "keywords_manager.js", "ontime_tasks.js", "workflow.js", "live_updates.js", "init.js"];
 	const clientFuncsHtml = () =>
 		CLIENT_FUNC_FILES.map((f) => "<script>\n" + readFileSync(path.join(frontDir, "client_functions", f), "utf8") + "\n</script>").join("\n");
 	const renderClient = () =>

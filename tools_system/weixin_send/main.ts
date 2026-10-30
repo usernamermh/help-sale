@@ -40,7 +40,7 @@ function currentAccount() {
 
 export async function execute(ctx: ToolContext, params: Params) {
 	if (!config.weixinEnabled) {
-		return reply("微信通道未启用(help-sale.config.yaml 的 weixin.enabled=false),无法发送。");
+		return reply("微信通道未启用（help-sale.config.yaml 的 weixin.enabled=false），无法发送。");
 	}
 	const action = params?.action ?? "send";
 
@@ -57,10 +57,10 @@ export async function execute(ctx: ToolContext, params: Params) {
 
 	const to = String(params?.to ?? "").trim();
 	const text = String(params?.text ?? "").trim();
-	if (!to || !text) return reply("action=send 时,to 与 text 都是必填。");
+	if (!to || !text) return reply("action=send 时，to 与 text 都是必填的。");
 
 	const account = currentAccount();
-	if (!account) return reply("尚未登录微信:先在控制台调用 POST /api/v1/weixin/login 扫码登录。");
+	if (!account) return reply("尚未登录微信：先在控制台调用 POST /api/v1/weixin/login 扫码登录。");
 
 	const result = await sendWeixinText(
 		{
@@ -75,6 +75,6 @@ export async function execute(ctx: ToolContext, params: Params) {
 		to,
 		text,
 	);
-	if (!result.ok) return reply(`发送失败:${result.error ?? "unknown"}`, { ok: false, chunks: result.chunks });
-	return reply(`已发送(${result.chunks} 条)`, { ok: true, chunks: result.chunks });
+	if (!result.ok) return reply(`发送失败：${result.error ?? "unknown"}|`, { ok: false, chunks: result.chunks });
+	return reply(`已发送（${result.chunks} 条）`, { ok: true, chunks: result.chunks });
 }

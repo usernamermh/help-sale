@@ -8,6 +8,7 @@ import { createWeixinDispatcher } from "./dispatch.js";
 import { describeError, ilinkHeaders, isRateLimited, isSessionExpired, isSuccess, toInbound } from "./ilink.js";
 import { sendWeixinText } from "./send.js";
 import { WeixinDedup, readAccount, readContextToken, readSyncBuf, setContextToken, writeAccount, writeSyncBuf } from "./store.js";
+import { subscribeThreadEvents, type ThreadEvent } from "../../backend/services/thread-events.js";
 import { extractText, maskId, splitText, toPlainText } from "./text.js";
 
 const dirs: string[] = [];
@@ -368,6 +369,87 @@ describe("入站分发", () => {
 		releaseRun();
 		await first; await second;
 		expect(sent).toEqual(["收到", "收到", "结果", "结果"]);
+		db.close();
+	});
+
+	it("写入线程时把消息与标题广播给网页端", async () => {
+		const dir = tempDir();
+		const db = openDatabase(":memory:");
+		requireTenant(db, "t_test", "测试租户");
+		const events: ThreadEvent[] = [];
+		const unsubscribe = subscribeThreadEvents((event) => events.push(event));
+		const fetchImpl = (async () => jsonResponse({ ret: 0, errcode: 0 })) as unknown as typeof fetch;
+		const dispatcher = createWeixinDispatcher({
+			db,
+			tenantId: "t_test",
+			autoReply: true,
+			agentTimeoutMs: 5000,
+			allowFrom: [],
+			unsupportedText: "不支持",
+			ackText: "",
+			send: { dataDir: dir, baseUrl: "https://ilink.example", accountId: "acc", token: "tk", maxLength: 2000, retries: 0, retryDelayMs: 0, fetchImpl },
+			runAgent: async () => ({ runId: "run-4", answer: "结果" }),
+		});
+		await dispatcher({
+			messageId: "m6",
+			fromUserId: "wxid_e",
+			toUserId: "bot",
+			roomId: "",
+			msgType: 1,
+			items: [{ type: 1, text_item: { text: "同步到网页" } }],
+			contextToken: "",
+			raw: {},
+		});
+		unsubscribe();
+		expect(events.map((e) => e.type)).toEqual(["title", "message"]);
+		expect(events[0].title).toBe("同步到网页");
+		expect(events[1].role).toBe("user");
+		expect(events[1].text).toBe("同步到网页");
+		expect(events[1].tenantId).toBe("t_test");
+		db.close();
+	});
+
+	it("命令消息直接回结果:不跑 agent、不发确认语", async () => {
+		const dir = tempDir();
+		const db = openDatabase(":memory:");
+		requireTenant(db, "t_test", "测试租户");
+		const sent: string[] = [];
+		const fetchImpl = (async (_url: string, init?: RequestInit) => {
+			const body = JSON.parse(String(init?.body));
+			sent.push(body.msg.item_list[0].text_item.text);
+			return jsonResponse({ ret: 0, errcode: 0 });
+		}) as unknown as typeof fetch;
+		let ranAgent = 0;
+		const dispatcher = createWeixinDispatcher({
+			db,
+			tenantId: "t_test",
+			autoReply: true,
+			agentTimeoutMs: 5000,
+			allowFrom: [],
+			unsupportedText: "不支持",
+			ackText: "收到",
+			handleCommand: async ({ text }) => (text === "/help" ? "命令清单" : undefined),
+			send: { dataDir: dir, baseUrl: "https://ilink.example", accountId: "acc", token: "tk", maxLength: 2000, retries: 0, retryDelayMs: 0, fetchImpl },
+			runAgent: async () => { ranAgent += 1; return { runId: "run-5", answer: "不该跑" }; },
+		});
+		const inbound = (messageId: string, text: string) => ({
+			messageId,
+			fromUserId: "wxid_f",
+			toUserId: "bot",
+			roomId: "",
+			msgType: 1,
+			items: [{ type: 1, text_item: { text } }],
+			contextToken: "",
+			raw: {},
+		});
+
+		await dispatcher(inbound("m7", "/help"));
+		expect(sent).toEqual(["命令清单"]);
+		expect(ranAgent).toBe(0);
+
+		await dispatcher(inbound("m8", "你好"));
+		expect(sent).toEqual(["命令清单", "收到", "不该跑"]);
+		expect(ranAgent).toBe(1);
 		db.close();
 	});
 });

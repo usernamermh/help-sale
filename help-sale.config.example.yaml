@@ -468,8 +468,12 @@ weixin:
   # 收到消息是否自动跑 agent 并回复
   autoReply: true
   # 收到消息后立刻回的确认语(留空字符串表示不回)
-  ackText: "收到,正在处理,请稍等。"
+  ackText: "收到，正在处理，请稍等。"
   # 非文字消息 / agent 失败时的兜底回复
-  unsupportedText: "目前只支持文字消息,图片和语音请稍后再试。"
+  unsupportedText: "目前只支持文字消息，图片和语音请稍后再试。"
+  # 是否允许 /help /new /sessions 这类会话命令
+  commandsEnabled: true
+  # /sessions 最多列几条历史会话
+  sessionsLimit: 10
   # 只接受这些微信 openid 的消息;空数组表示不限制
   allowFrom: []

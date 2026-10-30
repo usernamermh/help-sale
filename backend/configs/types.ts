@@ -60,6 +60,8 @@ export interface AppConfig {
 	weixinAutoReply: boolean;
 	weixinAckText: string;
 	weixinUnsupportedText: string;
+	weixinCommandsEnabled: boolean;
+	weixinSessionsLimit: number;
 	weixinAllowFrom: string[];
 	knowledgeSearchLimit: number;
 	mysqlEnabled: boolean;
@@ -193,6 +195,6 @@ export type FeaturesConfig = Pick<AppConfig,
 export type WeixinConfig = Pick<AppConfig,
 	| "weixinEnabled" | "weixinBaseUrl" | "weixinAccountId" | "weixinToken" | "weixinTenantId" | "weixinBotType"
 	| "weixinMaxMessageLength" | "weixinSendRetries" | "weixinSendRetryDelayMs" | "weixinPollTimeoutMs"
-	| "weixinDedupTtlSeconds" | "weixinAgentTimeoutMs" | "weixinAutoReply" | "weixinAckText" | "weixinUnsupportedText" | "weixinAllowFrom">;
+	| "weixinDedupTtlSeconds" | "weixinAgentTimeoutMs" | "weixinAutoReply" | "weixinAckText" | "weixinUnsupportedText" | "weixinCommandsEnabled" | "weixinSessionsLimit" | "weixinAllowFrom">;
 /** milvus_backend + milvus_docker_compose 段:Milvus 部署清单(整体透出,不做字段级校验) */
 export type MilvusDeployConfig = Pick<AppConfig, "milvusBackend" | "milvusDockerCompose">;

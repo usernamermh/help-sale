@@ -28,7 +28,7 @@ export function registerWeixinRoutes(app: FastifyInstance, ctx: WeixinContext): 
 		method: ["GET", "POST"],
 		url: "/api/v1/weixin/login",
 		handler: async (_request, reply) => {
-			if (!ctx.enabled) return reply.code(400).send({ error: "weixin_disabled", message: "微信通道未启用(weixin.enabled=false)" });
+			if (!ctx.enabled) return reply.code(400).send({ error: "weixin_disabled", message: "微信通道未启用（weixin.enabled=false）" });
 			try {
 				return await ctx.startLogin();
 			} catch (error) {
@@ -53,10 +53,10 @@ export function registerWeixinRoutes(app: FastifyInstance, ctx: WeixinContext): 
 	app.post<{ Body: { to?: string; text?: string } }>("/api/v1/weixin/send", async (request, reply) => {
 		const to = String(request.body?.to ?? "").trim();
 		const text = String(request.body?.text ?? "").trim();
-		if (!to || !text) return reply.code(400).send({ error: "invalid_request", message: "to 与 text 都是必填" });
-		if (!ctx.enabled) return reply.code(400).send({ error: "weixin_disabled", message: "微信通道未启用(weixin.enabled=false)" });
+		if (!to || !text) return reply.code(400).send({ error: "invalid_request", message: "to 与 text 都是必填的。" });
+		if (!ctx.enabled) return reply.code(400).send({ error: "weixin_disabled", message: "微信通道未启用（weixin.enabled=false）" });
 		const result = await ctx.sendText(to, text);
-		if (!result.ok) return reply.code(502).send({ error: "weixin_send_failed", message: result.error ?? "发送失败", chunks: result.chunks });
+		if (!result.ok) return reply.code(502).send({ error: "weixin_send_failed", message: result.error ?? "发送失败。", chunks: result.chunks });
 		return result;
 	});
 
@@ -78,10 +78,10 @@ export function registerWeixinRoutes(app: FastifyInstance, ctx: WeixinContext): 
 		const kind = String(request.body?.kind ?? "").trim();
 		const boundId = String(request.body?.id ?? "").trim();
 		if (!openid || !BIND_KINDS.has(kind) || !boundId) {
-			return reply.code(400).send({ error: "invalid_request", message: "openid、kind(sales|customers)、id 都是必填" });
+			return reply.code(400).send({ error: "invalid_request", message: "openid、kind（sales|customers）、id 都是必填的。" });
 		}
 		if (!getWeixinUser(ctx.db, ctx.tenantId, openid)) {
-			return reply.code(404).send({ error: "weixin_user_not_found", message: "该微信联系人还没有给系统发过消息" });
+			return reply.code(404).send({ error: "weixin_user_not_found", message: "该微信联系人还没有给系统发过消息。" });
 		}
 		const ok = bindWeixinUser(ctx.db, ctx.tenantId, openid, kind, boundId);
 		return { ok, openid, kind, id: boundId };

@@ -11,6 +11,7 @@ import { buildContextForThread, ensureThreadSummary } from "../context-compress.
 import { getThreadSummary } from "../../integrations_pi/tables/agents/summaries.js";
 import { createReflectionCase } from "../../integrations_pi/tables/analysis/reflections.js";
 import { executeToolPage } from "../tool-pagination.js";
+import { subscribeThreadEvents } from "../thread-events.js";
 import { config } from "../../env.js";
 import type { RouteDeps } from "./helpers.js";
 
@@ -35,6 +36,38 @@ export function registerThreadRoutes(app: FastifyInstance, deps: RouteDeps): voi
 		return { runId: result.runId, final: result.final, hasResponse: Boolean(result.final) };
 	});
 
+	// 会话事件流(SSE):微信等外部渠道写入消息或改标题时,网页端同步更新,不用手动刷新
+	app.get("/api/v1/agent/threads/stream", async (request, reply) => {
+		reply.hijack();
+		const raw = reply.raw;
+		raw.writeHead(200, {
+			"Content-Type": "text/event-stream; charset=utf-8",
+			"Cache-Control": "no-cache, no-transform",
+			Connection: "keep-alive",
+			"X-Accel-Buffering": "no",
+		});
+		raw.write(": connected\n\n");
+		const unsubscribe = subscribeThreadEvents((event) => {
+			if (event.tenantId !== request.tenantId) return;
+			try {
+				raw.write(`data: ${JSON.stringify(event)}\n\n`);
+			} catch {
+				// 客户端已断开:由 close 事件负责清理
+			}
+		});
+		const heartbeat = setInterval(() => {
+			try {
+				raw.write(": ping\n\n");
+			} catch {
+				// 同上
+			}
+		}, 15000);
+		request.raw.on("close", () => {
+			clearInterval(heartbeat);
+			unsubscribe();
+		});
+		return reply;
+	});
 	app.post("/api/v1/agent/threads", async (request) => {
 		return createThread(deps.db, request.tenantId);
 	});

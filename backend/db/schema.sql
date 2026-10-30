@@ -511,3 +511,16 @@ CREATE TABLE IF NOT EXISTS weixin_messages (
 );
 CREATE INDEX IF NOT EXISTS idx_wxm_tenant ON weixin_messages (tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_wxm_msgid ON weixin_messages (tenant_id, direction, message_id);
+
+-- v39:微信会话目录(一个联系人可以有多个会话,/sessions 与 /switch 用)
+CREATE TABLE IF NOT EXISTS weixin_threads (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	openid TEXT NOT NULL,
+	thread_id TEXT NOT NULL,
+	title TEXT,
+	last_active_at TEXT,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	UNIQUE (tenant_id, openid, thread_id)
+);
+CREATE INDEX IF NOT EXISTS idx_wxt_tenant ON weixin_threads (tenant_id, openid, last_active_at DESC);

@@ -65,7 +65,7 @@ export function createLoginManager(options: LoginManagerOptions): LoginManager {
 			});
 			const qrcode = String(response.qrcode ?? "").trim();
 			const qrcodeUrl = String(response.qrcode_img_content ?? "").trim();
-			if (!qrcode) throw new Error(`取二维码失败: ${JSON.stringify(response).slice(0, 200)}`);
+			if (!qrcode) throw new Error(`取二维码失败：${JSON.stringify(response).slice(0, 200)}`);
 			const stamp = now();
 			return save({
 				id: randomUUID(),
@@ -80,7 +80,7 @@ export function createLoginManager(options: LoginManagerOptions): LoginManager {
 
 		async poll(id: string): Promise<LoginTicket> {
 			const ticket = tickets.get(id);
-			if (!ticket) throw new Error("登录会话不存在或已过期,请重新获取二维码");
+			if (!ticket) throw new Error("登录会话不存在或已过期，请重新获取二维码。");
 			if (ticket.status === "confirmed" || ticket.status === "failed") return ticket;
 
 			const response = await apiGet({
@@ -104,7 +104,7 @@ export function createLoginManager(options: LoginManagerOptions): LoginManager {
 			}
 			if (status === "expired") {
 				ticket.status = "expired";
-				ticket.error = "二维码已过期,请重新获取";
+				ticket.error = "二维码已过期，请重新获取。";
 				return ticket;
 			}
 			if (status === "confirmed") {
@@ -112,7 +112,7 @@ export function createLoginManager(options: LoginManagerOptions): LoginManager {
 				const token = String(response.bot_token ?? "").trim();
 				if (!accountId || !token) {
 					ticket.status = "failed";
-					ticket.error = "登录确认但缺少账号或令牌";
+					ticket.error = "登录已确认，但没拿到账号或令牌。";
 					return ticket;
 				}
 				const account: WeixinAccount = {
