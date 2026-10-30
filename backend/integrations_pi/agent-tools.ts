@@ -216,3 +216,13 @@ export async function createSalesAgentTools(deps: SalesAgentToolDeps, opts: Sale
 	const discoveryTools = createToolDiscoveryTools(catalog, { topK: config.toolsCatalogTopK, maxInspect: config.toolsCatalogMaxInspect }, deps.recallState);	registerDynamicLabels(discoveryTools.map((t) => ({ name: t.name, label: t.label ?? t.name })));
 	return [...filteredExternal, ...discoveryTools, systemFinalTool()];
 }
+
+/**
+ * 启动预热:把工具装配先跑一遍(目录导入、工作流校验、外部 MCP 列表)。
+ * 冷启动那次装配实测要几秒到几十秒(动态导入 + MCP 握手),预热后第一条用户消息就不用等它。
+ */
+export async function warmupAgentTools(deps: SalesAgentToolDeps): Promise<{ toolCount: number; ms: number }> {
+	const startedAt = Date.now();
+	const tools = await createSalesAgentTools(deps, {});
+	return { toolCount: tools.length, ms: Date.now() - startedAt };
+}

@@ -12,6 +12,8 @@ import type { ModelRuntime } from "./integrations_pi/models.js";
 import { registerRoutes } from "./services/routes/index.js";
 import type { RouteDeps } from "./services/routes/index.js";
 import { registerMcp } from "./mcp/index.js";
+import { startMcpToolWarmup } from "./mcp/warmup.js";
+import { warmupAgentTools } from "./integrations_pi/agent-tools.js";
 import { registerWeixin } from "../3party/weixin/index.js";
 import { createSyncMysqlDb } from "./db/mysql/client.js";
 import { createReminderQueue, type ReminderQueue } from "./integrations_db/reminder-queue.js";
@@ -85,8 +87,17 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	});
 
 	const deps: RouteDeps = { db, store, dataDir, logDir, runtime: options.runtime, streamFn: options.streamFn, reminders };
+
+	// 工具装配预热:后台跑,不挡启动;第一条消息就不会为"冷装配"买单
+	if (!process.env.VITEST) {
+		void warmupAgentTools({ db, tenantId: config.tenantId, store })
+			.then((r) => console.log(`[warmup] 工具装配预热完成: ${r.toolCount} 个工具,${r.ms}ms`))
+			.catch((error: unknown) => console.warn(`[warmup] 工具装配预热失败: ${error instanceof Error ? error.message : String(error)}`));
+	}
 	registerRoutes(app, deps);
 	registerMcp(app, { db, tenantId: config.tenantId });
+	// 外部 MCP 工具列表:启动就预热,之后在缓存过期前后台续期,别让用户消息等外部握手
+	const stopMcpWarmup = startMcpToolWarmup(config.mcpServers);
 	// 微信通道(iLink 机器人):扫码登录、长轮询收消息、agent 回复;未启用时只挂状态接口
 	const stopWeixin = registerWeixin(app, { db, dataDir, store, runtime: options.runtime, streamFn: options.streamFn });
 
@@ -163,6 +174,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 
 	app.addHook("onClose", async () => {
 		stopWeixin();
+		stopMcpWarmup();
 		stopSubagents();
 		stopAutomation();
 		await Promise.allSettled([store.close(), reminders.close(), closeStopSignal()]);

@@ -2,7 +2,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { AgentEvent } from "@earendil-works/pi-agent-core";
 import { toClientEvents } from "../integrations_pi/events-adapter.js";
-import { appendAgentEvent } from "../integrations_pi/tables/agents/events.js";
+import { appendAgentEvents } from "../integrations_pi/tables/agents/events.js";
 
 export interface TimelineRecorder {
 	listen(event: AgentEvent): void;
@@ -15,6 +15,9 @@ export interface TimelineRecorder {
 	record(eventType: "tool_start" | "tool_end", data: { toolName?: string; payload?: unknown }): void;
 	flush(): Promise<void>;
 }
+
+/** 只服务实时展示、不落库的事件类型。 */
+const STREAMING_ONLY_EVENTS = new Set(["text_delta", "message_update", "tool_update"]);
 
 interface PendingEvent {
 	eventType: string;
@@ -31,6 +34,9 @@ export function createTimelineRecorder(
 	return {
 		listen(event) {
 			for (const clientEvent of toClientEvents(event)) {
+				// 流式碎片(逐字增量、中间态)只用于实时展示,回放靠 message / tool_* 就够;
+				// 它们占事件总数九成以上,逐条落库会把一轮几十次 SQL 变成上百次。
+				if (STREAMING_ONLY_EVENTS.has(clientEvent.type)) continue;
 				pending.push({
 					eventType: clientEvent.type,
 					toolName: clientEvent.toolName,
@@ -47,15 +53,19 @@ export function createTimelineRecorder(
 			});
 		},
 		async flush() {
-			for (const item of pending) {
-				await appendAgentEvent(db, {
+			if (pending.length === 0) return;
+			const items = pending.splice(0, pending.length);
+			try {
+				await appendAgentEvents(db, {
 					tenantId: input.tenantId,
 					conversationId: input.conversationId,
 					threadId: input.threadId,
-					...item,
-				}).catch(() => undefined);
+					events: items,
+				});
+			} catch (error) {
+				// 轨迹写失败不影响本轮结果(原实现也是逐条吞错)
+				console.warn(`[timeline] 轨迹落库失败: ${error instanceof Error ? error.message : String(error)}`);
 			}
-			pending.length = 0;
 		},
 	};
 }

@@ -17,6 +17,9 @@ export interface McpServerConfig {
  * 按 url 缓存 5 分钟;真正调用工具时仍走实时 tools/call。
  */
 const toolsCache = new Map<string, { tools: McpTool[]; at: number }>();
+/** 连接失败后的退避窗口:避免每次运行都为一个连不上的外部 server 付连接超时。 */
+const FAILURE_BACKOFF_MS = 5 * 60 * 1000;
+const failureBackoff = new Map<string, number>();
 const TOOLS_TTL_MS = 5 * 60 * 1000;
 
 /** 中日韩表意文字:用来判断外部工具元数据里有没有中文 */
@@ -101,13 +104,25 @@ export class McpClient {
 		return result;
 	}
 
-	/** 拉取外部工具列表。 */
+	/** 拉取外部工具列表(带缓存与失败退避)。 */
 	async listTools(): Promise<McpTool[]> {
 		const cached = toolsCache.get(this.cfg.url);
 		if (cached && Date.now() - cached.at < TOOLS_TTL_MS) return cached.tools;
-		const tools = await this.listToolsFresh();
-		toolsCache.set(this.cfg.url, { tools, at: Date.now() });
-		return tools;
+		// 失败退避:最近刚连不上的 server 不再让用户消息等着重试,改由后台预热去探活
+		const blockedUntil = failureBackoff.get(this.cfg.url) ?? 0;
+		if (Date.now() < blockedUntil) {
+			const left = Math.ceil((blockedUntil - Date.now()) / 1000);
+			throw new Error(`MCP ${this.cfg.name} 最近连接失败,${left}s 内不再尝试(后台会继续预热)`);
+		}
+		try {
+			const tools = await this.listToolsFresh();
+			toolsCache.set(this.cfg.url, { tools, at: Date.now() });
+			failureBackoff.delete(this.cfg.url);
+			return tools;
+		} catch (error) {
+			failureBackoff.set(this.cfg.url, Date.now() + FAILURE_BACKOFF_MS);
+			throw error;
+		}
 	}
 
 	/** 绕过缓存强制拉取(缓存过期/首连时使用)。 */
@@ -180,4 +195,28 @@ export function mcpToolToAgentTool(serverName: string, tool: McpTool, client: Mc
 			return { content: [{ type: "text", text: text || "(无返回)" }], details: null };
 		},
 	};
+}
+
+/** 工具列表缓存有效期(毫秒):后台预热按它提前刷新。 */
+export const MCP_TOOLS_TTL_MS = TOOLS_TTL_MS;
+
+/**
+ * 主动刷新若干 server 的工具列表(后台预热用)。
+ * 目的不是"取数据",而是把 5 分钟缓存到期后的那次网络往返挪到后台 ——
+ * 否则缓存一过期,下一条用户消息就要干等一次外部 MCP 握手(实测 20 秒)。
+ */
+export async function refreshMcpTools(servers: McpServerConfig[]): Promise<{ ok: string[]; failed: string[] }> {
+	const ok: string[] = [];
+	const failed: string[] = [];
+	for (const server of servers) {
+		try {
+			await new McpClient(server).listToolsFresh();
+			failureBackoff.delete(server.url); // 后台探活成功,解除退避
+			ok.push(server.name);
+		} catch (error) {
+			failed.push(server.name);
+			console.warn(`[mcp-client] 刷新 ${server.name} 工具列表失败: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+	return { ok, failed };
 }
