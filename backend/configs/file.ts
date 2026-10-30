@@ -126,6 +126,7 @@ export interface FileConfig {
 		dedupTtlSeconds?: number;
 		agentTimeoutMs?: number;
 		autoReply?: boolean;
+		ackText?: string;
 		unsupportedText?: string;
 		allowFrom?: string[];
 	};

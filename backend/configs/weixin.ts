@@ -24,6 +24,7 @@ export function loadWeixinConfig(file: FileConfig): WeixinConfig {
 		weixinDedupTtlSeconds: num(w?.dedupTtlSeconds, "weixin.dedupTtlSeconds"),
 		weixinAgentTimeoutMs: num(w?.agentTimeoutMs, "weixin.agentTimeoutMs"),
 		weixinAutoReply: bool(w?.autoReply, "weixin.autoReply"),
+		weixinAckText: str(w?.ackText, "weixin.ackText"),
 		weixinUnsupportedText: str(w?.unsupportedText, "weixin.unsupportedText"),
 		weixinAllowFrom: strList(w?.allowFrom, "weixin.allowFrom"),
 	};

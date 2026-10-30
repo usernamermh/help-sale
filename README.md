@@ -128,7 +128,7 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 | `tools.fileWrite` | 文件写入工具是否允许写到仓库之外(`allowOutsideRepo`) |
 | `tools.catalog` | 工具编目与召回,见下 |
 | `tools.sql` | SQL 工具的行数上限、执行超时、追加拦截关键字(见「SQL 执行策略」) |
-| `weixin` | 微信 iLink 通道:登录凭据、租户、分片长度、发送重试、轮询超时、去重窗口、agent 超时、允许的联系人(见「微信接入」) |
+| `weixin` | 微信 iLink 通道:登录凭据、租户、分片长度、发送重试、轮询超时、去重窗口、agent 超时、确认语、兜底话术、允许的联系人(见「微信接入」) |
 | `mcp.servers` | 外部 MCP Server 列表 |
 | `knowledge.searchLimit` | 知识检索默认条数 |
 | `vector` / `milvus_backend` / `milvus_docker_compose` | Milvus 旁路与单机部署参数 |
@@ -346,6 +346,9 @@ tools:
 
 行为约定:
 
+- **单 Agent 直答**:微信侧不启用规划与看板子代理,一条消息只跑一轮 agent 并直接出结果 —— 聊天渠道没有网页端那套流式界面,也没有人来触发多代理汇总;
+- **先确认再回答**:收到消息立刻回一条 `weixin.ackText`(留空则不回),agent 跑完再回正式答复。确认语在入队时就发,同一联系人连发多条也不会等到上一条跑完才有反馈;
+- **会话立刻可见**:线程在收到消息时就建好并写入本轮用户消息、用消息内容起标题,网页历史里点开就能看到提问,不用等 agent 结束;
 - **按联系人串行**:同一个 openid 的消息排队处理,两条消息同时到也不会把一条线程写乱;
 - **幂等**:`message_id` 记在 `weixin_messages`,重投递直接跳过;
 - **context_token 回带**:每条出站消息带该联系人最新的 `context_token`;失效(-14 / -2 "unknown error")时自动去掉 token 重试一次;

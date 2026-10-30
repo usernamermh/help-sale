@@ -58,6 +58,7 @@ export interface AppConfig {
 	weixinDedupTtlSeconds: number;
 	weixinAgentTimeoutMs: number;
 	weixinAutoReply: boolean;
+	weixinAckText: string;
 	weixinUnsupportedText: string;
 	weixinAllowFrom: string[];
 	knowledgeSearchLimit: number;
@@ -192,6 +193,6 @@ export type FeaturesConfig = Pick<AppConfig,
 export type WeixinConfig = Pick<AppConfig,
 	| "weixinEnabled" | "weixinBaseUrl" | "weixinAccountId" | "weixinToken" | "weixinTenantId" | "weixinBotType"
 	| "weixinMaxMessageLength" | "weixinSendRetries" | "weixinSendRetryDelayMs" | "weixinPollTimeoutMs"
-	| "weixinDedupTtlSeconds" | "weixinAgentTimeoutMs" | "weixinAutoReply" | "weixinUnsupportedText" | "weixinAllowFrom">;
+	| "weixinDedupTtlSeconds" | "weixinAgentTimeoutMs" | "weixinAutoReply" | "weixinAckText" | "weixinUnsupportedText" | "weixinAllowFrom">;
 /** milvus_backend + milvus_docker_compose 段:Milvus 部署清单(整体透出,不做字段级校验) */
 export type MilvusDeployConfig = Pick<AppConfig, "milvusBackend" | "milvusDockerCompose">;

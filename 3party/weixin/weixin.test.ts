@@ -181,6 +181,8 @@ describe("入站分发", () => {
 		const db = openDatabase(":memory:");
 		requireTenant(db, "t_test", "测试租户");
 		const sent: Array<{ to: string; text: string }> = [];
+		let titleDuringRun = "";
+		let messagesDuringRun: Array<Record<string, unknown>> = [];
 		const fetchImpl = (async (_url: string, init?: RequestInit) => {
 			const body = JSON.parse(String(init?.body));
 			sent.push({ to: body.msg.to_user_id, text: body.msg.item_list[0].text_item.text });
@@ -194,8 +196,17 @@ describe("入站分发", () => {
 			agentTimeoutMs: 5000,
 			allowFrom: [],
 			unsupportedText: "不支持",
+			ackText: "",
 			send: { dataDir: dir, baseUrl: "https://ilink.example", accountId: "acc", token: "tk", maxLength: 2000, retries: 0, retryDelayMs: 0, fetchImpl },
-			runAgent: async (input) => ({ runId: "run-1", answer: `收到:${input.goal}` }),
+			runAgent: async (input) => {
+				// agent 还在跑的时候,网页历史里这条会话就必须已经能打开(有标题、有这轮用户消息)
+				const row = db.prepare("SELECT title FROM agent_threads WHERE id = ?").get(input.threadId) as Record<string, unknown>;
+				titleDuringRun = String(row.title ?? "");
+				messagesDuringRun = db
+					.prepare("SELECT role, content_json FROM agent_thread_messages WHERE thread_id = ? ORDER BY seq")
+					.all(input.threadId) as Array<Record<string, unknown>>;
+				return { runId: "run-1", answer: `收到:${input.goal}` };
+			},
 		});
 
 		await dispatcher({
@@ -211,6 +222,8 @@ describe("入站分发", () => {
 
 		expect(sent).toHaveLength(1);
 		expect(sent[0].text).toBe("收到:今天有哪些待跟进");
+		expect(titleDuringRun).toBe("今天有哪些待跟进");
+		expect(messagesDuringRun.map((m) => m.role)).toEqual(["user"]);
 
 		const user = db.prepare("SELECT * FROM weixin_users WHERE tenant_id = ? AND openid = ?").get("t_test", "wxid_a") as Record<string, unknown>;
 		expect(String(user.thread_id ?? "")).not.toBe("");
@@ -218,7 +231,7 @@ describe("入站分发", () => {
 		expect(thread.title).toBeTruthy();
 
 		const messages = db.prepare("SELECT direction, status FROM weixin_messages WHERE tenant_id = ? ORDER BY created_at").all("t_test") as Array<Record<string, unknown>>;
-		expect(messages.map((m) => `${m.direction}:${m.status}`)).toEqual(["in:received", "out:sent"]);
+		expect(messages.map((m) => `${m.direction}:${m.status}`).sort()).toEqual(["in:received", "out:sent"]);
 
 		// 同一条 message_id 重放不再处理
 		await dispatcher({
@@ -253,6 +266,7 @@ describe("入站分发", () => {
 			agentTimeoutMs: 5000,
 			allowFrom: [],
 			unsupportedText: "目前只支持文字消息",
+			ackText: "",
 			send: { dataDir: dir, baseUrl: "https://ilink.example", accountId: "acc", token: "tk", maxLength: 2000, retries: 0, retryDelayMs: 0, fetchImpl },
 			runAgent: async () => ({ answer: "不该被调用" }),
 		});
@@ -268,6 +282,92 @@ describe("入站分发", () => {
 			raw: {},
 		});
 		expect(sent).toEqual(["目前只支持文字消息"]);
+		db.close();
+	});
+
+	it("配置了确认语时:先回确认,再回结果", async () => {
+		const dir = tempDir();
+		const db = openDatabase(":memory:");
+		requireTenant(db, "t_test", "测试租户");
+		const sent: string[] = [];
+		const fetchImpl = (async (_url: string, init?: RequestInit) => {
+			const body = JSON.parse(String(init?.body));
+			sent.push(body.msg.item_list[0].text_item.text);
+			return jsonResponse({ ret: 0, errcode: 0 });
+		}) as unknown as typeof fetch;
+
+		const dispatcher = createWeixinDispatcher({
+			db,
+			tenantId: "t_test",
+			autoReply: true,
+			agentTimeoutMs: 5000,
+			allowFrom: [],
+			unsupportedText: "不支持",
+			ackText: "收到,正在处理",
+			send: { dataDir: dir, baseUrl: "https://ilink.example", accountId: "acc", token: "tk", maxLength: 2000, retries: 0, retryDelayMs: 0, fetchImpl },
+			runAgent: async () => ({ runId: "run-2", answer: "结果在这里" }),
+		});
+
+		await dispatcher({
+			messageId: "m3",
+			fromUserId: "wxid_c",
+			toUserId: "bot",
+			roomId: "",
+			msgType: 1,
+			items: [{ type: 1, text_item: { text: "帮我看看客户" } }],
+			contextToken: "",
+			raw: {},
+		});
+		expect(sent).toEqual(["收到,正在处理", "结果在这里"]);
+		const statuses = db.prepare("SELECT direction, status FROM weixin_messages WHERE tenant_id = ? ORDER BY created_at").all("t_test") as Array<Record<string, unknown>>;
+		expect(statuses.map((r) => `${r.direction}:${r.status}`).sort()).toEqual(["in:received", "out:sent", "out:sent"]);
+		db.close();
+	});
+
+	it("同一联系人连发两条:第二条的确认不会等第一条跑完", async () => {
+		const dir = tempDir();
+		const db = openDatabase(":memory:");
+		requireTenant(db, "t_test", "测试租户");
+		const sent: string[] = [];
+		const fetchImpl = (async (_url: string, init?: RequestInit) => {
+			const body = JSON.parse(String(init?.body));
+			sent.push(body.msg.item_list[0].text_item.text);
+			return jsonResponse({ ret: 0, errcode: 0 });
+		}) as unknown as typeof fetch;
+
+		let releaseRun: () => void = () => undefined;
+		const gate = new Promise<void>((resolve) => { releaseRun = resolve; });
+		const dispatcher = createWeixinDispatcher({
+			db,
+			tenantId: "t_test",
+			autoReply: true,
+			agentTimeoutMs: 5000,
+			allowFrom: [],
+			unsupportedText: "不支持",
+			ackText: "收到",
+			send: { dataDir: dir, baseUrl: "https://ilink.example", accountId: "acc", token: "tk", maxLength: 2000, retries: 0, retryDelayMs: 0, fetchImpl },
+			runAgent: async () => { await gate; return { runId: "run-3", answer: "结果" }; },
+		});
+		const inbound = (messageId: string, text: string) => ({
+			messageId,
+			fromUserId: "wxid_d",
+			toUserId: "bot",
+			roomId: "",
+			msgType: 1,
+			items: [{ type: 1, text_item: { text } }],
+			contextToken: "",
+			raw: {},
+		});
+
+		const first = dispatcher(inbound("m4", "第一条"));
+		await new Promise((resolve) => setTimeout(resolve, 30));
+		const second = dispatcher(inbound("m5", "第二条"));
+		await new Promise((resolve) => setTimeout(resolve, 30));
+		// 第一条 agent 还卡着,两条确认都已经发出去了
+		expect(sent).toEqual(["收到", "收到"]);
+		releaseRun();
+		await first; await second;
+		expect(sent).toEqual(["收到", "收到", "结果", "结果"]);
 		db.close();
 	});
 });

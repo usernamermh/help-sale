@@ -81,7 +81,7 @@ export interface WeixinMessageInput {
 
 export function recordWeixinMessage(db: DatabaseSync, input: WeixinMessageInput): void {
 	db.prepare(
-		"INSERT INTO weixin_messages (id, tenant_id, openid, direction, message_id, msg_type, content, thread_id, run_id, status, error) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+		"INSERT INTO weixin_messages (id, tenant_id, openid, direction, message_id, msg_type, content, thread_id, run_id, status, error, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
 	).run(
 		randomUUID(),
 		input.tenantId,

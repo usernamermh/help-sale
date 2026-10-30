@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
-import { createThread, setThreadTitle } from "../../backend/integrations_pi/tables/agents/threads.js";
+import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import { appendThreadMessage, createThread, setThreadTitle } from "../../backend/integrations_pi/tables/agents/threads.js";
 import { extractText, maskId } from "./text.js";
 import { ensureWeixinUser, isMessageRecorded, recordWeixinMessage, setWeixinThread, getWeixinUser } from "./tables.js";
 import type { WeixinSendOptions } from "./send.js";
@@ -12,6 +13,8 @@ export interface AgentRunInput {
 	tenantId: string;
 	threadId: string;
 	goal: string;
+	/** 本轮之前的会话历史(不含本轮这条用户消息) */
+	history: AgentMessage[];
 }
 
 export interface AgentRunOutput {
@@ -28,8 +31,12 @@ export interface WeixinDispatchOptions {
 	agentTimeoutMs: number;
 	allowFrom: string[];
 	unsupportedText: string;
+	/** 收到消息后立刻回一条"已收到";留空表示不回 */
+	ackText: string;
 	send: WeixinSendOptions;
 	runAgent: WeixinAgentRunner;
+	/** 组装本轮之前的会话历史(在写入本轮用户消息之前调用) */
+	buildHistory?: (input: { tenantId: string; threadId: string; goal: string }) => Promise<AgentMessage[]>;
 	onLog?: (line: string) => void;
 }
 
@@ -58,9 +65,13 @@ export function createWeixinDispatcher(options: WeixinDispatchOptions): (inbound
 	const chains = new Map<string, Promise<void>>();
 	const log = options.onLog ?? (() => undefined);
 
-	const handle = async (inbound: WeixinInbound): Promise<void> => {
+	/**
+	 * 入队前的准入:查白名单、去重、写入站审计。
+	 * 返回 undefined 表示这条消息不该处理(未授权/重复);返回空串表示非文字消息。
+	 */
+	const admit = (inbound: WeixinInbound): string | undefined => {
 		const openid = inbound.fromUserId;
-		if (!openid) return;
+		if (!openid) return undefined;
 		if (options.allowFrom.length > 0 && !options.allowFrom.includes(openid)) {
 			log(`[weixin] 忽略未授权联系人 ${maskId(openid)}`);
 			recordWeixinMessage(options.db, {
@@ -73,13 +84,12 @@ export function createWeixinDispatcher(options: WeixinDispatchOptions): (inbound
 				status: "blocked",
 				error: "allowFrom 未包含该联系人",
 			});
-			return;
+			return undefined;
 		}
 		if (isMessageRecorded(options.db, options.tenantId, inbound.messageId)) {
 			log(`[weixin] 跳过重复消息 ${maskId(inbound.messageId)}`);
-			return;
+			return undefined;
 		}
-
 		const text = extractText(inbound.items);
 		recordWeixinMessage(options.db, {
 			tenantId: options.tenantId,
@@ -90,7 +100,12 @@ export function createWeixinDispatcher(options: WeixinDispatchOptions): (inbound
 			content: text,
 			status: "received",
 		});
+		return text;
+	};
 
+	const handle = async (inbound: WeixinInbound, text: string): Promise<void> => {
+		const openid = inbound.fromUserId;
+		if (!openid) return;
 		if (!text) {
 			if (options.autoReply) {
 				await reply(options, openid, options.unsupportedText, undefined, undefined);
@@ -107,16 +122,26 @@ export function createWeixinDispatcher(options: WeixinDispatchOptions): (inbound
 		}
 
 		const goal = user.boundKind && user.boundId ? `(微信联系人已绑定${user.boundKind}:${user.boundId})\n${text}` : text;
+
+		// 先把本轮消息落进线程:网页历史里这条会话立刻可见可打开,agent 还在跑也不会是空会话
+		const title = text.replace(/\s+/g, " ").trim();
+		setThreadTitle(options.db, options.tenantId, threadId, title.length > 24 ? `${title.slice(0, 24)}…` : title);
+		let history: AgentMessage[] = [];
+		if (options.buildHistory) {
+			try {
+				history = await options.buildHistory({ tenantId: options.tenantId, threadId, goal });
+			} catch (error) {
+				log(`[weixin] 组装历史失败(按无历史处理): ${error instanceof Error ? error.message : String(error)}`);
+			}
+		}
+		appendThreadMessage(options.db, options.tenantId, threadId, "user", [{ type: "text", text }]);
+
 		let answer = "";
 		let runId: string | undefined;
 		try {
-			const result = await withTimeout(options.runAgent({ tenantId: options.tenantId, threadId, goal }), options.agentTimeoutMs, "agent 执行超时");
+			const result = await withTimeout(options.runAgent({ tenantId: options.tenantId, threadId, goal, history }), options.agentTimeoutMs, "agent 执行超时");
 			answer = result.answer?.trim() ?? "";
 			runId = result.runId;
-			if (answer) {
-				const title = text.replace(/\s+/g, " ").trim();
-				setThreadTitle(options.db, options.tenantId, threadId, title.length > 24 ? `${title.slice(0, 24)}…` : title);
-			}
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			log(`[weixin] agent 失败 openid=${maskId(openid)}: ${message}`);
@@ -145,10 +170,23 @@ export function createWeixinDispatcher(options: WeixinDispatchOptions): (inbound
 		await reply(options, openid, answer, threadId, runId);
 	};
 
-	return (inbound: WeixinInbound): Promise<void> => {
+	/** 入队前先回一条确认:同一联系人连发多条时,第二条也不会等到前一条跑完才有反馈。 */
+	const acknowledge = async (openid: string, text: string): Promise<void> => {
+		if (!options.autoReply || !options.ackText || !text) return;
+		try {
+			await reply(options, openid, options.ackText, undefined, undefined);
+		} catch (error) {
+			log(`[weixin] 回确认失败: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	};
+
+	return async (inbound: WeixinInbound): Promise<void> => {
 		const key = inbound.fromUserId || "unknown";
+		const text = admit(inbound);
+		if (text === undefined) return;
+		await acknowledge(key, text);
 		const previous = chains.get(key) ?? Promise.resolve();
-		const next = previous.then(() => handle(inbound)).catch((error: unknown) => {
+		const next = previous.then(() => handle(inbound, text)).catch((error: unknown) => {
 			log(`[weixin] 处理消息失败: ${error instanceof Error ? error.message : String(error)}`);
 		});
 		chains.set(key, next);

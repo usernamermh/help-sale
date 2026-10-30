@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { DatabaseSync } from "node:sqlite";
 import type { AgentMessage, StreamFn } from "@earendil-works/pi-agent-core";
 import { config } from "../../backend/env.js";
-import { runSalesAgentWithPlan, stripChartsForHistory } from "../../backend/integrations_pi/agent-runtime.js";
+import { runSalesAgent, stripChartsForHistory } from "../../backend/integrations_pi/agent-runtime.js";
 import { appendThreadMessage } from "../../backend/integrations_pi/tables/agents/threads.js";
 import { buildContextForThread } from "../../backend/services/context-compress.js";
 import type { ModelRuntime } from "../../backend/integrations_pi/models.js";
@@ -31,19 +31,27 @@ export interface WeixinRuntimeDeps {
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, Math.max(0, ms)));
 
-/** 把一条微信消息送进现有 agent 链路,取最终回答。 */
-function createAgentRunner(deps: WeixinRuntimeDeps): WeixinAgentRunner {
-	return async ({ tenantId, threadId, goal }) => {
-		const built = buildContextForThread(deps.db, tenantId, threadId, { goal });
-		const history = built.messages.map((message) => ({
+/** 本轮之前的会话历史:MCP/向量等上下文压缩逻辑与网页端共用同一套。 */
+function weixinHistory(db: DatabaseSync) {
+	return async (input: { tenantId: string; threadId: string; goal: string }): Promise<AgentMessage[]> => {
+		const built = buildContextForThread(db, input.tenantId, input.threadId, { goal: input.goal });
+		return built.messages.map((message) => ({
 			role: message.role as AgentMessage["role"],
 			content: stripChartsForHistory(message.content),
 		})) as AgentMessage[];
-		const result = await runSalesAgentWithPlan(
+	};
+}
+
+/**
+ * 把一条微信消息送进 agent 链路。聊天渠道没有流式界面,也不该等服务端多代理汇总,
+ * 所以走单 Agent 一次执行(不启用 emit_plan / 看板子代理),跑完必有最终回答。
+ */
+function createAgentRunner(deps: WeixinRuntimeDeps): WeixinAgentRunner {
+	return async ({ tenantId, threadId, goal, history }) => {
+		const result = await runSalesAgent(
 			{ db: deps.db, tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
 			{ goal, history, threadId },
 		);
-		appendThreadMessage(deps.db, tenantId, threadId, "user", [{ type: "text", text: goal }]);
 		const answer = result.final?.answer ?? "";
 		if (answer) appendThreadMessage(deps.db, tenantId, threadId, "assistant", [{ type: "text", text: answer }]);
 		return { runId: result.runId, answer };
@@ -114,6 +122,8 @@ export function registerWeixin(app: FastifyInstance, deps: WeixinRuntimeDeps): (
 
 	let stopPoller: () => void = () => undefined;
 
+	const agentRunner = createAgentRunner(deps);
+
 	const dispatchInbound = async (inbound: WeixinInbound): Promise<void> => {
 		if (inbound.contextToken && account) {
 			setContextToken(deps.dataDir, account.accountId, inbound.fromUserId, inbound.contextToken);
@@ -127,8 +137,10 @@ export function registerWeixin(app: FastifyInstance, deps: WeixinRuntimeDeps): (
 			agentTimeoutMs: config.weixinAgentTimeoutMs,
 			allowFrom: config.weixinAllowFrom,
 			unsupportedText: config.weixinUnsupportedText,
+			ackText: config.weixinAckText,
 			send: options,
-			runAgent: createAgentRunner(deps),
+			runAgent: agentRunner,
+			buildHistory: weixinHistory(deps.db),
 			onLog: log,
 		});
 		await dispatcher(inbound);
