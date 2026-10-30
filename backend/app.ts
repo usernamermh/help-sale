@@ -17,6 +17,7 @@ import { warmupAgentTools } from "./integrations_pi/agent-tools.js";
 import { registerWeixin } from "../3party/weixin/index.js";
 import { resolveTenant } from "./services/tenant-context.js";
 import { withTenantGuard } from "./db/tenant-guard.js";
+import { assertTableMappingComplete } from "./db/schema-audit.js";
 import { createSyncMysqlDb } from "./db/mysql/client.js";
 import { createReminderQueue, type ReminderQueue } from "./integrations_db/reminder-queue.js";
 import { closeStopSignal, initStopSignal } from "./services/stop-signal.js";
@@ -67,6 +68,10 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const sessionDbPath = options.dataDir ? path.join(dataDir, "pi-sessions.db") : resolveDbPath(config.sessionDbPath);
 	// 数据存储二选一:local = SQLite 业务库;mysql = 远程 MySQL 业务库(同步桥,仓库层零改动)
 	// 显式传入 dataDir(测试/嵌入式)时一定用本地 SQLite,避免碰到生产 MySQL
+	// 表映射自检:schema 里的表必须都在 data.tables 里(否则租户守卫不会覆盖那张表)
+	const mappingAudit = assertTableMappingComplete(config.tables);
+	console.log(`[config] 表映射自检通过:${mappingAudit.schemaTables.length} 张表全部纳入租户守卫${mappingAudit.extraKeys.length > 0 ? `(另有自定义表 ${mappingAudit.extraKeys.join(", ")})` : ""}`);
+
 	const rawDb: DatabaseSync =
 		options.dataDir || config.dataMode !== "mysql" ? openDatabase(businessDbPath) : (createSyncMysqlDb() as unknown as DatabaseSync);
 	// 租户隔离强制点:业务表语句缺 tenant_id 谓词时按配置告警或直接拦下(MySQL 没有 RLS,这里做应用层强制)
