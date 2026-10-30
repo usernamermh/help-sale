@@ -24,7 +24,7 @@ export interface FileConfig {
 		businessDbPath?: string;
 		sessionDbPath?: string;
 	};
-	tenant?: { defaultTenantId?: string };
+	tenant?: { defaultTenantId?: string; headerTenantAllowed?: boolean; trustedTenantIds?: string[]; dataIsolationMode?: string; apiKeys?: Record<string, string> };
 	model?: {
 		modelId?: string;
 		baseUrl?: string;

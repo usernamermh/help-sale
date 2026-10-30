@@ -27,6 +27,14 @@ data:
   sessionDbPath: backend/data/pi-sessions.db
 tenant:
   defaultTenantId: t_demo
+  # 是否允许用请求头声明租户(开发/内网方便,生产建议 false:只认 API Key 或登录令牌)
+  headerTenantAllowed: true
+  # 受信租户清单:非空时,请求头声明的租户必须在这里面,否则 403
+  trustedTenantIds: ["t_demo"]
+  # 数据隔离模式:off=不检查 / warn=只告警 / enforce=缺 tenant_id 谓词直接拦下
+  dataIsolationMode: "enforce"
+  # 集成方 API Key → 租户 ID 的映射,值放密钥文件(tenant.apiKeys),这里留空
+  apiKeys: {}
 model:
   modelId: your-model-id
   baseUrl: http://your-llm-gateway/v1

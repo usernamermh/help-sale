@@ -30,7 +30,9 @@ export async function notifyOverdue(
 	},
 ): Promise<NotifyResult> {
 	const now = input.now ?? new Date();
-	const ids = await input.reminders.due(now.getTime(), 100);
+	const entries = await input.reminders.due(now.getTime(), 100);
+	// 只处理属于本租户的到期提醒(队列成员带租户前缀)
+	const ids = entries.filter((entry) => entry.tenantId === input.tenantId).map((entry) => entry.taskId);
 	const tasks = ids
 		.map((id) => getTask(db, input.tenantId, id))
 		.filter((t): t is NonNullable<typeof t> => !!t && t.status === "pending");

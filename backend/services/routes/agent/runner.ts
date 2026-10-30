@@ -6,6 +6,7 @@ import { LOCAL_PROVIDER_ID, createModelRegistry, type ModelRuntime } from "../..
 import { getSubagentPrompt } from "../../../prompts/multi-agent.js";
 import { loadExternalAgentTools, externalToolPaths } from "../../external-tools.js";
 import { applyToolPolicy } from "../../../integrations_pi/agent-tools.js";
+import { listTenantIds } from "../../../integrations_pi/tables/automation/runs.js";
 import { listCapabilityStates } from "../../../integrations_pi/tables/agents/capabilities.js";
 import { isStopped } from "../../stop-signal.js";
 import { createTimelineRecorder } from "../../timeline.js";
@@ -133,7 +134,8 @@ export function startSubagentConsumer(deps: SubagentRunnerDeps, tenantIds: strin
 		} catch (error) {
 			console.warn("[subagents] 清理陈旧卡片失败:", error instanceof Error ? error.message : String(error));
 		}
-		const tenants = tenantIds.length > 0 ? tenantIds : ["t_demo"];
+		// 不传就枚举库里的全部租户:后台任务不能只服务"配置里的那个租户"
+		const tenants = tenantIds.length > 0 ? tenantIds : listTenantIds(deps.db);
 		for (const tenantId of tenants) {
 			// 整段都要兜住:轮询里的数据库异常若不接住会从定时器冒出去,直接把服务带崩
 			try {

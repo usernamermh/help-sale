@@ -87,6 +87,14 @@ export interface AppConfig {
 	companyName: string;
 	teamName: string;
 	tenantId: string;
+	/** 是否允许用请求头声明租户(tenant.headerTenantAllowed);生产建议 false,只认 API Key / 登录令牌 */
+	tenantHeaderAllowed: boolean;
+	/** 受信租户清单(tenant.trustedTenantIds):非空时,请求头声明的租户必须在此清单内 */
+	tenantTrustedIds: string[];
+	/** 数据隔离模式(tenant.dataIsolationMode):off / warn / enforce */
+	tenantDataIsolationMode: "off" | "warn" | "enforce";
+	/** 集成方 API Key → 租户 ID(来自密钥文件 tenant.apiKeys) */
+	tenantApiKeys: Record<string, string>;
 	// 业务默认值(defaults 段)
 	insightsDays: number;
 	improvementsDays: number;
@@ -163,7 +171,7 @@ export interface AppConfig {
 /** server + logging 段:监听地址与运行日志。 */
 export type RuntimeConfig = Pick<AppConfig, "host" | "port" | "logEnabled" | "logDir" | "logMaxBytes" | "logLevel" | "logRuntimeFile">;
 /** data + tenant 段:存储模式、表名映射、路径与默认租户。 */
-export type DataConfig = Pick<AppConfig, "dataMode" | "databaseId" | "tables" | "dataDir" | "memoryFile" | "businessDbPath" | "sessionDbPath" | "tenantId">;
+export type DataConfig = Pick<AppConfig, "dataMode" | "databaseId" | "tables" | "dataDir" | "memoryFile" | "businessDbPath" | "sessionDbPath" | "tenantId" | "tenantHeaderAllowed" | "tenantTrustedIds" | "tenantDataIsolationMode" | "tenantApiKeys">;
 /** model 段:模型端点、密钥、上下文窗口与额外请求体。 */
 export type ModelConfig = Pick<AppConfig, "modelId" | "modelBaseUrl" | "modelApiKey" | "modelProxy" | "modelContextWindow" | "modelMaxTokens" | "modelExtraBody">;
 /** context.compression 段:长对话记忆压缩参数。 */

@@ -1,4 +1,4 @@
-import { parseTables, storageMode, str } from "./primitives.js";
+import { parseTables, storageMode, str, bool, strList, strMap } from "./primitives.js";
 import type { FileConfig } from "./file.js";
 import type { DataConfig } from "./types.js";
 
@@ -16,5 +16,9 @@ export function loadDataConfig(file: FileConfig): DataConfig {
 		businessDbPath: str(file.data?.businessDbPath, "data.businessDbPath"),
 		sessionDbPath: str(file.data?.sessionDbPath, "data.sessionDbPath"),
 		tenantId: str(file.tenant?.defaultTenantId, "tenant.defaultTenantId"),
+		tenantHeaderAllowed: bool(file.tenant?.headerTenantAllowed, "tenant.headerTenantAllowed"),
+		tenantTrustedIds: strList(file.tenant?.trustedTenantIds, "tenant.trustedTenantIds"),
+		tenantDataIsolationMode: str(file.tenant?.dataIsolationMode, "tenant.dataIsolationMode") as "off" | "warn" | "enforce",
+		tenantApiKeys: strMap(file.tenant?.apiKeys, "tenant.apiKeys"),
 	};
 }

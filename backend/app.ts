@@ -15,6 +15,8 @@ import { registerMcp } from "./mcp/index.js";
 import { startMcpToolWarmup } from "./mcp/warmup.js";
 import { warmupAgentTools } from "./integrations_pi/agent-tools.js";
 import { registerWeixin } from "../3party/weixin/index.js";
+import { resolveTenant } from "./services/tenant-context.js";
+import { withTenantGuard } from "./db/tenant-guard.js";
 import { createSyncMysqlDb } from "./db/mysql/client.js";
 import { createReminderQueue, type ReminderQueue } from "./integrations_db/reminder-queue.js";
 import { closeStopSignal, initStopSignal } from "./services/stop-signal.js";
@@ -62,15 +64,36 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const sessionDbPath = options.dataDir ? path.join(dataDir, "pi-sessions.db") : resolveDbPath(config.sessionDbPath);
 	// 数据存储二选一:local = SQLite 业务库;mysql = 远程 MySQL 业务库(同步桥,仓库层零改动)
 	// 显式传入 dataDir(测试/嵌入式)时一定用本地 SQLite,避免碰到生产 MySQL
-	const db: DatabaseSync =
+	const rawDb: DatabaseSync =
 		options.dataDir || config.dataMode !== "mysql" ? openDatabase(businessDbPath) : (createSyncMysqlDb() as unknown as DatabaseSync);
+	// 租户隔离强制点:业务表语句缺 tenant_id 谓词时按配置告警或直接拦下(MySQL 没有 RLS,这里做应用层强制)
+	const db: DatabaseSync = config.tenantDataIsolationMode === "off"
+		? rawDb
+		: withTenantGuard(rawDb, { tables: config.tables, mode: config.tenantDataIsolationMode });
 	const store = openSessionStore(dataDir, sessionDbPath);
 
 	if (options.ensureTenant !== false) requireTenant(db, config.tenantId, "示例租户");
 
 	app.decorateRequest("tenantId", "");
-	app.addHook("preHandler", async (request) => {
-		request.tenantId = (request.headers["x-tenant-id"] as string | undefined) ?? config.tenantId;
+	// 租户不再由调用方随意声明:凭证(API Key)优先,请求头只在配置允许时才认,且要落在受信清单内
+	app.addHook("preHandler", async (request, reply) => {
+		const resolved = resolveTenant({
+			headers: request.headers as Record<string, string | string[] | undefined>,
+			apiKeys: config.tenantApiKeys,
+			headerAllowed: config.tenantHeaderAllowed,
+			trustedTenantIds: config.tenantTrustedIds,
+			defaultTenantId: config.tenantId,
+		});
+		if (resolved.error) {
+			appendRuntimeLog(logDir, {
+				level: "error",
+				type: "tenant_rejected",
+				message: `${request.method} ${request.url} 租户校验失败: ${resolved.error.message}`,
+				meta: { tenantHeader: (request.headers["x-tenant-id"] as string | undefined) ?? null },
+			}, { fileName: config.logRuntimeFile, level: config.logLevel, maxBytes: config.logMaxBytes });
+			return reply.code(resolved.error.status).send({ error: "tenant_not_allowed", message: resolved.error.message });
+		}
+		request.tenantId = resolved.tenantId ?? config.tenantId;
 	});
 
 	initStopSignal({
@@ -155,7 +178,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	});
 
 	// ── 后台常驻任务:定时自动化 + 子代理消费者(按配置与调用方开关) ──
-	const stopSubagents = options.subagents === true ? startSubagentConsumer({ db }, [config.tenantId]) : () => undefined;
+	const stopSubagents = options.subagents === true ? startSubagentConsumer({ db }) : () => undefined;
 	const stopAutomation = startAutomationScheduler({
 		db,
 		store,

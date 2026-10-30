@@ -1,11 +1,26 @@
 import { Redis } from "ioredis";
 import { config } from "../env.js";
 
+/** 队列里的条目:租户 + 任务,租户维度进成员名,避免跨租户误删/误读。 */
+export interface ReminderEntry {
+	tenantId: string;
+	taskId: string;
+}
+
 export interface ReminderQueue {
-	add(taskId: string, dueAtMs: number | null): Promise<void>;
-	remove(taskId: string): Promise<void>;
-	due(nowMs: number, limit?: number): Promise<string[]>;
+	add(tenantId: string, taskId: string, dueAtMs: number | null): Promise<void>;
+	remove(tenantId: string, taskId: string): Promise<void>;
+	due(nowMs: number, limit?: number): Promise<ReminderEntry[]>;
 	close(): Promise<void>;
+}
+
+const MEMBER_SEP = "::";
+const member = (tenantId: string, taskId: string) => `${tenantId}${MEMBER_SEP}${taskId}`;
+/** 兼容历史成员(没有租户前缀):租户留空,由调用方按自己租户过滤时自然丢弃。 */
+function parseMember(value: string): ReminderEntry {
+	const index = value.indexOf(MEMBER_SEP);
+	if (index < 0) return { tenantId: "", taskId: value };
+	return { tenantId: value.slice(0, index), taskId: value.slice(index + MEMBER_SEP.length) };
 }
 
 export interface RedisConfig {
@@ -44,21 +59,22 @@ export function createReminderQueue(config: RedisConfig): ReminderQueue {
 	};
 
 	return {
-		async add(taskId, dueAtMs) {
+		async add(tenantId, taskId, dueAtMs) {
 			if (dueAtMs == null || !Number.isFinite(dueAtMs)) return;
 			await op(async () => {
-				await client!.zadd(KEY, dueAtMs, taskId);
+				await client!.zadd(KEY, dueAtMs, member(tenantId, taskId));
 			});
 		},
-		async remove(taskId) {
+		async remove(tenantId, taskId) {
 			await op(async () => {
-				await client!.zrem(KEY, taskId);
+				await client!.zrem(KEY, member(tenantId, taskId));
 			});
 		},
 		async due(nowMs, limit = 100) {
 			if (!client) return [];
 			try {
-				return (await client.zrangebyscore(KEY, 0, nowMs, "LIMIT", 0, limit)) as string[];
+				const raw = (await client.zrangebyscore(KEY, 0, nowMs, "LIMIT", 0, limit)) as string[];
+				return raw.map(parseMember);
 			} catch {
 				return [];
 			}
@@ -80,18 +96,18 @@ export function createReminderQueue(config: RedisConfig): ReminderQueue {
 export function createMemoryReminderQueue(): ReminderQueue {
 	const map = new Map<string, number>();
 	return {
-		async add(taskId, dueAtMs) {
-			if (dueAtMs != null && Number.isFinite(dueAtMs)) map.set(taskId, dueAtMs);
+		async add(tenantId, taskId, dueAtMs) {
+			if (dueAtMs != null && Number.isFinite(dueAtMs)) map.set(member(tenantId, taskId), dueAtMs);
 		},
-		async remove(taskId) {
-			map.delete(taskId);
+		async remove(tenantId, taskId) {
+			map.delete(member(tenantId, taskId));
 		},
 		async due(nowMs, limit = 100) {
 			return [...map.entries()]
 				.filter(([, due]) => due <= nowMs)
 				.sort((a, b) => a[1] - b[1])
 				.slice(0, limit)
-				.map(([id]) => id);
+				.map(([key]) => parseMember(key));
 		},
 		async close() {
 			map.clear();

@@ -30,6 +30,7 @@ export const SENSITIVE_KEYS = [
 	"weixin.accountId",
 	"weixin.token",
 	"mcp.servers[].pat",
+	"tenant.apiKeys",
 ] as const;
 
 /** 密钥文件位置:SECRETS_PATH 优先,否则取主配置同目录下的 help-sale.secrets.yaml。 */
@@ -147,8 +148,19 @@ export function mergeSecrets(
 	};
 
 	for (const key of SENSITIVE_KEYS) {
-		if (key === "mcp.servers[].pat") continue;
+		if (key === "mcp.servers[].pat" || key === "tenant.apiKeys") continue;
 		take(key);
+	}
+
+	// 集成用的租户 API Key 映射(键=Key,值=租户 ID):由密钥文件提供,主配置留空
+	const apiKeys = readPath(secrets.raw, "tenant.apiKeys");
+	if (apiKeys && typeof apiKeys === "object" && Object.keys(apiKeys as Record<string, unknown>).length > 0) {
+		const current = readPath(raw, "tenant.apiKeys");
+		if (current === undefined || current === null || (typeof current === "object" && !Array.isArray(current) && Object.keys(current as Record<string, unknown>).length === 0)) {
+			writePath(raw, "tenant.apiKeys", apiKeys);
+		} else {
+			plaintextKeys.push("tenant.apiKeys");
+		}
 	}
 
 	// MCP 的 PAT 按 server 名映射:secrets 里写 mcp.servers.<name>

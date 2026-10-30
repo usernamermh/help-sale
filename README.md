@@ -90,7 +90,7 @@ npm ci --prefix pi --ignore-scripts
 node scripts/gen-minimal-model-data.mjs        # 离线模型数据(models.dev 不可达时)
 npm run build:offline --prefix pi
 npm install --ignore-scripts                    # 根 workspace 链接 pi 包
-npm test                                        # 31 个测试文件 / 213 个用例
+npm test                                        # 33 个测试文件 / 224 个用例
 npm run typecheck && npm run typecheck:eval
 ```
 
@@ -157,6 +157,54 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 | `automation` | 定时任务:晨报、周报、沉默客户唤醒的时间与开关 |
 | `company` / `userkey` / `client` | 公司名(写入提示词)、调用方标识、前端注入参数 |
 
+# 多租户隔离契约
+
+隔离不是"表里加一个 tenant_id"就结束的事,它是贯穿身份、数据、缓存、队列、后台任务与可观测性的一条契约。这里写清本项目当前的做法、强制点和仍依赖人工的部分。
+
+## 隔离等级怎么选
+
+| 方案 | 隔离强度 | 运维成本 | 适用 |
+| --- | --- | --- | --- |
+| 共享库 + `tenant_id` 列(本项目) | 中,靠应用层强制 | 最低,扩展性最好 | 多租户 SaaS 起步与中期 |
+| 独立 schema | 较高,能按租户授权/备份 | 中 | 有合规要求、租户数量可控 |
+| 独立数据库 | 最高,物理隔离 | 高 | 大客户 / 强合规 |
+
+选共享库就意味着**必须把强制机制补齐**,否则一次漏写 `WHERE tenant_id = ?` 就是跨租户串数据。本项目的补齐方式见下。
+
+## 强制点(系统强制,不靠"记得写")
+
+1. **租户上下文权威解析**(`backend/services/tenant-context.ts`)
+   - 调用方凭证优先:请求带 `Authorization: Bearer <apiKey>` 或 `x-api-key`,服务端用 `tenant.apiKeys`(密钥文件)映射出租户 —— 这是权威来源;
+   - 同时带了 `x-tenant-id` 但与凭证归属不一致 → **403**(防止拿 A 的钥匙开 B 的门);
+   - 没有凭证时,是否允许用请求头声明租户由 `tenant.headerTenantAllowed` 决定(开发可开,生产建议关);
+   - 请求头声明的租户必须落在 `tenant.trustedTenantIds` 清单内,否则 403;
+   - 每次拒绝都会写 `runtime.log`(`type: tenant_rejected`),便于排查与告警。
+2. **数据层强制**(`backend/db/tenant-guard.ts`)
+   - 所有数据库访问都经过统一的 `prepare` 入口:语句只要涉及业务表却整句没有 `tenant_id` 谓词,就按 `tenant.dataIsolationMode` 处理 —— `off` 不查、`warn` 告警、`enforce` **直接抛错**;
+   - 当前部署为 `enforce`,全部接口在 enforce 下回归通过;
+   - 系统级语句(租户枚举、建表补列、清库)必须显式带 `/* system */` 标记才放行,把"跨租户操作"从"忘了写"变成"故意写"。
+3. **工具侧强制**:`sql` 工具要求业务表必须用 `:tenantId` 占位符,由工具注入当前租户;写死租户值、缺占位符都会被拦,读写都有审计。
+4. **后台任务按租户枚举**:定时任务与子代理消费者都从库里枚举租户逐个处理,不再只服务"配置里的那个租户";一次执行绑定一个租户上下文。
+5. **队列与缓存带租户维度**:Redis 到期提醒队列的成员是 `tenantId::taskId`,删除/读取都按租户取值,跨租户误删不可能;工具结果缓存按 `(tenant_id, tool_name, cache_key)` 分键。
+6. **可观测带租户**:请求日志、错误日志、SQL 审计、微信收发审计都带 `tenantId`,出问题能立刻圈定受影响范围。
+
+## MySQL 的现实与替代
+
+MySQL **没有** PostgreSQL 那样的行级安全(RLS),数据库层不会替我们自动加租户条件。因此本项目的防线是组合拳:
+
+- 应用层强制(上面的 prepare 守卫)—— 拦"整句没提租户"的经典漏写;
+- 最小权限数据库账号(`scripts/mysql-grants.sql`)—— 应用账号只有业务表的 DML,没有 `FILE`、没有跨库权限,即使被绕过也拿不到别的库;
+- 只读账号给分析类用途;
+- 审计日志 + 拒绝记录;
+- 真要数据库级强制,可选:换 PostgreSQL 用 RLS,或在应用与库之间放代理层(如 ProxySQL 规则注入),这两条都属基础设施决策。
+
+## 仍依赖人工或尚未实现(诚实清单)
+
+- **没有登录与 RBAC**:目前租户由凭证/受信清单控制,但"某个人属于哪个租户、能开哪些高危工具"还没有身份体系支撑 —— 这是下一阶段第一项。
+- **凭证是全局一套**:`tenant.apiKeys` 是"Key → 租户"的映射,模型密钥、数据库账号还是全局配置;要做到"每租户自带密钥",需要凭证表 + 控制台录入 + 解析时租户覆盖全局。
+- **文件与产物没有按租户分目录**:`file_write` 这类工具现在默认关闭(见 `tools.risk`),重启打开前应先做路径白名单与租户子目录。
+- **前端是单租户视图**:页面按当前租户渲染,没有租户切换器与多租户管理台。
+- **跨租户统计必须显式标记**:带 `/* system */` 的语句绕过了守卫,这类报表要单独评审。
 # Agent 运行流程
 
 ```
@@ -433,7 +481,7 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 # 测试与评测
 
 ```bash
-npm test                 # 31 个测试文件 / 213 个用例
+npm test                 # 33 个测试文件 / 224 个用例
 npm run typecheck        # backend 业务代码
 npm run typecheck:eval   # 仓库根,额外覆盖 opimize/ 下的评测脚本
 ```
