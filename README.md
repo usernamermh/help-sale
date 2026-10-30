@@ -44,15 +44,16 @@
 
 ![multi agent模式](docs/images/multi_agent模式.jpg)
 
-# 与旧版(v1)的差异
+# 适用范围与设计取向
 
-本项目是 v1 的重构版,功能与目录结构都有调整,读旧文档时注意以下几点:
+平台围绕**销售通用能力**构建:会话、客户、话术与知识、跟进任务、工作流沉淀、多代理协作、呈现与系统工具。车型目录、试驾、意向车型这类具体业务字段不进入平台,业务差异通过配置、工作流与知识库表达。
 
-- **删掉了业务硬编码**:车型目录、车型优选方案、试驾、客户意向车型,以及会话分析、话术评估、通话总结三条流程,连同它们的表、归档、提示词与工具一并移除。`sales`(成交/门店/销售)保留 —— 周报、跟进待办、标签、反思同样保留。
-- **目录按"里面是什么"命名**:原来的 `repositories` 拆掉,功能逻辑与路由同放在 `services/routes/<功能>.ts`,`services/` 根目录只放跨功能通用函数。
-- **配置零默认值**:所有运行参数只从 `help-sale.config.yaml` 读,代码里不留默认值;缺项会在启动时直接报错并指出具体配置键。
-- **新增能力**:MCP 接入与工具编目(三层工具)、双语 query 改写与分语言召回、工作流沉淀(挖掘 → 审批 → 挂载)、检索评测目录 `opimize/`。
-- **文件工具换了一套**:原来"只允许新建文件"的 `file_write_new` 去掉,改成通用的 `file_write`(新建 / 整份替换 / 按行号局部修改,带哈希 CAS 与原文校验),读取侧 `txt`、`file_read` 同步改为输出行号 + 总行数 + 内容 hash(见「文件读写方案」一节)。
+- **多租户**:所有业务表按 `tenant_id` 隔离,查询层与 `sql` 工具都以当前租户为准。
+- **工具即目录**:工具是 `tools/`、`tools_system/` 下的目录(`readme.json` + `main.ts`);模型工具列表、能力清单、控制台开关都从目录派生,加工具不需要改后端代码。
+- **配置零默认值**:运行参数只来自 `help-sale.config.yaml`,缺失即报错并指出具体配置键。
+- **按内容命名**:功能逻辑与路由同文件放在 `services/routes/`,跨功能通用函数留在 `services/`。
+- **语言一致的检索**:工具描述使用中文,外部 MCP 工具按其自身语言;检索按描述语言分池召回,模型不需要猜工具是哪种语言写的。
+- **可评测**:`opimize/` 保存固定语料与跑分脚本,检索/召回/参数权衡都有可复现的数字。
 # 技术栈
 
 - Node.js ≥ 24(`node:sqlite`)+ TypeScript + Fastify + Vitest
@@ -88,7 +89,7 @@ npm ci --prefix pi --ignore-scripts
 node scripts/gen-minimal-model-data.mjs        # 离线模型数据(models.dev 不可达时)
 npm run build:offline --prefix pi
 npm install --ignore-scripts                    # 根 workspace 链接 pi 包
-npm test                                        # 25 个测试文件 / 151 个用例
+npm test                                        # 27 个测试文件 / 177 个用例
 npm run typecheck && npm run typecheck:eval
 ```
 
@@ -125,6 +126,7 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 | `tools.webSearch` | Serper 密钥(`web_search` 工具的启用门槛) |
 | `tools.fileWrite` | 文件写入工具是否允许写到仓库之外(`allowOutsideRepo`) |
 | `tools.catalog` | 工具编目与召回,见下 |
+| `tools.sql` | SQL 工具的行数上限、执行超时、追加拦截关键字(见「SQL 执行策略」) |
 | `mcp.servers` | 外部 MCP Server 列表 |
 | `knowledge.searchLimit` | 知识检索默认条数 |
 | `vector` / `milvus_backend` / `milvus_docker_compose` | Milvus 旁路与单机部署参数 |
@@ -243,7 +245,7 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 - **换行风格与 BOM 原样保留**(CRLF 文件改完还是 CRLF,带 BOM 还是带 BOM),避免一次小改在 git 里变成整文件 diff;
 - **原子写**:同目录临时文件 + rename,失败会清理临时文件;
 - **保护**:内容上限 2MB、含 NUL 字节拒绝、`create` 用 `wx` 语义(存在即失败);
-- **路径范围**由配置决定:`tools.fileWrite.allowOutsideRepo: true` 允许任意本地路径;改成 `false` 时只接受仓库内路径,越界直接拒绝。
+- **路径范围**由配置决定:`tools.fileWrite.allowOutsideRepo: true` 允许任意本地路径;设为 `false` 时只接受仓库内路径,越界直接拒绝。
 
 ## 典型调用链
 
@@ -265,12 +267,57 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 | `edits[i] 原文校验失败:第 X-Y 行实际是…` | 行号对不上,重读确认行号 |
 | `edits 有重叠…请合并成一段` | 合并相邻/重叠区间 |
 | `文件是空的,patch 没有可改的行` | 改用 `op=replace` 写整份内容 |
+
+# SQL 执行策略(sql 工具)
+
+`sql` 工具默认只读,所有守卫都在 `backend/services/sql-policy.ts`,执行层只负责"跑、截断、审计、超时"。
+
+| 防线 | 规则 |
+| --- | --- |
+| 只读默认 | 只有 `SELECT/SHOW/EXPLAIN/DESCRIBE/PRAGMA` 直接放行;写操作必须 `readOnly=false` **且** `confirmWrite=true` |
+| 语句黑名单 | `DROP / TRUNCATE / ALTER / CREATE / RENAME / GRANT / REVOKE / ATTACH / DETACH / VACUUM / REINDEX / ANALYZE / SHUTDOWN / KILL / FLUSH / RESET / INSTALL / UNINSTALL / LOCK / UNLOCK / HANDLER / LOAD / CALL / SET` 一律拒绝;`tools.sql.extraBlockedKeywords` 可再追加(整句扫描,如 `union`) |
+| 危险写法 | `LOAD_FILE()` / `INTO OUTFILE|DUMPFILE` / `LOAD DATA` / `BENCHMARK()` / `SLEEP()` / `pg_read_file()` |
+| 多语句 | 一条 `;` 后面还有内容就拒绝 |
+| MySQL 可执行注释 | 出现 `/*! … */` 直接拒绝(服务端会把它当语句执行,是最常见的绕过手法) |
+| **WITH 主语句** | 首词是 `WITH` 时,按声明之后的**主语句**(SELECT/INSERT/UPDATE/DELETE/REPLACE)判定,`WITH … DELETE` 不能借 CTE 逃过 WHERE 检查 |
+| WHERE 必填 | `UPDATE/DELETE` 必须带 `WHERE` |
+| 恒真条件 | `WHERE 1=1` / `true` / `0=0` / 空串比较 / `OR 1=1` 一律拒绝(只读语句不受限) |
+| **PRAGMA 白名单** | 只允许 `table_info / table_xinfo / index_list / index_info / index_xinfo / foreign_key_list / database_list / compile_options`;带 `=` 的赋值式(如 `writable_schema=ON`)拒绝;MySQL 方言下 PRAGMA 直接拒绝(改查 `information_schema`) |
+| **租户隔离** | 语句涉及业务表(`data.tables` 里除 `tenants` 外的表)时,必须用 `:tenantId` 占位符,由工具注入当前租户;`tenant_id = 't_other'` 这种写死值直接拒绝 |
+| 行数上限 | 读语句没写 `LIMIT` 时自动补 `LIMIT tools.sql.maxRows`;结果按同一上限截断(超出会标注) |
+| 执行超时 | `tools.sql.timeoutMs`:MySQL 作为查询超时传给驱动;SQLite 放进 worker 线程执行,超时直接终止(同时避免同步 API 卡住主线程) |
+| 审计 | 读、写、被拦截、执行失败都追加 JSONL 到 `data/sql-audit.log`(含租户、SQL、模式、行数/错误) |
+
+租户隔离的写法(工具会自动把 `:tenantId` 换成 `?` 并注入当前租户,`values` 里不要放租户):
+
+```sql
+SELECT * FROM customers WHERE tenant_id = :tenantId AND name LIKE ?
+-- values: ["%张%"]
+```
+
+配置(`help-sale.config.yaml`):
+
+```yaml
+tools:
+  sql:
+    maxRows: 200              # 单次读取上限(读语句自动补 LIMIT,结果也按它截断)
+    timeoutMs: 15000          # 单条 SQL 超时
+    extraBlockedKeywords: []   # 在内置黑名单之外追加拦截关键字
+```
+
+数据库账号的最小权限建议见 `scripts/mysql-grants.sql`:读写账号只给 `help_sale` 库的 `SELECT/INSERT/UPDATE/DELETE`,`root` 只用于首次建表(启动自检发现缺列时只会告警,不执行 DDL)。
+
+已知边界:
+
+- `WHERE` 只做"有/无 + 恒真"判定,不做语义分析 —— `WHERE status <> '不可能的值'` 这类仍然能全表命中;
+- 每次调用 `sql` 建立一次 MySQL 连接(握手约 3s),面向低频分析型查询;
+- 结果给模型的文本截断在 8000 字符,`details.rows` 按 `maxRows` 截断。
 # MCP 接入与工具编目
 
 - 在 `mcp.servers` 配外部 MCP Server(含 `pat` 时自动带 `Authorization: Bearer`),它们的工具以 `mcp_{server}_{tool}` 前缀混进工具列表;
 - 工具列表按 URL 缓存 5 分钟,传输层对"连不上"重试 3 次;
 - 外部工具元数据**含中文会打告警**:这类工具会被判为 `description_language=zh`,只参与中文那一路召回;
-- 长尾工具(MCP + 工作流)超过 `tools.catalog.threshold` 后,不再把全部 schema 塞给模型,改为三层工具按需取用。
+- 长尾工具(MCP + 工作流)超过 `tools.catalog.threshold` 时按需取用:模型先用 `search_tools` 检索候选,再 `get_tool_details` 取参数,最后 `call_tool` 执行。
 
 # 工作流沉淀
 
@@ -323,7 +370,7 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 # 测试与评测
 
 ```bash
-npm test                 # 25 个测试文件 / 151 个用例
+npm test                 # 27 个测试文件 / 177 个用例
 npm run typecheck        # backend 业务代码
 npm run typecheck:eval   # 仓库根,额外覆盖 opimize/ 下的评测脚本
 ```

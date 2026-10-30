@@ -5,6 +5,8 @@ import mysql from "mysql2/promise";
 // (主线程被 Atomics.wait 阻塞时,结果需放在共享内存而非 postMessage)
 type Pool = mysql.Pool;
 let pool: Pool | null = null;
+/** 建表专用池:只有 schema.sql / 补列这些 DDL 需要 multipleStatements,查询池一律关掉 */
+let schemaPool: Pool | null = null;
 let resultBuf: SharedArrayBuffer | null = null;
 let resultView: Int32Array | null = null;
 
@@ -94,29 +96,34 @@ parentPort!.on("message", async (msg: any) => {
 		if (msg.kind === "init") {
 			resultBuf = msg.resultBuf;
 			resultView = new Int32Array(resultBuf as SharedArrayBuffer);
-			pool = mysql.createPool({
+			const baseOptions = {
 				host: msg.host,
 				port: msg.port,
 				user: msg.user,
 				password: msg.password,
 				database: msg.database,
 				connectionLimit: 2,
-				multipleStatements: true,
 				decimalNumbers: true,
 				supportBigNumbers: false,
 				timezone: "Z",
 				charset: "utf8mb4",
-			});
+			};
+			// 查询池:multipleStatements=false —— 就算策略层漏了一条,驱动也不会把 `a; b` 当两条执行
+			pool = mysql.createPool({ ...baseOptions, multipleStatements: false });
 			await (pool as unknown as { query: (o: { sql: string }) => Promise<unknown> }).query({ sql: "SET sql_mode = CONCAT(@@sql_mode, ',PIPES_AS_CONCAT')" });
-			if (msg.forceRebuild && msg.schemaSql) {
-				const tableNames = [...msg.schemaSql.matchAll(/CREATE TABLE IF NOT EXISTS\s+([^\s(]+)/gi)].map((m: RegExpMatchArray) => m[1]);
-				const drops = tableNames.map((t: string) => `DROP TABLE IF EXISTS \`${t.replace(/`/g, "")}\``).join("; ");
-				await (pool as unknown as { query: (o: { sql: string }) => Promise<unknown> }).query({ sql: drops });
+			if (msg.schemaSql) {
+				// 建表池:允许一次执行整份 schema.sql(含多条 CREATE),用完即关
+				schemaPool = mysql.createPool({ ...baseOptions, multipleStatements: true });
+				if (msg.forceRebuild) {
+					const tableNames = [...msg.schemaSql.matchAll(/CREATE TABLE IF NOT EXISTS\s+([^\s(]+)/gi)].map((m: RegExpMatchArray) => m[1]);
+					const drops = tableNames.map((t: string) => `DROP TABLE IF EXISTS \`${t.replace(/`/g, "")}\``).join("; ");
+					await (schemaPool as unknown as { query: (o: { sql: string }) => Promise<unknown> }).query({ sql: drops });
+				}
+				await (schemaPool as unknown as { query: (o: { sql: string }) => Promise<unknown> }).query({ sql: msg.schemaSql });
 			}
-			if (msg.schemaSql) await (pool as unknown as { query: (o: { sql: string }) => Promise<unknown> }).query({ sql: msg.schemaSql });
-			// 老库补齐 schema.sql 里新增的列(只 ADD,不改不删)
-			const addedColumns = msg.schemaSql ? await ensureColumns(pool as Pool, String(msg.schemaSql)) : [];
+			const addedColumns = msg.schemaSql && schemaPool ? await ensureColumns(schemaPool, String(msg.schemaSql)) : [];
 			if (addedColumns.length > 0) console.warn(`[mysql] 启动补列 ${addedColumns.length} 个: ${addedColumns.join(", ")}`);
+			if (schemaPool) { await schemaPool.end().catch(() => undefined); schemaPool = null; }
 			writeResult("ok", { init: true, addedColumns });
 			return;
 		}
@@ -125,7 +132,7 @@ parentPort!.on("message", async (msg: any) => {
 			const [rows] = (await (pool as unknown as { query: (o: unknown) => Promise<[unknown, unknown]> }).query({
 				sql: msg.sql,
 				values: Array.isArray(msg.params) ? msg.params : [],
-				timeout: 15000,
+				timeout: Number(msg.timeoutMs) > 0 ? Number(msg.timeoutMs) : 15000,
 			})) as [any, unknown];
 			if (msg.stmtKind === "run") {
 				writeResult("ok", { changes: Number(rows?.affectedRows ?? 0) });
@@ -136,6 +143,7 @@ parentPort!.on("message", async (msg: any) => {
 		}
 		if (msg.kind === "close") {
 			if (pool) await pool.end().catch(() => undefined);
+			if (schemaPool) await schemaPool.end().catch(() => undefined);
 			writeResult("ok", { closed: true });
 			parentPort!.close();
 			return;

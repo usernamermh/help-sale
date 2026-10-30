@@ -1,38 +1,34 @@
 {
   "name": "sql",
   "label": "操作业务数据库",
-  "description": "操作当前 data.mode 对应的业务库(local=本地 SQLite / mysql=远程 MySQL),按配置二选一不会错连;默认只读,写操作需 readOnly=false + confirmWrite=true,危险语句(如 DROP/无 WHERE 的 UPDATE/DELETE)由规则拦截并审计。",
+  "description": "执行一条 SQL(默认只读)。写操作需 readOnly=false + confirmWrite=true;DDL/权限/运维语句(DDL、GRANT、ATTACH、SET、LOAD 等)、危险函数(LOAD_FILE、INTO OUTFILE、SLEEP)、多语句一律拦截;PRAGMA 只允许 table_info 这类查询型;UPDATE/DELETE 必须带 WHERE 且拒绝恒真条件。**业务表必须用 :tenantId 占位符做租户过滤**(工具注入当前租户,禁止写死 tenant_id),读语句会自动补 LIMIT(tools.sql.maxRows),单条执行超时 tools.sql.timeoutMs。",
   "description_language": "zh",
   "category": "数据库",
   "parameters": {
     "type": "object",
-    "required": [
-      "sql"
-    ],
+    "required": ["sql"],
     "properties": {
       "sql": {
         "type": "string",
-        "description": "单条 SQL,如 SELECT * FROM customers WHERE tenant_id = ?"
+        "description": "单条 SQL。查业务表时用 :tenantId 占位符,例如 SELECT * FROM customers WHERE tenant_id = :tenantId"
       },
       "values": {
         "type": "array",
-        "description": "SQL 占位符 ? 对应的值"
+        "description": "SQL 中 ? 占位符对应的值(按出现顺序;:tenantId 由工具自动注入,不要放进这个数组)"
       },
       "readOnly": {
         "type": "boolean",
         "default": true,
-        "description": "默认只读:写操作(INSERT/UPDATE/DELETE 等)必须显式传 false"
+        "description": "默认只读:写操作(INSERT/UPDATE/DELETE/REPLACE)必须显式传 false"
       },
       "confirmWrite": {
         "type": "boolean",
         "default": false,
-        "description": "危险写操作需 true 确认;规则拦截 DROP/TRUNCATE/ALTER,UPDATE/DELETE 必须带 WHERE"
+        "description": "写操作必须显式传 true 二次确认;UPDATE/DELETE 还需要 WHERE 且不能是恒真条件"
       }
     }
   },
   "entry": "main.ts",
-  "function_list": [
-    "main.execute"
-  ],
+  "function_list": ["main.execute"],
   "toggleable": true
 }

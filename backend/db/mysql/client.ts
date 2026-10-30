@@ -34,6 +34,7 @@ export class SyncMysqlDb {
 	// 索引 1（即字节偏移 4）：结果数据的长度（写入的是 uint32，读时也用 DataView 读）。
 	private resultView: Int32Array;
 	private timeoutMs: number;
+	private queryTimeoutMs: number;
 	private closed = false;  // "声明 + 初始化"合二为一
 
 	constructor(
@@ -46,6 +47,8 @@ export class SyncMysqlDb {
 			schemaSql?: string;
 			forceRebuild?: boolean;
 			timeoutMs?: number;
+			/** 单条查询超时(毫秒),来自配置 tools.sql.timeoutMs */
+			queryTimeoutMs?: number;
 		}
 	) {
 
@@ -53,6 +56,7 @@ export class SyncMysqlDb {
 		this.resultBuf = new SharedArrayBuffer(RESULT_BUF_BYTES);
 		this.resultView = new Int32Array(this.resultBuf);
 		this.timeoutMs = opts.timeoutMs ?? config.mysqlConnectTimeout;
+		this.queryTimeoutMs = opts.queryTimeoutMs ?? config.sqlTimeoutMs;
 		this.worker.on("error", () => {
 			// worker 异常:把 pending 请求标记失败,否则主线程可能无限等待
 			if (Atomics.load(this.resultView, 0) === 0) {    // Atomics 是 JavaScript 的一个内置对象，专门用于多线程共享内存的安全操作。 原子地读取 resultView 中索引 0 处的值。
@@ -107,7 +111,8 @@ export class SyncMysqlDb {
 	}
 
 	private waitResult(): boolean {
-		const deadline = Date.now() + this.timeoutMs;
+		// 等待窗口取「连接超时」和「查询超时 + 3s」的较大值:让 worker 先报查询超时,错误信息更清楚
+		const deadline = Date.now() + Math.max(this.timeoutMs, this.queryTimeoutMs + 3000);
 		while (Atomics.load(this.resultView, 0) === 0) {
 			const left = deadline - Date.now();
 			if (left <= 0) return false;
@@ -139,7 +144,7 @@ export class SyncMysqlDb {
 		if (this.closed) throw new Error("mysql 连接已关闭");
 		const { sql: translated, params: translatedParams } = translateSql(sql, params);
 		this.resetReady();
-		this.worker.postMessage({ kind: "run", sql: translated, params: translatedParams, stmtKind });
+		this.worker.postMessage({ kind: "run", sql: translated, params: translatedParams, stmtKind, timeoutMs: this.queryTimeoutMs });
 		if (!this.waitResult()) {
 			throw new Error("mysql 执行超时");
 		}
@@ -198,5 +203,6 @@ export function createSyncMysqlDb(): SyncMysqlDb {
 		database: config.mysqlDatabase,
 		schemaSql,
 		forceRebuild: config.mysqlSchemaRebuild,
+		queryTimeoutMs: config.sqlTimeoutMs,
 	});
 }

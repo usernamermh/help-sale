@@ -55,7 +55,7 @@ describe("配置:各段取值落到对应字段", () => {
 			raw.context = { compression: { enabled: false, thresholdRatio: 0.5, keepHead: 1, keepTail: 5, minMessages: 4, maxSummaryChars: 300 } };
 			raw.knowledge.searchLimit = 7;
 			raw.chunker.size = 333;
-			raw.tools = { webSearch: { apiKey: "cmp-serper" }, fileWrite: { allowOutsideRepo: false }, catalog: { enabled: true, threshold: 20, topK: 8, maxInspect: 3, semanticFloorZh: 0.42, semanticFloorEn: 0.6, bilingual: { enabled: true, rewriteTimeoutMs: 20000, perLanguageTopK: 8 } } };
+			raw.tools = { webSearch: { apiKey: "cmp-serper" }, fileWrite: { allowOutsideRepo: false }, sql: { maxRows: 50, timeoutMs: 5000, extraBlockedKeywords: ["union"] }, catalog: { enabled: true, threshold: 20, topK: 8, maxInspect: 3, semanticFloorZh: 0.42, semanticFloorEn: 0.6, bilingual: { enabled: true, rewriteTimeoutMs: 20000, perLanguageTopK: 8 } } };
 			raw.mcp = { servers: [{ name: "cmp", url: "https://cmp.example/mcp", headers: { "X-Tenant-Id": "t9" } }] };
 			raw.mysql.port = 3399;
 			raw.redis.port = 6399;
@@ -92,6 +92,9 @@ describe("配置:各段取值落到对应字段", () => {
 		expect(cfg.chunkerSize).toBe(333);
 			expect(cfg.webSearchApiKey).toBe("cmp-serper");
 			expect(cfg.fileWriteAllowOutsideRepo).toBe(false);
+			expect(cfg.sqlMaxRows).toBe(50);
+			expect(cfg.sqlTimeoutMs).toBe(5000);
+			expect(cfg.sqlExtraBlockedKeywords).toEqual(["union"]);
 			expect(cfg.toolsCatalogEnabled).toBe(true);
 			expect(cfg.toolsCatalogThreshold).toBe(20);
 			expect(cfg.toolsCatalogTopK).toBe(8);
@@ -131,7 +134,7 @@ describe("配置:各段取值落到对应字段", () => {
 		const cfg = loadConfig();
 		const undefinedKeys = Object.entries(cfg).filter(([, v]) => v === undefined).map(([k]) => k);
 		expect(undefinedKeys).toEqual([]);
-		expect(Object.keys(cfg)).toHaveLength(107);
+		expect(Object.keys(cfg)).toHaveLength(110);
 	});
 });
 
@@ -198,6 +201,6 @@ describe("配置:代码内不提供任何默认值", () => {
 	it("示例模板 help-sale.config.example.yaml 覆盖全部必填项", async () => {
 		process.env.CONFIG_PATH = path.join(repoRoot, "help-sale.config.example.yaml");
 		const cfg = await reload();
-		expect(Object.keys(cfg)).toHaveLength(107);
+		expect(Object.keys(cfg)).toHaveLength(110);
 	});
 });

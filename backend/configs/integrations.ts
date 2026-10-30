@@ -1,4 +1,4 @@
-import { bool, num, str, strMap } from "./primitives.js";
+import { bool, num, str, strList, strMap } from "./primitives.js";
 import type { FileConfig } from "./file.js";
 import type { AppConfig, IntegrationsConfig } from "./types.js";
 
@@ -25,6 +25,9 @@ export function loadIntegrationsConfig(file: FileConfig): IntegrationsConfig {
 		notificationWebhookUrl: str(file.notification?.webhookUrl, "notification.webhookUrl"),
 		webSearchApiKey: str(file.tools?.webSearch?.apiKey, "tools.webSearch.apiKey"),
 		fileWriteAllowOutsideRepo: bool(file.tools?.fileWrite?.allowOutsideRepo, "tools.fileWrite.allowOutsideRepo"),
+		sqlMaxRows: num(file.tools?.sql?.maxRows, "tools.sql.maxRows"),
+		sqlTimeoutMs: num(file.tools?.sql?.timeoutMs, "tools.sql.timeoutMs"),
+		sqlExtraBlockedKeywords: strList(file.tools?.sql?.extraBlockedKeywords, "tools.sql.extraBlockedKeywords"),
 		toolsCatalogEnabled: bool(file.tools?.catalog?.enabled, "tools.catalog.enabled"),
 		toolsCatalogThreshold: num(file.tools?.catalog?.threshold, "tools.catalog.threshold"),
 		toolsCatalogTopK: num(file.tools?.catalog?.topK, "tools.catalog.topK"),
