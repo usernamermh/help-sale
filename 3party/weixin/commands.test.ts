@@ -40,7 +40,7 @@ describe("命令解析", () => {
 
 	it("帮助清单覆盖核心命令", () => {
 		const help = commandHelp();
-		for (const name of ["/help", "/new", "/sessions", "/switch", "/compact", "/clear", "/stop", "/status", "/whoami", "/bind"]) {
+		for (const name of ["/help", "/new", "/sessions", "/switch", "/compact", "/clear", "/stop", "/status", "/whoami", "/title", "/bind"]) {
 			expect(help).toContain(name);
 		}
 	});

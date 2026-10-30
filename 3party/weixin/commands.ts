@@ -60,6 +60,7 @@ export function commandHelp(): string {
 		"/stop —— 中止正在执行的那一轮",
 		"/status —— 通道状态与当前会话信息",
 		"/whoami —— 看当前绑定身份",
+		"/title <标题> —— 改当前会话的名字",
 		"/bind <sales|customers>:<编号> —— 绑定销售或客户",
 		"",
 		"不带 / 的消息照常交给 agent 处理。",
