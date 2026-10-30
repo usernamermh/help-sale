@@ -16,7 +16,7 @@ export interface DealRow {
 export function createStore(db: DatabaseSync, tenantId: string, input: { name: string; address?: string }): StoreRow {
 	const id = randomUUID();
 	db.prepare("INSERT INTO stores (id, tenant_id, name, address) VALUES (?,?,?,?)").run(id, tenantId, input.name, input.address ?? null);
-	return db.prepare("SELECT * FROM stores WHERE id = ?").get(id) as unknown as StoreRow;
+	return db.prepare("SELECT * FROM stores WHERE tenant_id = ? AND id = ?").get(tenantId, id) as unknown as StoreRow;
 }
 
 /** 按(租户, 名称)幂等创建/更新门店,用于种子与 API。 */
@@ -24,8 +24,8 @@ export function upsertStore(db: DatabaseSync, tenantId: string, input: { name: s
 	const existing = db.prepare("SELECT * FROM stores WHERE tenant_id = ? AND name = ?").get(tenantId, input.name) as unknown as StoreRow | undefined;
 	if (existing) {
 		if (input.address !== undefined) {
-			db.prepare("UPDATE stores SET address = ? WHERE id = ?").run(input.address ?? null, existing.id);
-			return db.prepare("SELECT * FROM stores WHERE id = ?").get(existing.id) as unknown as StoreRow;
+			db.prepare("UPDATE stores SET address = ? WHERE tenant_id = ? AND id = ?").run(input.address ?? null, tenantId, existing.id);
+			return db.prepare("SELECT * FROM stores WHERE tenant_id = ? AND id = ?").get(tenantId, existing.id) as unknown as StoreRow;
 		}
 		return existing;
 	}
@@ -58,13 +58,14 @@ export function upsertSalesperson(db: DatabaseSync, tenantId: string, input: Sal
 		? db.prepare("SELECT * FROM sales WHERE tenant_id = ? AND name = ? AND store_id = ?").get(tenantId, input.name, input.storeId) as unknown as SalesRow | undefined
 		: db.prepare("SELECT * FROM sales WHERE tenant_id = ? AND name = ? AND store_id IS NULL").get(tenantId, input.name) as unknown as SalesRow | undefined;
 	if (existing) {
-		db.prepare("UPDATE sales SET store_id = ?, phone = ?, role = ? WHERE id = ?").run(
+		db.prepare("UPDATE sales SET store_id = ?, phone = ?, role = ? WHERE tenant_id = ? AND id = ?").run(
 			input.storeId ?? null,
 			input.phone ?? existing.phone ?? null,
 			input.role ?? existing.role,
+			tenantId,
 			existing.id,
 		);
-		return db.prepare("SELECT * FROM sales WHERE id = ?").get(existing.id) as unknown as SalesRow;
+		return db.prepare("SELECT * FROM sales WHERE tenant_id = ? AND id = ?").get(tenantId, existing.id) as unknown as SalesRow;
 	}
 	const id = randomUUID();
 	db.prepare("INSERT INTO sales (id, tenant_id, store_id, name, phone, role) VALUES (?,?,?,?,?,?)").run(
@@ -75,7 +76,7 @@ export function upsertSalesperson(db: DatabaseSync, tenantId: string, input: Sal
 		input.phone ?? null,
 		input.role ?? "sales",
 	);
-	return db.prepare("SELECT * FROM sales WHERE id = ?").get(id) as unknown as SalesRow;
+	return db.prepare("SELECT * FROM sales WHERE tenant_id = ? AND id = ?").get(tenantId, id) as unknown as SalesRow;
 }
 
 export function getSalespersonById(db: DatabaseSync, tenantId: string, id: string): SalesRow | undefined {
@@ -106,7 +107,7 @@ export function createDeal(db: DatabaseSync, tenantId: string, input: CreateDeal
 		`INSERT OR IGNORE INTO deals (id, tenant_id, store_id, sales_id, customer_id, conversation_id, amount, status, dealed_at)
 		 VALUES (?,?,?,?,?,?,?,?,?)`,
 	).run(id, tenantId, input.storeId ?? null, input.salesId ?? null, input.customerId ?? null, input.conversationId ?? null, input.amount, input.status ?? "closed", dealedAt);
-	return db.prepare("SELECT * FROM deals WHERE id = ?").get(id) as unknown as DealRow;
+	return db.prepare("SELECT * FROM deals WHERE tenant_id = ? AND id = ?").get(tenantId, id) as unknown as DealRow;
 }
 
 export type DealWithParties = DealRow & {

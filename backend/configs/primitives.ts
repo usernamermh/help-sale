@@ -81,16 +81,33 @@ export function parseTables(value: unknown, key = "data.tables"): Record<string,
 		throw new Error(`${label(key)} 缺失:请在 help-sale.config.yaml 的 data.tables 中配置全部业务表名`);
 	}
 	const inTables = value as Record<string, unknown>;
+	/**
+	 * 必须显式配置的全部业务表(与 db/schema.sql 一致;tenants 是唯一的全局表)。
+	 * 这份清单同时也是"租户隔离守卫覆盖哪些表"的依据 —— 表名映射漏一张,
+	 * 那张表的 SQL 就不会被强制要求带 tenant_id,所以这里要求全量声明。
+	 */
 	const required = [
-		"tenants", "customers", "conversations", "conversation_messages", "next_step_tasks",
-		"knowledge_documents", "knowledge_chunks", "knowledge_candidates", "agent_events", "customer_tags",
-		"notification_logs", "stores", "sales", "deals", "tool_call_cache", "digests",
+		"tenants", "customers", "knowledge_documents", "knowledge_chunks", "next_step_tasks", "digests",
+		"knowledge_candidates", "agent_events", "customer_tags", "notification_logs", "conversations",
+		"agent_threads", "agent_thread_messages", "agent_capabilities", "workflows", "stores", "sales",
+		"conversation_messages", "deals", "tool_call_cache", "automation_runs", "reflection_cases",
+		"thread_summaries", "agent_plans", "automation_jobs", "builtin_job_settings", "kanban_cards",
+		"keywords", "keyword_categories", "workflow_runs", "keyword_hits", "knowledge_embeddings",
+		"weixin_users", "weixin_messages", "weixin_threads",
 	];
 	const out: Record<string, string> = {};
 	for (const tableKey of required) {
 		const tableName = inTables[tableKey];
 		if (typeof tableName !== "string" || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(tableName)) {
 			throw new Error(`配置项 data.tables.${tableKey} 缺失或非法(应为合法表名):${String(tableName)}`);
+		}
+		out[tableKey] = tableName;
+	}
+	// 允许额外的自定义表(例如租户自己加的表):一并纳入映射与租户守卫
+	for (const [tableKey, tableName] of Object.entries(inTables)) {
+		if (tableKey in out) continue;
+		if (typeof tableName !== "string" || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(tableName)) {
+			throw new Error(`配置项 data.tables.${tableKey} 非法(应为合法表名):${String(tableName)}`);
 		}
 		out[tableKey] = tableName;
 	}

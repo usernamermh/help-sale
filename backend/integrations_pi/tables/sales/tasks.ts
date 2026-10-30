@@ -92,7 +92,7 @@ export function setTaskStatus(db: DatabaseSync, tenantId: string, taskId: string
 	const existing = getTask(db, tenantId, taskId);
 	if (!existing) return undefined;
 	const completedAt = status === "done" ? new Date().toISOString().replace("T", " ").slice(0, 19) + "Z" : null;
-	db.prepare("UPDATE next_step_tasks SET status = ?, completed_at = ? WHERE id = ?").run(status, completedAt, taskId);
+	db.prepare("UPDATE next_step_tasks SET status = ?, completed_at = ? WHERE tenant_id = ? AND id = ?").run(status, completedAt, tenantId, taskId);
 	return getTask(db, tenantId, taskId);
 }
 

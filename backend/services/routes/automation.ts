@@ -126,7 +126,7 @@ export function runCustomJob(db: DatabaseSync, tenantId: string, job: { id: stri
 			contentJson: JSON.stringify({ jobId: job.id, content: action.content ?? "" }),
 			status: "sent",
 		});
-		if (job.scheduleType === "once") db.prepare("UPDATE automation_jobs SET enabled = 0 WHERE id = ?").run(job.id); // 一次性任务手动运行后停用
+		if (job.scheduleType === "once") db.prepare("UPDATE automation_jobs SET enabled = 0 WHERE tenant_id = ? AND id = ?").run(tenantId, job.id); // 一次性任务手动运行后停用
 		return `已触发通知:${action.title ?? job.name}`;
 	}
 	return `未知自定义任务动作:${kind}`;
@@ -209,13 +209,13 @@ export function runDueAutomations(deps: AutomationDeps, now = new Date()): Array
 			if (actionKind === "agent_goal") {
 				const run = recordAutomationRun(db, { tenantId, jobType: `custom:${job.id}`, runDate: date, status: "running", summary: "Agent 任务排队执行" });
 				runAgentGoalJob(deps, tenantId, job, run.id, now);
-				if (job.scheduleType === "once") db.prepare("UPDATE automation_jobs SET enabled = 0 WHERE id = ?").run(job.id); // 一次性任务执行后停用
+				if (job.scheduleType === "once") db.prepare("UPDATE automation_jobs SET enabled = 0 WHERE tenant_id = ? AND id = ?").run(tenantId, job.id); // 一次性任务执行后停用
 				out.push({ tenantId, jobType: `custom:${job.id}`, status: "running", summary: "Agent 任务已触发,后台执行中" });
 				continue;
 			}
 			try {
 				const summary = runCustomJob(db, tenantId, job);
-				if (job.scheduleType === "once") db.prepare("UPDATE automation_jobs SET enabled = 0 WHERE id = ?").run(job.id); // 一次性任务执行后停用
+				if (job.scheduleType === "once") db.prepare("UPDATE automation_jobs SET enabled = 0 WHERE tenant_id = ? AND id = ?").run(tenantId, job.id); // 一次性任务执行后停用
 				recordAutomationRun(db, { tenantId, jobType: `custom:${job.id}`, runDate: date, status: "success", summary });
 				out.push({ tenantId, jobType: `custom:${job.id}`, status: "success", summary });
 			} catch (error) {

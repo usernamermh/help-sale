@@ -7,20 +7,39 @@ data:
   tables:
     tenants: tenants
     customers: customers
-    conversations: conversations
-    conversation_messages: conversation_messages
-    next_step_tasks: next_step_tasks
     knowledge_documents: knowledge_documents
     knowledge_chunks: knowledge_chunks
+    next_step_tasks: next_step_tasks
+    digests: digests
     knowledge_candidates: knowledge_candidates
     agent_events: agent_events
     customer_tags: customer_tags
     notification_logs: notification_logs
+    conversations: conversations
+    agent_threads: agent_threads
+    agent_thread_messages: agent_thread_messages
+    agent_capabilities: agent_capabilities
+    workflows: workflows
     stores: stores
     sales: sales
+    conversation_messages: conversation_messages
     deals: deals
     tool_call_cache: tool_call_cache
-    digests: digests
+    automation_runs: automation_runs
+    reflection_cases: reflection_cases
+    thread_summaries: thread_summaries
+    agent_plans: agent_plans
+    automation_jobs: automation_jobs
+    builtin_job_settings: builtin_job_settings
+    kanban_cards: kanban_cards
+    keywords: keywords
+    keyword_categories: keyword_categories
+    workflow_runs: workflow_runs
+    keyword_hits: keyword_hits
+    knowledge_embeddings: knowledge_embeddings
+    weixin_users: weixin_users
+    weixin_messages: weixin_messages
+    weixin_threads: weixin_threads
   dataDir: backend/data
   memoryFile: backend/data/memory.md
   businessDbPath: backend/data/business.db

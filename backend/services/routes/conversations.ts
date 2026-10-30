@@ -78,7 +78,7 @@ app.get<{ Params: { id: string } }>("/api/v1/conversations/:id/transcript", asyn
 		const meta = getConversation(deps.db, request.tenantId, request.params.id);
 		if (!meta) return reply.code(404).send({ error: "conversation_not_found", message: "会话不存在" });
 		const customer = meta.customerId
-			? (deps.db.prepare("SELECT id, key, name, phone FROM customers WHERE id = ?").get(meta.customerId) as unknown as { id: string; key: string; name: string | null; phone: string | null } | undefined)
+			? (deps.db.prepare("SELECT id, key, name, phone FROM customers WHERE tenant_id = ? AND id = ?").get(request.tenantId, meta.customerId) as unknown as { id: string; key: string; name: string | null; phone: string | null } | undefined)
 			: undefined;
 		return {
 			conversation: meta,
