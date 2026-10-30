@@ -90,7 +90,7 @@ npm ci --prefix pi --ignore-scripts
 node scripts/gen-minimal-model-data.mjs        # 离线模型数据(models.dev 不可达时)
 npm run build:offline --prefix pi
 npm install --ignore-scripts                    # 根 workspace 链接 pi 包
-npm test                                        # 34 个测试文件 / 228 个用例
+npm test                                        # 36 个测试文件 / 235 个用例
 npm run typecheck && npm run typecheck:eval
 ```
 
@@ -446,7 +446,16 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 - 规划器提示词决定 `single` / `multi`;协调者提示词负责汇总看板结果;
 - 并发、轮询间隔、超时、子代理默认工具都在 `subagents` 段配置。
 
-子代理执行者是**事件驱动**的:新建 pending 卡片(或把卡片改回 pending)会立刻唤醒消费者;消费者只在"确实有待执行的卡"时按 `subagents.pollIntervalMs` 的节奏连续扫描,没活立刻退出 —— **空闲时不轮询**。`subagents.idleSweepIntervalMs` 控制可选的低频兜底扫描(默认 0 = 完全事件驱动),它用于跨进程/崩溃恢复:多实例部署时应设为大于 0,或改用 Redis 总线。
+子代理执行者是**事件驱动**的:新建 pending 卡片(或把卡片改回 pending)会立刻唤醒消费者;消费者只在"确实有待执行的卡"时按 `subagents.pollIntervalMs` 的节奏连续扫描,没活立刻退出 —— **空闲时不轮询**。
+
+**单实例 vs 多实例**:
+
+| 条件 | 后台任务行为 | 部署约束 |
+| --- | --- | --- |
+| `redis.enabled: true` | 支持多实例:定时任务与微信长轮询用**主实例锁**选主(只有持锁实例在跑);子任务卡走**原子领取 + 租约**(`owner_instance` / `lease_expires_at`),领取者崩溃后租约过期由别的实例接管重跑(超过 `subagents.maxAttempts` 判 error);建卡时经 Redis 频道**跨实例唤醒** | 可横向扩展,实例数不限 |
+| `redis.enabled: false` | 退化为进程内模式:所有后台任务都在本进程跑,只有进程内唤醒 | **仅支持单实例部署**(启动日志会明确提示) |
+
+主实例锁租约由 `redis.leaderLeaseMs` 控制(默认 30 秒);锁续不上时本实例停止单例任务、由其他实例接管。`/api/v1/weixin/status` 里的 `leader` 字段直接反映"本实例是否在拉消息",便于多实例排查。
 
 # 知识与话术
 
@@ -483,7 +492,7 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 # 测试与评测
 
 ```bash
-npm test                 # 34 个测试文件 / 228 个用例
+npm test                 # 36 个测试文件 / 235 个用例
 npm run typecheck        # backend 业务代码
 npm run typecheck:eval   # 仓库根,额外覆盖 opimize/ 下的评测脚本
 ```

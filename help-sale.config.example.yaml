@@ -233,6 +233,8 @@ subagents:
   pollIntervalMs: 2000
   # 空闲兜底扫描间隔(毫秒):0 = 完全事件驱动(新建卡片会立即唤醒消费者)
   idleSweepIntervalMs: 0
+  # 单张子任务卡最多重试几次(领取者崩溃后由别的实例接管重跑)
+  maxAttempts: 3
   timeoutMs: 600000
   defaultTools:
     - knowledge_search
@@ -263,6 +265,8 @@ redis:
   enabled: true
   host: your-mysql-host
   port: 6379
+  # 主实例锁租约(毫秒):Redis 可用时,定时任务与微信长轮询只在持锁实例上运行
+  leaderLeaseMs: 30000
   password: ${SECRETS:redis.password}
 notification:
   enabled: true

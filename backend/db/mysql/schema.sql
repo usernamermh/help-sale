@@ -345,6 +345,9 @@ CREATE TABLE IF NOT EXISTS kanban_cards (
 	result MEDIUMTEXT,
 	error MEDIUMTEXT,
 	share_enabled INT NOT NULL DEFAULT 0,
+	owner_instance VARCHAR(64),
+	lease_expires_at VARCHAR(64),
+	attempts INT NOT NULL DEFAULT 0,
 	created_at VARCHAR(255) NOT NULL DEFAULT '',
 	updated_at VARCHAR(255) NOT NULL DEFAULT '',
   KEY idx_kanban_thread (tenant_id, thread_id, status)

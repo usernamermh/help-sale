@@ -29,6 +29,8 @@ export interface WeixinRuntimeDeps {
 	store: SessionStore;
 	runtime?: ModelRuntime;
 	streamFn?: StreamFn;
+	/** 多实例:只有主实例才拉 iLink 消息(同一条游标不能被两个进程抢) */
+	isLeader?: () => boolean;
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, Math.max(0, ms)));
@@ -163,6 +165,11 @@ export function registerWeixin(app: FastifyInstance, deps: WeixinRuntimeDeps): (
 		void (async () => {
 			let failures = 0;
 			while (!state.stopRequested) {
+				// 多实例:非主实例不拉消息(等待接管),避免两个进程抢同一条游标
+				if (deps.isLeader && !deps.isLeader()) {
+					await sleep(2000);
+					continue;
+				}
 				const current = account;
 				if (!current) break;
 				try {
@@ -230,6 +237,8 @@ export function registerWeixin(app: FastifyInstance, deps: WeixinRuntimeDeps): (
 			accountId: account ? maskId(account.accountId) : null,
 			baseUrl: account?.baseUrl ?? config.weixinBaseUrl,
 			polling: state.running,
+		// 多实例:只有主实例真正拉消息,这里直接暴露出来,便于确认"谁在拉"
+		leader: deps.isLeader ? deps.isLeader() : true,
 			lastPollAt: state.lastPollAt ? new Date(state.lastPollAt).toISOString() : null,
 			lastError: state.lastError || null,
 			handled: state.handled,

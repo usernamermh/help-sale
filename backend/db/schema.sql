@@ -398,6 +398,10 @@ CREATE TABLE IF NOT EXISTS kanban_cards (
 	result TEXT,
 	error TEXT,
 	share_enabled INTEGER NOT NULL DEFAULT 0,
+	-- v40:领取归属与租约(多实例安全)+ 重试次数
+	owner_instance TEXT,
+	lease_expires_at TEXT,
+	attempts INTEGER NOT NULL DEFAULT 0,
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );

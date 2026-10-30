@@ -16,6 +16,12 @@ export interface KanbanCard {
 	error?: string;
 	/** 是否允许本批子代理看到其他子代理的最新结果(主 agent 建卡时按选项写入) */
 	shareEnabled?: boolean;
+	/** 领取者实例(多实例竞争凭据);未领取为空 */
+	ownerInstance?: string;
+	/** 领取租约到期时间(ISO);过期后其他实例可接管 */
+	leaseExpiresAt?: string;
+	/** 已尝试执行次数(超过上限直接判 error,避免坏卡无限重试) */
+	attempts: number;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -33,6 +39,9 @@ function mapRow(row: Record<string, unknown>): KanbanCard {
 		result: row.result ? String(row.result) : undefined,
 		error: row.error ? String(row.error) : undefined,
 		shareEnabled: Number(row.share_enabled ?? 0) === 1,
+		ownerInstance: row.owner_instance ? String(row.owner_instance) : undefined,
+		leaseExpiresAt: row.lease_expires_at ? String(row.lease_expires_at) : undefined,
+		attempts: Number(row.attempts ?? 0),
 		createdAt: String(row.created_at),
 		updatedAt: String(row.updated_at),
 	};
@@ -84,8 +93,8 @@ export function updateKanbanCard(db: DatabaseSync, tenantId: string, id: string,
 	if (!card) return undefined;
 	const next = { ...card, ...patch, id: card.id, tenantId: card.tenantId, threadId: card.threadId, createdAt: card.createdAt, updatedAt: new Date().toISOString() };
 	db.prepare(
-		"UPDATE kanban_cards SET title = ?, description = ?, status = ?, goal = ?, tools_json = ?, result = ?, error = ?, share_enabled = ?, updated_at = ? WHERE id = ? AND tenant_id = ?",
-	).run(next.title, next.description ?? null, next.status, next.goal ?? null, next.tools ? JSON.stringify(next.tools) : null, next.result ?? null, next.error ?? null, next.shareEnabled === true ? 1 : 0, next.updatedAt, id, tenantId);
+		"UPDATE kanban_cards SET title = ?, description = ?, status = ?, goal = ?, tools_json = ?, result = ?, error = ?, share_enabled = ?, owner_instance = ?, lease_expires_at = ?, attempts = ?, updated_at = ? WHERE id = ? AND tenant_id = ?",
+	).run(next.title, next.description ?? null, next.status, next.goal ?? null, next.tools ? JSON.stringify(next.tools) : null, next.result ?? null, next.error ?? null, next.shareEnabled === true ? 1 : 0, next.ownerInstance ?? null, next.leaseExpiresAt ?? null, next.attempts ?? 0, next.updatedAt, id, tenantId);
 	const saved = getKanbanCard(db, tenantId, id);
 	// 卡片被改回 pending(重试/重新排队)同样要唤醒消费者
 	if (saved?.status === "pending") notifySubagentWork();
@@ -98,8 +107,41 @@ export function touchKanbanCard(db: DatabaseSync, tenantId: string, id: string):
 }
 
 /** 把运行中的子代理标记为 inprogress;返回 false 表示卡片不存在。 */
-export function claimKanbanCard(db: DatabaseSync, tenantId: string, id: string): boolean {
-	return updateKanbanCard(db, tenantId, id, { status: "inprogress" }) !== undefined;
+/**
+ * 原子领取:只有"把这张卡从 pending 改成 inprogress"成功的那一个执行者才算抢到。
+ * 靠 UPDATE 的条件与影响行数保证互斥 —— 多实例同时扫到同一张卡时,只有一个 changes=1。
+ */
+export function claimKanbanCard(db: DatabaseSync, tenantId: string, id: string, opts: { owner: string; leaseMs: number }): boolean {
+	const now = new Date();
+	const result = db
+		.prepare(
+			"UPDATE kanban_cards SET status = 'inprogress', owner_instance = ?, lease_expires_at = ?, attempts = attempts + 1, updated_at = ? WHERE id = ? AND tenant_id = ? AND status = 'pending'",
+		)
+		.run(opts.owner, new Date(now.getTime() + opts.leaseMs).toISOString(), now.toISOString(), id, tenantId);
+	return Number(result.changes ?? 0) === 1;
+}
+
+/** 心跳续租:执行中的卡定期刷新租约,避免被别的实例当成过期接管。 */
+export function renewKanbanLease(db: DatabaseSync, tenantId: string, id: string, owner: string, leaseMs: number): boolean {
+	const result = db
+		.prepare("UPDATE kanban_cards SET lease_expires_at = ?, updated_at = ? WHERE id = ? AND tenant_id = ? AND owner_instance = ? AND status = 'inprogress'")
+		.run(new Date(Date.now() + leaseMs).toISOString(), new Date().toISOString(), id, tenantId, owner);
+	return Number(result.changes ?? 0) === 1;
+}
+
+/**
+ * 回收过期租约:领取者崩了/卡死了,租约到期就把卡放回 pending 让别人接手;
+ * 尝试次数超过上限则直接判 error,避免坏卡被无限重试。
+ */
+export function reclaimExpiredKanbanCards(db: DatabaseSync, tenantId: string, opts: { maxAttempts: number }): number {
+	const now = new Date().toISOString();
+	const expired = db
+		.prepare("UPDATE kanban_cards SET status = 'pending', owner_instance = NULL, lease_expires_at = NULL, updated_at = ? WHERE tenant_id = ? AND status = 'inprogress' AND lease_expires_at IS NOT NULL AND lease_expires_at < ? AND attempts < ?")
+		.run(now, tenantId, now, opts.maxAttempts);
+	const gaveUp = db
+		.prepare("UPDATE kanban_cards SET status = 'error', error = '子代理多次执行未完成,已放弃', owner_instance = NULL, lease_expires_at = NULL, updated_at = ? WHERE tenant_id = ? AND status = 'inprogress' AND lease_expires_at IS NOT NULL AND lease_expires_at < ? AND attempts >= ?")
+		.run(now, tenantId, now, opts.maxAttempts);
+	return Number(expired.changes ?? 0) + Number(gaveUp.changes ?? 0);
 }
 
 /** 回填子代理执行结果:ok=true 置 done+result,否则 error+error。 */
@@ -108,5 +150,8 @@ export function finishKanbanCard(db: DatabaseSync, tenantId: string, id: string,
 		status: input.ok ? "done" : "error",
 		result: input.ok ? input.result : undefined,
 		error: input.ok ? undefined : input.error,
+		// 执行结束:清掉领取归属与租约
+		ownerInstance: undefined,
+		leaseExpiresAt: undefined,
 	});
 }

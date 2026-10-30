@@ -23,6 +23,9 @@ import { closeStopSignal, initStopSignal } from "./services/stop-signal.js";
 import { appendRuntimeLog } from "./services/runtime-log.js";
 import { startAutomationScheduler } from "./services/routes/automation.js";
 import { startSubagentConsumer } from "./services/routes/agent/index.js";
+import { SUBAGENT_WAKE_CHANNEL } from "./services/routes/agent/runner.js";
+import { setSubagentWakePublisher } from "./services/routes/agent/subagent-signal.js";
+import { createClusterCoordinator } from "./integrations_db/cluster.js";
 
 // FastifyRequest.tenantId 的类型增强声明在 services/routes/helpers.ts(路由层公共文件)
 
@@ -111,6 +114,22 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 
 	const deps: RouteDeps = { db, store, dataDir, logDir, runtime: options.runtime, streamFn: options.streamFn, reminders };
 
+	// ── 多实例协调(Redis 可用才支持多实例) ──
+	const cluster = createClusterCoordinator({
+		enabled: config.redisEnabled,
+		host: config.redisHost,
+		port: config.redisPort,
+		password: config.redisPassword,
+		leaderLeaseMs: config.redisLeaderLeaseMs,
+	});
+	console.log(
+		cluster.redisEnabled
+			? `[cluster] Redis 可用:支持多实例部署(主实例锁选主,跨实例唤醒);本实例 ${cluster.instanceId}`
+			: `[cluster] Redis 未启用:后台任务为进程内模式,仅支持单实例部署;本实例 ${cluster.instanceId}`,
+	);
+	// 建卡时除了唤醒本进程,还广播给其他实例
+	setSubagentWakePublisher((message) => cluster.publish(SUBAGENT_WAKE_CHANNEL, message));
+
 	// 工具装配预热:后台跑,不挡启动;第一条消息就不会为"冷装配"买单
 	if (!process.env.VITEST) {
 		void warmupAgentTools({ db, tenantId: config.tenantId, store })
@@ -122,7 +141,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	// 外部 MCP 工具列表:启动就预热,之后在缓存过期前后台续期,别让用户消息等外部握手
 	const stopMcpWarmup = startMcpToolWarmup(config.mcpServers);
 	// 微信通道(iLink 机器人):扫码登录、长轮询收消息、agent 回复;未启用时只挂状态接口
-	const stopWeixin = registerWeixin(app, { db, dataDir, store, runtime: options.runtime, streamFn: options.streamFn });
+	const stopWeixin = registerWeixin(app, { db, dataDir, store, runtime: options.runtime, streamFn: options.streamFn, isLeader: () => cluster.isLeader("weixin-poller") });
 
 	app.addHook("onResponse", async (request, reply) => {
 		if (!request.url.startsWith("/api/")) return;
@@ -177,13 +196,18 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		}
 	});
 
+	// 申请"单例任务"的主实例锁(拿不到就等待别人释放;拿到后定时任务与微信长轮询才开始工作)
+	cluster.watchLeadership("automation", () => undefined);
+	cluster.watchLeadership("weixin-poller", () => undefined);
+
 	// ── 后台常驻任务:定时自动化 + 子代理消费者(按配置与调用方开关) ──
-	const stopSubagents = options.subagents === true ? startSubagentConsumer({ db }) : () => undefined;
+	const stopSubagents = options.subagents === true ? startSubagentConsumer({ db, cluster }) : () => undefined;
 	const stopAutomation = startAutomationScheduler({
 		db,
 		store,
 		runtime: options.runtime,
 		streamFn: options.streamFn,
+		isLeader: () => cluster.isLeader("automation"),
 		config: {
 			enabled: options.automation === true && config.automationEnabled,
 			morningDigestTime: config.morningDigestTime,
@@ -200,6 +224,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		stopMcpWarmup();
 		stopSubagents();
 		stopAutomation();
+		await cluster.close();
 		await Promise.allSettled([store.close(), reminders.close(), closeStopSignal()]);
 		db.close();
 	});

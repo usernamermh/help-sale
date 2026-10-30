@@ -80,6 +80,8 @@ export interface AppConfig {
 	redisHost: string;
 	redisPort: number;
 	redisPassword: string;
+	/** 主实例锁租约(redis.leaderLeaseMs):多实例下后台单例任务靠它选主 */
+	redisLeaderLeaseMs: number;
 	chunkerSize: number;
 	chunkerOverlap: number;
 	notificationEnabled: boolean;
@@ -114,6 +116,8 @@ export interface AppConfig {
 	subagentPollIntervalMs: number;
 	/** 空闲兜底扫描间隔(ms):0 = 完全事件驱动,不空转 */
 	subagentIdleSweepIntervalMs: number;
+	/** 单张子任务卡最多重试几次(subagents.maxAttempts) */
+	subagentMaxAttempts: number;
 	subagentTimeoutMs: number;
 	subagentDefaultTools: string[];
 	automationEnabled: boolean;
@@ -187,7 +191,7 @@ export type RetrievalConfig = Pick<AppConfig,
 /** mysql + redis + notification + tools + mcp 段:中间件与外部工具接入。 */
 export type IntegrationsConfig = Pick<AppConfig,
 	| "mysqlEnabled" | "mysqlSchemaRebuild" | "mysqlConnectTimeout" | "mysqlHost" | "mysqlPort" | "mysqlUser" | "mysqlPassword" | "mysqlDatabase"
-	| "redisEnabled" | "redisHost" | "redisPort" | "redisPassword"
+	| "redisEnabled" | "redisHost" | "redisPort" | "redisPassword" | "redisLeaderLeaseMs"
 	| "notificationEnabled" | "notificationWebhookUrl"
 	| "webSearchApiKey" | "fileWriteAllowOutsideRepo" | "sqlMaxRows" | "sqlTimeoutMs" | "sqlExtraBlockedKeywords" | "riskDangerousTools" | "riskDangerousDefaultEnabled" | "mcpServers"
 	| "toolsCatalogEnabled" | "toolsCatalogThreshold" | "toolsCatalogTopK" | "toolsCatalogMaxInspect" | "toolsCatalogSemanticFloorZh" | "toolsCatalogSemanticFloorEn"
@@ -200,7 +204,7 @@ export type DefaultsConfig = Pick<AppConfig,
 	| "notificationScanLimit" | "remindersTakeLimit">;
 /** subagents + automation + workflows.mine + client 段:多代理、定时任务与工作流挖掘。 */
 export type FeaturesConfig = Pick<AppConfig,
-	| "subagentMaxConcurrency" | "subagentPollIntervalMs" | "subagentTimeoutMs" | "subagentIdleSweepIntervalMs" | "subagentDefaultTools"
+	| "subagentMaxConcurrency" | "subagentPollIntervalMs" | "subagentTimeoutMs" | "subagentIdleSweepIntervalMs" | "subagentMaxAttempts" | "subagentDefaultTools"
 	| "automationEnabled" | "morningDigestTime" | "weeklyReportWeekday" | "weeklyReportTime"
 	| "silentCustomerDays" | "silentWakeupEnabled" | "wakeupTaskTime"
 	| "workflowMineDays" | "workflowMineMinWindow" | "workflowMineMaxWindow" | "workflowMineMinCount"

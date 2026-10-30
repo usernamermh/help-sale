@@ -21,6 +21,7 @@ export function loadIntegrationsConfig(file: FileConfig): IntegrationsConfig {
 		redisHost: str(file.redis?.host, "redis.host"),
 		redisPort: num(file.redis?.port, "redis.port"),
 		redisPassword: str(file.redis?.password, "redis.password"),
+		redisLeaderLeaseMs: num(file.redis?.leaderLeaseMs, "redis.leaderLeaseMs"),
 		notificationEnabled: bool(file.notification?.enabled, "notification.enabled"),
 		notificationWebhookUrl: str(file.notification?.webhookUrl, "notification.webhookUrl"),
 		webSearchApiKey: str(file.tools?.webSearch?.apiKey, "tools.webSearch.apiKey"),

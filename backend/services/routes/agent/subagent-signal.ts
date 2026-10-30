@@ -21,9 +21,20 @@ export function unregisterSubagentWorker(): void {
 	worker = undefined;
 }
 
+/**
+ * 跨实例广播钩子:Redis 可用时由宿主注入,把"有活了"发到频道上,让别的实例也立刻检查一次
+ * (多实例下卡可能由任意实例消费,越早知道越好)。Redis 不可用时保持空,只做进程内唤醒。
+ */
+let wakePublisher: ((message: string) => void) | undefined;
+
+export function setSubagentWakePublisher(fn: ((message: string) => void) | undefined): void {
+	wakePublisher = fn;
+}
+
 /** 生产者调用:有新的待执行任务了。没有消费者在跑时静默忽略。 */
 export function notifySubagentWork(): void {
 	worker?.();
+	wakePublisher?.("wake");
 }
 
 export function hasSubagentWorker(): boolean {

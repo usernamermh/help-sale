@@ -35,6 +35,11 @@ export interface AutomationDeps {
 	streamFn?: StreamFn;
 	config: AutomationConfig;
 }
+
+/** 定时任务是"单例语义"的:多实例部署时只有主实例该跑(redis.leaderLeaseMs 决定的锁) */
+export interface AutomationLeaderCheck {
+	isLeader?: () => boolean;
+}
 const MINUTE_MS = 60 * 1000;
 
 function dateKey(d: Date): string {
@@ -249,9 +254,11 @@ export function runDueAutomations(deps: AutomationDeps, now = new Date()): Array
 }
 
 /** 启动定时调度器:每分钟 tick 一次;返回 stop 函数(注册到 app.onClose)。 */
-export function startAutomationScheduler(deps: AutomationDeps): () => void {
+export function startAutomationScheduler(deps: AutomationDeps & AutomationLeaderCheck): () => void {
 	if (!deps.config.enabled) return () => undefined;
 	const timer = setInterval(() => {
+		// 多实例:没拿到主实例锁就不跑,避免同一个晨报跑两遍
+		if (deps.isLeader && !deps.isLeader()) return;
 		try {
 			runDueAutomations(deps);
 		} catch (error) {
