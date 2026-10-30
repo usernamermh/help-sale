@@ -1,8 +1,8 @@
 {
   "name": "redis",
   "label": "操作 Redis",
-  "description": "Connect using the redis section of the config file; supports get/set/del/keys/ttl/expire/incr/zadd/zrange (whitelisted operations); connection failures return an explicit error.",
-  "description_language": "en",
+  "description": "基于配置文件 redis 段连接,支持 get/set/del/keys/ttl/expire/incr/zadd/zrange,白名单操作,连接失败返回明确错误。",
+  "description_language": "zh",
   "category": "存储",
   "parameters": {
     "type": "object",
@@ -30,19 +30,19 @@
       },
       "value": {
         "type": "string",
-        "description": "value for set"
+        "description": "set 时的值"
       },
       "expireSeconds": {
         "type": "number",
-        "description": "expiry in seconds for set/expire"
+        "description": "set/expire 的过期秒数"
       },
       "score": {
         "type": "number",
-        "description": "zadd score"
+        "description": "zadd 分值"
       },
       "member": {
         "type": "string",
-        "description": "zadd member"
+        "description": "zadd 成员"
       },
       "start": {
         "type": "number",

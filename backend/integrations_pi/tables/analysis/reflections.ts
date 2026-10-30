@@ -35,8 +35,9 @@ export function listReflectionCases(
 		params.push(input.caseType);
 	}
 	if (input.days) {
-		clauses.push("created_at >= datetime('now', ?)");
-		params.push(`-${input.days} days`);
+		clauses.push("created_at >= ?");
+    // 时间边界在 JS 里算:datetime('now',?) 是 SQLite 语法,MySQL 不认;ISO 字符串两边都能比较
+		params.push(new Date(Date.now() - input.days * 86400000).toISOString());
 	}
 	params.push(input.limit ?? 200);
 	const rows = db
@@ -49,9 +50,9 @@ export function countReflectionCases(db: DatabaseSync, tenantId: string, days: n
 	const rows = db
 		.prepare(
 			`SELECT case_type, COUNT(*) AS count FROM reflection_cases
-			 WHERE tenant_id = ? AND created_at >= datetime('now', ?) GROUP BY case_type`,
+			 WHERE tenant_id = ? AND created_at >= ? GROUP BY case_type`,
 		)
-		.all(tenantId, `-${days} days`) as Array<{ case_type: string; count: number }>;
+		.all(tenantId, new Date(Date.now() - days * 86400000).toISOString()) as Array<{ case_type: string; count: number }>;
 	return rows;
 }
 

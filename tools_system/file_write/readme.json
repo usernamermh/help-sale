@@ -1,0 +1,47 @@
+{
+  "name": "file_write",
+  "label": "写入/编辑文件",
+  "description": "在本地路径写入文本文件。op=create 新建(已存在则拒绝并给出当前 hash);op=replace 整文件替换、op=patch 按行号局部修改 —— 后两者必须带 expectedHash(读取文件时返回的 hash),内容被别人改过就拒绝并提示重读。patch 的每条编辑还可带 expect(该区间当前原文)做二次校验,防止行号算错写错位置。行号从 1 开始;endLine 省略=只改一行;content 为空串=删除该行区间。写入会保留原文件的换行风格(CRLF/LF)与 BOM。",
+  "description_language": "zh",
+  "category": "文件写入",
+  "parameters": {
+    "type": "object",
+    "required": ["filePath", "op"],
+    "properties": {
+      "filePath": {
+        "type": "string",
+        "description": "要写入的文件路径(仓库内路径;是否允许仓库外路径由配置 tools.fileWrite.allowOutsideRepo 决定)"
+      },
+      "op": {
+        "type": "string",
+        "enum": ["create", "replace", "patch"],
+        "description": "create=新建文件;replace=整文件替换;patch=按行号局部修改"
+      },
+      "content": {
+        "type": "string",
+        "description": "create / replace 用:整份文本内容"
+      },
+      "expectedHash": {
+        "type": "string",
+        "description": "replace / patch 必填:读取文件时返回的 hash(完整 sha256,或前 8 位以上的前缀)"
+      },
+      "edits": {
+        "type": "array",
+        "description": "patch 用:按行号的修改列表(可多条,一次原子应用;区间不能重叠)",
+        "items": {
+          "type": "object",
+          "required": ["startLine"],
+          "properties": {
+            "startLine": { "type": "number", "description": "起始行号,从 1 开始" },
+            "endLine": { "type": "number", "description": "结束行号(含);省略表示只改这一行" },
+            "content": { "type": "string", "description": "替换成的内容;传空串表示删除该区间" },
+            "expect": { "type": "string", "description": "该区间当前的原文(建议填):与文件实际内容不一致时直接拒绝,避免行号算错" }
+          }
+        }
+      }
+    }
+  },
+  "entry": "main.ts",
+  "function_list": ["main.execute"],
+  "toggleable": true
+}

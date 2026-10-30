@@ -56,25 +56,7 @@ interface McpToolSnapshot {
 	inputSchema: unknown;
 }
 
-/**
- * 本地工具元数据用哪一版:
- *   en = 仓库当前的 readme.json(2026-10 已统一改成英文)
- *   zh = 改造前的中文快照(fixtures/tool-meta-zh.json),用来做"中英元数据"对照评测
- * MCP 工具的元数据来自外部 server,两版都一样(英文),不受此开关影响。
- */
-export interface BuildCorpusOptions {
-	meta: "en" | "zh";
-}
-
-/** 读改造前的中文描述快照(name → 中文 description) */
-function loadChineseMeta(): Map<string, string> {
-	const fixture = fileURLToPath(new URL("./fixtures/tool-meta-zh.json", import.meta.url));
-	const rows = JSON.parse(readFileSync(fixture, "utf8")) as Array<{ name: string; description: string }>;
-	return new Map(rows.map((r) => [r.name, r.description]));
-}
-
-export async function buildToolDocs(options: BuildCorpusOptions): Promise<ToolDoc[]> {
-	const zhMeta = options.meta === "zh" ? loadChineseMeta() : null;
+export async function buildToolDocs(): Promise<ToolDoc[]> {
 	const docs: ToolDoc[] = [];
 	// webSearchApiKey 传非空:与生产一致(生产配了密钥,web_search 是挂载的)
 	const local = await loadExternalAgentTools(externalToolPaths(), { db: null, tenantId: "", webSearchApiKey: "eval" });
@@ -82,9 +64,9 @@ export async function buildToolDocs(options: BuildCorpusOptions): Promise<ToolDo
 		docs.push({
 			name: tool.name,
 			label: tool.label ?? tool.name,
-			description: (zhMeta?.get(tool.name) ?? String(tool.description ?? "")),
+			description: String(tool.description ?? ""),
 			// 描述语言:readme.json 声明优先(缺省按描述推断)——决定它进中/英哪一路召回
-			descriptionLanguage: zhMeta ? "zh" : ((tool as { descriptionLanguage?: "zh" | "en" }).descriptionLanguage ?? "en"),
+			descriptionLanguage: (tool as { descriptionLanguage?: "zh" | "en" }).descriptionLanguage ?? "zh",
 			category: String((tool as { category?: string }).category ?? ""),
 			parameters: tool.parameters,
 			params: paramNames(tool.parameters),

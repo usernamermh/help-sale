@@ -102,6 +102,9 @@ tools:
   webSearch:
     # Serper API 密钥(请填写自己的密钥)
     apiKey: your-serper-api-key
+  # 文件写入(file_write):是否允许写到仓库之外(否则只允许仓库内路径)
+  fileWrite:
+    allowOutsideRepo: true
   # 工具编目:长尾工具(MCP/工作流)数量超过 threshold 时,改为三层按需加载
   # search_tools(工具名+一行描述) → get_tool_details(单个工具 schema) → call_tool(执行)
   catalog:

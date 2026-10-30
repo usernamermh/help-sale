@@ -1,8 +1,8 @@
 {
   "name": "date_tool",
   "label": "日期转换",
-  "description": "Convert relative dates mentioned in conversation (next Monday, this Friday, today, ...) into concrete calendar dates.",
-  "description_language": "en",
+  "description": "把对话中的「下周X、星期X、今天」等相对日期转换为具体日期。",
+  "description_language": "zh",
   "category": "通用",
   "parameters": {
     "type": "object",
@@ -12,11 +12,11 @@
     "properties": {
       "text": {
         "type": "string",
-        "description": "text containing relative dates"
+        "description": "含相对日期的文本"
       },
       "baseDate": {
         "type": "string",
-        "description": "base date YYYY-MM-DD, defaults to today"
+        "description": "基准日期 YYYY-MM-DD,缺省今天"
       }
     }
   },

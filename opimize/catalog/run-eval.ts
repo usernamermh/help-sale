@@ -12,7 +12,7 @@
  *   全量      本地目录工具 + MCP + 工作流
  *   生产编目   只有 MCP + 工作流(线上编目里真实躺着的那批长尾工具)
  *
- * 用法: npx tsx opimize/catalog/run-eval.ts [--topk=8] [--floor=0.5] [--verbose] [--out=报告路径] [--corpus=all|catalog] [--meta=en|zh]
+ * 用法: npx tsx opimize/catalog/run-eval.ts [--topk=8] [--floor=0.5] [--verbose] [--out=报告路径] [--corpus=all|catalog]
  * 不传参时 topK / semanticFloor / 双语召回参数都取 help-sale.config.yaml 的真实配置(tools.catalog.*)。
  */
 import { writeFileSync } from "node:fs";
@@ -35,8 +35,6 @@ const FLOORS_CONFIG = FLOOR_ARG === undefined ? { zh: config.toolsCatalogSemanti
 const VERBOSE = args.has("verbose");
 const OUT = args.get("out");
 const CORPUS = args.get("corpus") ?? "both";
-// 本地工具元数据版本:en=当前英文仓库,zh=改造前中文快照(对照评测用)
-const META = (args.get("meta") ?? "en") as "en" | "zh";
 const KINDS: EvalKind[] = ["local", "mcp", "mixed", "rewrite", "en", "chitchat"];
 const FLOORS = [0, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7];
 const RECALL_OPTIONS = { perLanguageTopK: config.toolsCatalogPerLanguageTopK };
@@ -240,9 +238,8 @@ async function report(corpusLabel: string, docs: ToolDoc[]): Promise<void> {
 }
 
 async function main(): Promise<void> {
-	const all = await buildToolDocs({ meta: META });
+	const all = await buildToolDocs();
 	const catalogOnly = all.filter((d) => d.source !== "local");
-	log(`本地工具元数据: ${META === "en" ? "英文(仓库当前 readme.json)" : "中文(改造前快照 fixtures/tool-meta-zh.json)"}`);
 	log(`语料明细: 本地目录 ${all.filter((d) => d.source === "local").length} / MCP ${all.filter((d) => d.source === "mcp").length} / 工作流 ${all.filter((d) => d.source === "workflow").length}`);
 	log(`测试集: ${CASES.length} 条查询,每条都已配中英两侧 query(zh/en),全部进入双语召回对比`);
 	if (CORPUS !== "catalog") await report("全量:本地目录 + MCP + 工作流", all);

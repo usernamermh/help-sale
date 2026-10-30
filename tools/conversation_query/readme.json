@@ -1,8 +1,8 @@
 {
   "name": "conversation_query",
   "label": "会话查询",
-  "description": "List recent conversations (10 rows per page, pageable; the table is rendered as-is by the frontend), or load the full transcript of one conversation by conversation id, to analyze what was discussed with a customer.",
-  "description_language": "en",
+  "description": "查看最近的会话列表(每页 10 行,可翻页;表格由前端原样渲染),或按会话 ID 读取完整对话原文,便于分析客户沟通内容。",
+  "description_language": "zh",
   "category": "查询",
   "parameters": {
     "type": "object",
@@ -14,21 +14,21 @@
           "load"
         ],
         "default": "list",
-        "description": "query kind"
+        "description": "查询类型"
       },
       "conversationId": {
         "type": "string",
-        "description": "conversation id (for load)"
+        "description": "会话 ID(load 用)"
       },
       "page": {
         "type": "number",
         "default": 1,
-        "description": "page number, at most 10 rows per page; page 1 by default, pass this only when the user explicitly asks for more"
+        "description": "页码,每页最多 10 行;默认第 1 页,仅当用户明确要求查看更多时才翻页"
       },
       "limit": {
         "type": "number",
         "maximum": 100,
-        "description": "maximum number of rows"
+        "description": "列表条数上限"
       }
     }
   },

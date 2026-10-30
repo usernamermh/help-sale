@@ -1,8 +1,8 @@
 {
   "name": "sql",
   "label": "操作业务数据库",
-  "description": "Run SQL against the business database selected by data.mode (local = SQLite, mysql = remote MySQL; the config picks one, so it cannot hit the wrong database); read-only by default, writes need readOnly=false + confirmWrite=true, and dangerous statements (DROP, UPDATE/DELETE without WHERE) are blocked and audited by rules.",
-  "description_language": "en",
+  "description": "操作当前 data.mode 对应的业务库(local=本地 SQLite / mysql=远程 MySQL),按配置二选一不会错连;默认只读,写操作需 readOnly=false + confirmWrite=true,危险语句(如 DROP/无 WHERE 的 UPDATE/DELETE)由规则拦截并审计。",
+  "description_language": "zh",
   "category": "数据库",
   "parameters": {
     "type": "object",
@@ -16,17 +16,17 @@
       },
       "values": {
         "type": "array",
-        "description": "values for the SQL ? placeholders"
+        "description": "SQL 占位符 ? 对应的值"
       },
       "readOnly": {
         "type": "boolean",
         "default": true,
-        "description": "read-only by default: write statements (INSERT/UPDATE/DELETE, ...) must pass false explicitly"
+        "description": "默认只读:写操作(INSERT/UPDATE/DELETE 等)必须显式传 false"
       },
       "confirmWrite": {
         "type": "boolean",
         "default": false,
-        "description": "dangerous writes need true to confirm; rules block DROP/TRUNCATE/ALTER and require WHERE on UPDATE/DELETE"
+        "description": "危险写操作需 true 确认;规则拦截 DROP/TRUNCATE/ALTER,UPDATE/DELETE 必须带 WHERE"
       }
     }
   },

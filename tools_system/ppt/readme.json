@@ -1,8 +1,8 @@
 {
   "name": "ppt",
   "label": "读取 PPT",
-  "description": "Read a .pptx deck inside the repository and extract the text of every slide (repository paths only).",
-  "description_language": "en",
+  "description": "读取仓库内的 .pptx 演示文稿,提取每页文字内容(路径仅限仓库内)。",
+  "description_language": "zh",
   "category": "文件读取",
   "parameters": {
     "type": "object",
@@ -12,7 +12,7 @@
     "properties": {
       "filePath": {
         "type": "string",
-        "description": "path inside the repository, e.g. data/proposal.pptx"
+        "description": "仓库内路径,如 data/方案.pptx"
       },
       "maxSlides": {
         "type": "number",

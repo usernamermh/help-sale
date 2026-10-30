@@ -1,8 +1,8 @@
 {
   "name": "browser",
   "label": "无头浏览器",
-  "description": "Lightweight headless fetch: retrieve a URL over HTTP and return the page title and visible text (no page JavaScript is executed); for a full browser (clicks/forms/screenshots) install playwright and extend this tool.",
-  "description_language": "en",
+  "description": "轻量无头抓取:通过 HTTP 抓取指定 URL 返回页面标题与可见文本(不执行页面 JS);如需完整浏览器(点击/表单/截图)请安装 playwright 后扩展本工具。",
+  "description_language": "zh",
   "category": "浏览器",
   "parameters": {
     "type": "object",
@@ -12,7 +12,7 @@
     "properties": {
       "url": {
         "type": "string",
-        "description": "URL to fetch"
+        "description": "要抓取的 URL"
       },
       "maxChars": {
         "type": "number",

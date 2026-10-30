@@ -1,8 +1,8 @@
 {
   "name": "subagents",
   "label": "子代理任务",
-  "description": "Register and inspect subagent tasks: op=create hands a goal to a subagent (optional tools whitelist); op=list shows the queue and statuses; op=get returns one task's result. The host orchestrator consumes and runs subagent tasks automatically.",
-  "description_language": "en",
+  "description": "登记/查看子代理任务:op=create 把目标拆给子代理执行(可指定 tools 白名单);op=list 查看队列与状态;op=get 查看单个任务结果。子代理由宿主编排器自动消费执行。",
+  "description_language": "zh",
   "category": "协作",
   "parameters": {
     "type": "object",
@@ -15,34 +15,34 @@
           "get"
         ],
         "default": "list",
-        "description": "operation kind"
+        "description": "操作类型"
       },
       "title": {
         "type": "string",
-        "description": "task title (for create)"
+        "description": "任务标题(create 用)"
       },
       "goal": {
         "type": "string",
-        "description": "goal the subagent must achieve (for create)"
+        "description": "子代理要完成的目标(create 用)"
       },
       "input": {
         "type": "object",
-        "description": "extra input passed to the subagent (for create)"
+        "description": "传给子代理的额外输入(create 用)"
       },
       "tools": {
         "type": "array",
         "items": {
           "type": "string"
         },
-        "description": "tool whitelist the subagent may use (defaults to the default read-only tools)"
+        "description": "允许子代理使用的工具白名单(缺省用默认只读工具)"
       },
       "taskId": {
         "type": "string",
-        "description": "task id (for get)"
+        "description": "任务 ID(get 用)"
       },
       "statusFilter": {
         "type": "string",
-        "description": "status filter: queued/running/done/error"
+        "description": "按状态过滤:queued/running/done/error"
       }
     }
   },

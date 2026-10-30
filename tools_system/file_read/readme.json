@@ -1,8 +1,8 @@
 {
   "name": "file_read",
   "label": "任意路径读取文件",
-  "description": "Read a document from any local path (txt/md/csv/json/yaml/log/xml/html/xlsx/pdf/pptx/docx, ...) and return the extracted text; read-only - use it when the user explicitly wants a local file read.",
-  "description_language": "en",
+  "description": "从任意本地路径读取文件。文本文件按绝对行号输出内容,并返回总行数与内容 hash(可直接作为 file_write 的 expectedHash 去编辑);xlsx/pdf/pptx/docx 只做文本抽取,不提供行号与 hash(不能用 file_write 编辑)。仅读不写。",
+  "description_language": "zh",
   "category": "文件读取",
   "parameters": {
     "type": "object",
@@ -12,7 +12,12 @@
     "properties": {
       "filePath": {
         "type": "string",
-        "description": "any absolute local path, e.g. C:/data/customers.xlsx or E:/proj_help_sale/data/report.pdf"
+        "description": "要读取的文件路径(文本文件按行号显示;Excel/PDF/PPT/DOCX 抽取文本)"
+      },
+      "page": {
+        "type": "number",
+        "default": 1,
+        "description": "页码,每页最多 50 行;默认第 1 页,仅当需要查看更多时才翻页"
       }
     }
   },

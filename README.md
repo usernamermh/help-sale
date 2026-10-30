@@ -44,6 +44,15 @@
 
 ![multi agent模式](docs/images/multi_agent模式.jpg)
 
+# 与旧版(v1)的差异
+
+本项目是 v1 的重构版,功能与目录结构都有调整,读旧文档时注意以下几点:
+
+- **删掉了业务硬编码**:车型目录、车型优选方案、试驾、客户意向车型,以及会话分析、话术评估、通话总结三条流程,连同它们的表、归档、提示词与工具一并移除。`sales`(成交/门店/销售)保留 —— 周报、跟进待办、标签、反思同样保留。
+- **目录按"里面是什么"命名**:原来的 `repositories` 拆掉,功能逻辑与路由同放在 `services/routes/<功能>.ts`,`services/` 根目录只放跨功能通用函数。
+- **配置零默认值**:所有运行参数只从 `help-sale.config.yaml` 读,代码里不留默认值;缺项会在启动时直接报错并指出具体配置键。
+- **新增能力**:MCP 接入与工具编目(三层工具)、双语 query 改写与分语言召回、工作流沉淀(挖掘 → 审批 → 挂载)、检索评测目录 `opimize/`。
+- **文件工具换了一套**:原来"只允许新建文件"的 `file_write_new` 去掉,改成通用的 `file_write`(新建 / 整份替换 / 按行号局部修改,带哈希 CAS 与原文校验),读取侧 `txt`、`file_read` 同步改为输出行号 + 总行数 + 内容 hash(见「文件读写方案」一节)。
 # 技术栈
 
 - Node.js ≥ 24(`node:sqlite`)+ TypeScript + Fastify + Vitest
@@ -114,6 +123,7 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 | `context.compression` | 长对话增量压缩阈值 |
 | `chunker` | 知识分块大小与重叠 |
 | `tools.webSearch` | Serper 密钥(`web_search` 工具的启用门槛) |
+| `tools.fileWrite` | 文件写入工具是否允许写到仓库之外(`allowOutsideRepo`) |
 | `tools.catalog` | 工具编目与召回,见下 |
 | `mcp.servers` | 外部 MCP Server 列表 |
 | `knowledge.searchLimit` | 知识检索默认条数 |
@@ -127,6 +137,27 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 | `automation` | 定时任务:晨报、周报、沉默客户唤醒的时间与开关 |
 | `company` / `userkey` / `client` | 公司名(写入提示词)、调用方标识、前端注入参数 |
 
+# Agent 运行流程
+
+```
+用户提问(中文/英文)
+  └─ 组装本轮工具:目录工具直挂;MCP + 工作流作为"长尾"
+       ├─ 长尾 ≤ threshold:全部直挂,不做改写
+       └─ 长尾 > threshold:进编目模式
+            ├─ query 改写(1 次模型调用)→ { zh: 中文检索词, en: English keywords }
+            ├─ zh 检索词 → 只在「中文描述」的工具池召回(词面 BM25 + 语义 BGE,下限 semanticFloorZh)
+            ├─ en 检索词 → 只在「英文描述」的工具池召回(同双通道,下限 semanticFloorEn)
+            ├─ search_tools 把两段分开返回给模型:【中文描述的工具】+【英文描述的工具】
+            └─ 模型选工具 → get_tool_details 取参数 → call_tool 执行
+  └─ 轨迹、工具调用与工作流步骤写入 agent_events,前端时间线可回放
+```
+
+几个设计点:
+
+- **工具描述语言**(`description_language`,zh/en)决定它进哪一段:现有 32 个本地目录工具与已沉淀工作流都是**中文**描述(zh),外部 MCP 工具一般按英文描述提供(en);`readme.json` 里可显式声明,缺省按描述文本推断。
+- **两段不混排**:跨语言谁更相关交给模型按描述判断 —— 两段的第一名分数在融合里相同,合成一条榜单只能按工具名猜,实测会错。
+- **改写只触发一次**:超时、解析失败或开关关闭都会退回用户原话,不阻塞本轮。
+- 模型自己那次 `search_tools` 的 query 也算一路,按语言并入对应那一段。
 # 工具契约(目录工具)
 
 `tools/` 与 `tools_system/` 下每个工具是一个目录,含:
@@ -135,8 +166,8 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 {
   "name": "conversation_query",
   "label": "会话查询",
-  "description": "List recent conversations ...",
-  "description_language": "en",
+  "description": "查看最近的会话列表(每页 10 行,可翻页;表格由前端原样渲染),或按会话 ID 读取完整对话原文。",
+  "description_language": "zh",
   "category": "查询",
   "parameters": { "type": "object", "properties": { "view": { "type": "string" } } },
   "entry": "main.ts",
@@ -151,8 +182,89 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 - `hidden: true` 的工具不出现在能力清单(模型仍可调用);
 - 新增/修改工具**重启服务即生效**,不需要改后端代码。
 
-当前挂载的本地工具(32 个):`conversation_query`、`customer_query`、`insight_query`、`knowledge_search`、`knowledge_ingest`、`knowledge_candidate`、`playbook_check`、`task_manage`、`workflow_manage`、`browser`、`chart_generate`、`cluster`、`computer`、`date_tool`、`dialog_extract`、`embedding`、`excel`、`file_read`、`file_write_new`、`kanban`、`keyword_extract_free`、`keyword_extract_strict`、`ppt`、`redis`、`similarity`、`sql`、`subagents`、`table_generate`、`terminal`、`txt`、`update_memory`、`web_search`(需配 Serper 密钥)。
+当前挂载的本地工具(32 个):`conversation_query`、`customer_query`、`insight_query`、`knowledge_search`、`knowledge_ingest`、`knowledge_candidate`、`playbook_check`、`task_manage`、`workflow_manage`、`browser`、`chart_generate`、`cluster`、`computer`、`date_tool`、`dialog_extract`、`embedding`、`excel`、`file_read`、`file_write`、`kanban`、`keyword_extract_free`、`keyword_extract_strict`、`ppt`、`redis`、`similarity`、`sql`、`subagents`、`table_generate`、`terminal`、`txt`、`update_memory`、`web_search`(需配 Serper 密钥)。
 
+# 文件读写方案(file_read / txt / file_write)
+
+模型要改文件时,最大的风险不是"不会写",而是**拿着过期内容去写**:读完之后文件被别人(或别的步骤)改了、或者行号数错了。所以这套工具按"乐观锁 + 行号锚点"设计。
+
+三个工具分工:
+
+| 工具 | 作用 | 读/写 |
+| --- | --- | --- |
+| `txt` | 读**仓库内**文本文件(txt/md/csv/json/yaml/log/xml/html) | 读 |
+| `file_read` | 读**任意路径**文件;文本文件带行号/哈希,Excel/PDF/PPT/DOCX 只做文本抽取 | 读 |
+| `file_write` | 写文本文件:`create` 新建、`replace` 整份替换、`patch` 按行号局部修改 | 写 |
+
+## 读:`txt` / `file_read` 返回什么
+
+文本文件一律带**绝对行号 + 总行数 + 内容 hash + 换行风格**,拿到的 hash 可以直接当写操作的 `expectedHash`:
+
+```
+文件:E:\proj_help_sale_v2\.tmp\smoke.md
+共 3 行 · hash=f97871a36f51 · 换行=LF
+1| # 标题
+2| 第一段
+3| 第二段
+
+(修改请用 file_write:op=patch 按行号改,或 op=replace 整份替换,并带上 expectedHash=f97871a36f51)
+```
+
+- 行号是**文件里的绝对行号**(不是分页内的相对序号);
+- `txt` 用 `startLine` / `maxLines`(默认 200 行)分页,截断时会写"仅显示第 X-Y 行,继续读传 startLine=…",避免模型拿截断内容去算行号;
+- Excel / PDF / PPT / DOCX 只抽取文本,结果里明确写"不提供行号与 hash,不能用 file_write 编辑"。
+
+## 写:`file_write` 的三种模式
+
+| op | 用途 | 必填参数 |
+| --- | --- | --- |
+| `create` | 新建文件;文件已存在则**拒绝**,并回当前 hash 提示改用 `replace` | `content` |
+| `replace` | 整文件替换 | `content` + `expectedHash` |
+| `patch` | 按行号局部修改(可一次多条,原子应用) | `expectedHash` + `edits[]` |
+
+`patch` 的每条 edit:`{ startLine, endLine?, content, expect? }`
+
+| 字段 | 约定 |
+| --- | --- |
+| `startLine` | 从 **1** 开始 |
+| `endLine` | 省略 = 只改这一行 |
+| `content` | 替换成的内容;传空串 `""` = **删除**该区间 |
+| `expect` | 该区间当前原文(建议填):与实际内容不一致就直接拒绝,防止行号数错写错位置 |
+
+三层校验,任何一层不过都不落盘:
+
+1. **哈希 CAS**:`expectedHash` 与文件当前 sha256 不符 → 说明内容被改过,拒绝并回当前 hash + 行数,要求重读;
+2. **行号边界**:越界、`startLine > endLine`、区间重叠、对空文件 patch → 拒绝并说明原因;
+3. **原文锚点**:`expect` 与目标区间实际内容不一致 → 拒绝并**把实际内容贴出来**。
+
+工程细节:
+
+- **写入必回新 hash**(12 位短 ID,也接受完整 sha256 或 ≥8 位前缀),模型可连续编辑而不必反复读文件;
+- **换行风格与 BOM 原样保留**(CRLF 文件改完还是 CRLF,带 BOM 还是带 BOM),避免一次小改在 git 里变成整文件 diff;
+- **原子写**:同目录临时文件 + rename,失败会清理临时文件;
+- **保护**:内容上限 2MB、含 NUL 字节拒绝、`create` 用 `wx` 语义(存在即失败);
+- **路径范围**由配置决定:`tools.fileWrite.allowOutsideRepo: true` 允许任意本地路径;改成 `false` 时只接受仓库内路径,越界直接拒绝。
+
+## 典型调用链
+
+```
+1) txt(filePath="src/a.ts")                    → 行号 + 总行数 + hash=ab12cd34ef56
+2) file_write(op=patch, expectedHash="ab12cd34ef56",
+              edits=[{ startLine: 12, endLine: 14, content: "新内容", expect: "原第 12-14 行" }])
+   → 已局部修改…hash=99aa88bb77cc(旧 ab12cd34ef56)
+3) 需要再改就带 99aa88bb77cc 继续;若中途文件被改过,第 2 步会返回 CAS 未通过
+```
+
+## 常见返回与含义
+
+| 返回 | 含义 / 下一步 |
+| --- | --- |
+| `文件已存在,不能新建…hash=xxx` | 改用 `op=replace` + 该 hash |
+| `编辑现有文件必须带 expectedHash` | 先读文件拿 hash |
+| `文件内容已变更,拒绝写入(CAS 未通过)` | 内容已变,重新读取后再改 |
+| `edits[i] 原文校验失败:第 X-Y 行实际是…` | 行号对不上,重读确认行号 |
+| `edits 有重叠…请合并成一段` | 合并相邻/重叠区间 |
+| `文件是空的,patch 没有可改的行` | 改用 `op=replace` 写整份内容 |
 # MCP 接入与工具编目
 
 - 在 `mcp.servers` 配外部 MCP Server(含 `pat` 时自动带 `Authorization: Bearer`),它们的工具以 `mcp_{server}_{tool}` 前缀混进工具列表;

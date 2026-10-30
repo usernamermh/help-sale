@@ -24,6 +24,7 @@ export function loadIntegrationsConfig(file: FileConfig): IntegrationsConfig {
 		notificationEnabled: bool(file.notification?.enabled, "notification.enabled"),
 		notificationWebhookUrl: str(file.notification?.webhookUrl, "notification.webhookUrl"),
 		webSearchApiKey: str(file.tools?.webSearch?.apiKey, "tools.webSearch.apiKey"),
+		fileWriteAllowOutsideRepo: bool(file.tools?.fileWrite?.allowOutsideRepo, "tools.fileWrite.allowOutsideRepo"),
 		toolsCatalogEnabled: bool(file.tools?.catalog?.enabled, "tools.catalog.enabled"),
 		toolsCatalogThreshold: num(file.tools?.catalog?.threshold, "tools.catalog.threshold"),
 		toolsCatalogTopK: num(file.tools?.catalog?.topK, "tools.catalog.topK"),

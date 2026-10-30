@@ -44,7 +44,7 @@ const LOCAL_CASES: EvalCase[] = [
 	{ id: "local-15", query: "从这次会话里把提到价格的句子抽出来", expect: ["dialog_extract"], kind: "local", queryEn: "extract the sentences that mention price from this conversation" },
 	{ id: "local-16", query: "把这段话转成向量", expect: ["embedding"], kind: "local", queryEn: "turn this text into an embedding vector" },
 	{ id: "local-17", query: "读一下这个 Excel 表格", expect: ["excel"], kind: "local", queryEn: "read this Excel spreadsheet", queryZh: "读一下这个 Excel 表格" },
-	{ id: "local-18", query: "新建一个说明文件,把结论写进去", expect: ["file_write_new"], kind: "local", queryEn: "create a new file and write the conclusion into it" },
+	{ id: "local-18", query: "新建一个说明文件,把结论写进去", expect: ["file_write"], kind: "local", queryEn: "create a new file and write the conclusion into it" },
 	{ id: "local-19", query: "在看板上加一个任务卡片", expect: ["kanban"], kind: "local", queryEn: "add a task card on the kanban board" },
 	{ id: "local-20", query: "从这段对话里抽几个关键词当标签", expect: ["keyword_extract_free"], kind: "local", queryEn: "extract keywords from this conversation as tags" },
 	{ id: "local-21", query: "这段文本里有没有命中这些候选标签", expect: ["keyword_extract_strict"], kind: "local", queryEn: "check whether these candidate tags appear in the text" },

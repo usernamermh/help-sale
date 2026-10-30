@@ -38,6 +38,57 @@ function writeRaw(payload: Record<string, unknown>): void {
 	Atomics.notify(resultView, 0);
 }
 
+/**
+ * 建表只做 CREATE TABLE IF NOT EXISTS —— 老库里"后来新增的列"不会被补上(实测:沉默客户唤醒报
+ * Unknown column 'c.funnel_stage')。这里按 schema.sql 逐表比对 information_schema,只补缺列(ADD COLUMN),
+ * 不改不删,因此对线上库安全;补列时去掉 NOT NULL(老表已有数据,没默认值的 NOT NULL 列加不上去)。
+ */
+/**
+ * 建表只做 CREATE TABLE IF NOT EXISTS —— 老库里"后来新增的列/后来放大的列宽"都不会自动生效
+ * (实测:沉默客户唤醒报 Unknown column 'c.funnel_stage'、周报报 Data too long for 'digest_date')。
+ * 这里按 schema.sql 逐表比对 information_schema:缺列 ADD COLUMN、VARCHAR 长度不够 MODIFY,不改不删。
+ */
+async function ensureColumns(p: Pool, schemaSql: string): Promise<string[]> {
+	const changes: string[] = [];
+	const blocks = [...schemaSql.matchAll(/CREATE TABLE IF NOT EXISTS\s+`?([a-zA-Z_]+)`?\s*\(([\s\S]*?)\n\)\s*ENGINE/gi)];
+	for (const block of blocks) {
+		const table = block[1];
+		const defs = new Map<string, string>();
+		for (const rawLine of block[2].split("\n")) {
+			const line = rawLine.trim().replace(/,$/, "");
+			if (!line) continue;
+			if (/^(PRIMARY|UNIQUE|KEY|INDEX|CONSTRAINT|FOREIGN|FULLTEXT)\b/i.test(line)) continue;
+			const m = line.match(/^`?([a-zA-Z_][a-zA-Z0-9_]*)`?\s+([\s\S]+)$/);
+			if (m) defs.set(m[1], line);
+		}
+		const [rows] = (await (p as unknown as { query: (o: unknown) => Promise<[Array<Record<string, unknown>>, unknown]> }).query({
+			sql: "SELECT COLUMN_NAME AS name, DATA_TYPE AS type, CHARACTER_MAXIMUM_LENGTH AS len FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ?",
+			values: [table],
+		})) as [Array<Record<string, unknown>>, unknown];
+		const existing = new Map<string, { type: string; len: number }>();
+		for (const r of rows) {
+			const name = String(r.name ?? r.COLUMN_NAME ?? r.column_name ?? "").toLowerCase();
+			const len = Number(r.len ?? r.CHARACTER_MAXIMUM_LENGTH ?? 0) || 0;
+			existing.set(name, { type: String(r.type ?? r.DATA_TYPE ?? "").toLowerCase(), len });
+		}
+		for (const [name, ddl] of defs) {
+			const have = existing.get(name.toLowerCase());
+			if (!have) {
+				const safe = /DEFAULT/i.test(ddl) ? ddl : ddl.replace(/\s+NOT NULL/i, "");
+				await (p as unknown as { query: (o: unknown) => Promise<unknown> }).query({ sql: `ALTER TABLE \`${table}\` ADD COLUMN ${safe}` });
+				changes.push(`${table}.${name}(新增)`);
+				continue;
+			}
+			const want = ddl.match(/varchar\((\d+)\)/i);
+			if (want && have.len > 0 && Number(want[1]) > have.len) {
+				await (p as unknown as { query: (o: unknown) => Promise<unknown> }).query({ sql: `ALTER TABLE \`${table}\` MODIFY COLUMN ${ddl}` });
+				changes.push(`${table}.${name}(列宽 ${have.len}→${want[1]})`);
+			}
+		}
+	}
+	return changes;
+}
+
 parentPort!.on("message", async (msg: any) => {
 	try {
 		if (msg.kind === "init") {
@@ -63,7 +114,10 @@ parentPort!.on("message", async (msg: any) => {
 				await (pool as unknown as { query: (o: { sql: string }) => Promise<unknown> }).query({ sql: drops });
 			}
 			if (msg.schemaSql) await (pool as unknown as { query: (o: { sql: string }) => Promise<unknown> }).query({ sql: msg.schemaSql });
-			writeResult("ok", { init: true });
+			// 老库补齐 schema.sql 里新增的列(只 ADD,不改不删)
+			const addedColumns = msg.schemaSql ? await ensureColumns(pool as Pool, String(msg.schemaSql)) : [];
+			if (addedColumns.length > 0) console.warn(`[mysql] 启动补列 ${addedColumns.length} 个: ${addedColumns.join(", ")}`);
+			writeResult("ok", { init: true, addedColumns });
 			return;
 		}
 		if (msg.kind === "run") {

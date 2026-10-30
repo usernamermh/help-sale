@@ -1,8 +1,8 @@
 {
   "name": "cluster",
   "label": "文本聚类",
-  "description": "Run KMeans clustering over a list of texts (local lightweight BGE embeddings, falling back to character n-gram vectors when the model is missing) and return each cluster's size and samples, for topic or intent grouping.",
-  "description_language": "en",
+  "description": "对文本列表做 KMeans 聚类(本地轻量 BGE 中文向量,模型缺失时自动回退字符 n-gram 向量),返回每簇大小与样本,用于话题/意图分组。",
+  "description_language": "zh",
   "category": "文本算法",
   "parameters": {
     "type": "object",
@@ -15,13 +15,13 @@
         "items": {
           "type": "string"
         },
-        "description": "texts to cluster"
+        "description": "要聚类的文本列表"
       },
       "k": {
         "type": "number",
         "default": 3,
         "maximum": 10,
-        "description": "desired number of clusters"
+        "description": "期望簇数"
       }
     }
   },

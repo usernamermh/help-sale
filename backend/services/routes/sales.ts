@@ -15,9 +15,10 @@ export interface SalesPerformanceRow {
 	deals: number;
 	dealAmount: number;
 	avgDiscount: number | null;
-	dealRate: number; // 成交客户数 / 负责客户数
+	/** 试驾相关指标:试驾功能(含 test_drives 表)已删除,这里恒为 0,保留字段仅为兼容前端 */
+	dealRate: number;
 	testDrives: number;
-	testDriveConvert: number; // 试驾后成交率
+	testDriveConvert: number;
 	followupDone: number;
 	followupTotal: number;
 	followupRate: number;
@@ -71,12 +72,6 @@ export function getStorePerformance(db: DatabaseSync, tenantId: string, storeId?
 		)
 		.all(tenantId, ...(storeId ? ([storeId] as Array<string | number>) : [])) as Array<{ sales_id: string | null; n: number; amount: number | null; avg_discount: number | null; discount_count: number }>;
 
-	const tdRows = db
-		.prepare(
-			`SELECT sales_id, COUNT(*) AS n FROM test_drives WHERE tenant_id = ? AND status = 'completed'${storeId ? " AND store_id = ?" : ""} GROUP BY sales_id`,
-		)
-		.all(tenantId, ...(storeId ? ([storeId] as Array<string | number>) : [])) as Array<{ sales_id: string | null; n: number }>;
-
 	const taskRows = db
 		.prepare(
 			`SELECT t.sales_id, COUNT(*) AS total, SUM(CASE WHEN t.status = 'done' THEN 1 ELSE 0 END) AS done
@@ -87,7 +82,6 @@ export function getStorePerformance(db: DatabaseSync, tenantId: string, storeId?
 	const rows: SalesPerformanceRow[] = [];
 	for (const s of sales) {
 		const deal = dealRows.find((d) => d.sales_id === s.id);
-		const td = tdRows.find((d) => d.sales_id === s.id);
 		const task = taskRows.find((d) => d.sales_id === s.id);
 		rows.push({
 			salesId: s.id,
@@ -96,9 +90,10 @@ export function getStorePerformance(db: DatabaseSync, tenantId: string, storeId?
 			deals: deal?.n ?? 0,
 			dealAmount: deal?.amount ?? 0,
 			avgDiscount: deal && deal.discount_count ? (deal.avg_discount ?? 0) / deal.discount_count : null,
-			dealRate: td && td.n > 0 ? (deal?.n ?? 0) / td.n : 0,
-			testDrives: td?.n ?? 0,
-			testDriveConvert: td && td.n > 0 ? (deal?.n ?? 0) / td.n : 0,
+			// 试驾功能已删除(表 test_drives 一并移除),相关指标保留字段但恒为 0
+			dealRate: 0,
+			testDrives: 0,
+			testDriveConvert: 0,
 			followupDone: task?.done ?? 0,
 			followupTotal: task?.total ?? 0,
 			followupRate: task && task.total > 0 ? (task.done ?? 0) / task.total : 0,

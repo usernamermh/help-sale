@@ -1,8 +1,8 @@
 {
   "name": "keyword_extract_strict",
   "label": "候选标签匹配",
-  "description": "Match a given list of candidate tags against a text (substring matching) and return the ones that hit, for tagging and intent detection.",
-  "description_language": "en",
+  "description": "在文本中匹配给定的候选标签列表(包含匹配),返回命中的标签,用于打标/意图识别。",
+  "description_language": "zh",
   "category": "文本算法",
   "parameters": {
     "type": "object",
@@ -13,14 +13,14 @@
     "properties": {
       "text": {
         "type": "string",
-        "description": "text to match against"
+        "description": "待匹配文本"
       },
       "candidates": {
         "type": "array",
         "items": {
           "type": "string"
         },
-        "description": "candidate tag list"
+        "description": "候选标签列表"
       }
     }
   },

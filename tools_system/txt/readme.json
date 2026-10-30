@@ -1,29 +1,31 @@
 {
   "name": "txt",
   "label": "读取文本文件",
-  "description": "Read a text file inside the repository (txt/md/csv/json/yaml, ...); repository paths only, to prevent reads outside the repo.",
-  "description_language": "en",
+  "description": "读取仓库内的文本文件(txt/md/csv/json/yaml/log/xml/html),按**绝对行号**输出内容,并返回总行数与内容 hash;修改时可直接把 hash 作为 file_write 的 expectedHash,按行号 patch。",
+  "description_language": "zh",
   "category": "文件读取",
   "parameters": {
     "type": "object",
-    "required": [
-      "filePath"
-    ],
+    "required": ["filePath"],
     "properties": {
       "filePath": {
         "type": "string",
-        "description": "path inside the repository, relative or absolute, e.g. tools/data/example.txt"
+        "description": "仓库内相对路径或绝对路径,如 tools/data/example.txt"
       },
-      "maxChars": {
+      "startLine": {
         "type": "number",
-        "default": 4000,
-        "maximum": 20000
+        "default": 1,
+        "description": "从第几行开始读(默认 1)"
+      },
+      "maxLines": {
+        "type": "number",
+        "default": 200,
+        "maximum": 1000,
+        "description": "本次最多返回多少行(默认 200;超出时结果里会提示下一次从哪行开始)"
       }
     }
   },
   "entry": "main.ts",
-  "function_list": [
-    "main.execute"
-  ],
+  "function_list": ["main.execute"],
   "toggleable": true
 }

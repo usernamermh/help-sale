@@ -1,8 +1,8 @@
 {
   "name": "computer",
   "label": "数值计算",
-  "description": "Evaluate a numeric expression safely (numbers, the operators + - * / % and parentheses only, with variable substitution); no code is executed.",
-  "description_language": "en",
+  "description": "安全地计算数值表达式(仅支持数字、运算符 + - * / % 与括号,支持变量替换),不执行任何代码。",
+  "description_language": "zh",
   "category": "数值计算",
   "parameters": {
     "type": "object",
@@ -12,11 +12,11 @@
     "properties": {
       "expression": {
         "type": "string",
-        "description": "numeric expression, e.g. (a+b)*2/3"
+        "description": "数值表达式,如 (a+b)*2/3"
       },
       "variables": {
         "type": "object",
-        "description": "variable name -> value, e.g. {a:10,b:20}"
+        "description": "变量名->数值,如 {a:10,b:20}"
       }
     }
   },

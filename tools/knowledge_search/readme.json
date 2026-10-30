@@ -1,8 +1,8 @@
 {
   "name": "knowledge_search",
   "label": "话术检索",
-  "description": "Search the team knowledge base for sales scripts, competitor material, pricing policies and after-sales FAQ and return the matched content; say so honestly when nothing matches.",
-  "description_language": "en",
+  "description": "在团队知识库中检索话术、竞品资料、价格政策与售后 FAQ,返回命中的知识内容;无命中时如实说明。",
+  "description_language": "zh",
   "category": "话术",
   "parameters": {
     "type": "object",
@@ -12,12 +12,12 @@
     "properties": {
       "query": {
         "type": "string",
-        "description": "search terms, e.g. the customer's own words"
+        "description": "检索词/客户原话"
       },
       "limit": {
         "type": "number",
         "maximum": 10,
-        "description": "maximum number of matches"
+        "description": "命中条数上限"
       }
     }
   },

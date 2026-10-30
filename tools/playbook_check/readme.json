@@ -1,38 +1,38 @@
 {
   "name": "playbook_check",
   "label": "话术命中检测",
-  "description": "Sales-script hit check: match what the salesperson actually said in the transcripts against the standard scripts using both literal and semantic matching (all categories by default, pass category to filter), and return the matched lines, the match method and the script coverage rate.",
-  "description_language": "en",
+  "description": "话术命中检测:用对话原文中销售角色的发言,与话术库中的标准话术做原文/语义双通道匹配(默认匹配知识库全部类别,传 category 可按分类过滤),返回命中明细、命中方式与话术覆盖率。",
+  "description_language": "zh",
   "category": "话术",
   "parameters": {
     "type": "object",
     "properties": {
       "salesName": {
         "type": "string",
-        "description": "salesperson name (either this or salesId)"
+        "description": "销售姓名(与 salesId 二选一)"
       },
       "salesId": {
         "type": "string",
-        "description": "salesperson id (either this or salesName)"
+        "description": "销售 ID(与 salesName 二选一)"
       },
       "days": {
         "type": "number",
         "default": 30,
-        "description": "time window in days (last N days)"
+        "description": "统计时间范围(近 N 天)"
       },
       "limit": {
         "type": "number",
         "default": 20,
-        "description": "maximum number of conversations to check"
+        "description": "最多检查的对话条数"
       },
       "category": {
         "type": "string",
-        "description": "script-library category keyword (empty = match all categories)"
+        "description": "话术库分类关键词(留空=匹配全部类别)"
       },
       "threshold": {
         "type": "number",
         "default": 0.72,
-        "description": "semantic match similarity threshold (0-1)"
+        "description": "语义命中相似度阈值(0-1)"
       }
     }
   },

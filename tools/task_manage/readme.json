@@ -1,8 +1,8 @@
 {
   "name": "task_manage",
   "label": "跟进任务",
-  "description": "Create a follow-up task for a customer, list pending or completed tasks, or mark a task as done.",
-  "description_language": "en",
+  "description": "为客户创建跟进待办,查看待办/已完成任务,或把任务标记为完成。",
+  "description_language": "zh",
   "category": "任务",
   "parameters": {
     "type": "object",
@@ -15,23 +15,23 @@
           "complete"
         ],
         "default": "list",
-        "description": "operation kind"
+        "description": "操作类型"
       },
       "customerKey": {
         "type": "string",
-        "description": "customer key or name (for create)"
+        "description": "客户标识或姓名(create 用)"
       },
       "action": {
         "type": "string",
-        "description": "follow-up action (for create)"
+        "description": "跟进动作(create 用)"
       },
       "dueAt": {
         "type": "string",
-        "description": "due time in ISO format (for create)"
+        "description": "截止时间 ISO(create 用)"
       },
       "taskId": {
         "type": "string",
-        "description": "task id (for complete)"
+        "description": "任务 ID(complete 用)"
       },
       "status": {
         "type": "string",
@@ -40,12 +40,12 @@
           "done"
         ],
         "default": "pending",
-        "description": "status filter for the list"
+        "description": "列表状态筛选"
       },
       "limit": {
         "type": "number",
         "maximum": 100,
-        "description": "maximum number of rows"
+        "description": "列表条数上限"
       }
     }
   },

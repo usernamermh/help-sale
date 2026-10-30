@@ -1,8 +1,8 @@
 {
   "name": "workflow_manage",
   "label": "工作流沉淀",
-  "description": "Manage the pipeline that turns model execution traces into reusable fixed workflows: mine frequent tool chains from past runs and produce draft workflows (mine), list drafts (list), promote a draft into a workflow the model can call directly after the user confirms (approve), reject it (reject), disable or enable it (disable), statically check whether the tools used by its steps are available (check). Use it when the user wants the whole flow to become repeatable, asks whether recent runs contain repeated steps worth saving, or wants the reusable workflows organized.",
-  "description_language": "en",
+  "description": "管理「模型执行轨迹 → 可复用固定工作流」的沉淀链路:从历史运行挖掘高频工具串联并生成待审批草稿(mine),查看草稿(list),经用户确认后晋升为可被模型直接调用的工作流(approve),驳回(reject),停用/启用(disable),静态自检步骤工具是否可用(check)。当用户提出「把这套流程固化下来」「看看最近有没有值得沉淀的重复操作」「整理一下可复用的工作流」等意图时使用。",
+  "description_language": "zh",
   "category": "工作流",
   "parameters": {
     "type": "object",
@@ -20,51 +20,51 @@
           "disable",
           "check"
         ],
-        "description": "mine = mine traces and produce drafts; list = list workflows; approve/reject = review a draft; disable = disable or enable; check = static self-check"
+        "description": "mine=挖掘并产出草稿;list=列出工作流;approve/reject=审批草稿;disable=停用或启用;check=静态自检"
       },
       "workflowId": {
         "type": "string",
-        "description": "workflow id (required for approve/reject/disable/check)"
+        "description": "工作流 ID(approve/reject/disable/check 必填)"
       },
       "days": {
         "type": "number",
-        "description": "history window in days for mining (for mine; defaults to config workflows.mine.days)"
+        "description": "挖掘的历史天数窗口(mine 用,缺省取配置 workflows.mine.days)"
       },
       "minCount": {
         "type": "number",
-        "description": "minimum number of distinct runs a chain must appear in (for mine; defaults to config)"
+        "description": "串联最少出现的独立运行次数(mine 用,缺省取配置)"
       },
       "minWindow": {
         "type": "number",
-        "description": "minimum steps in a chain (for mine, 2-8)"
+        "description": "子序列最短步数(mine 用,2-8)"
       },
       "maxWindow": {
         "type": "number",
-        "description": "maximum steps in a chain (for mine, 2-8)"
+        "description": "子序列最长步数(mine 用,2-8)"
       },
       "topChains": {
         "type": "number",
-        "description": "maximum number of candidate chains to return (for mine)"
+        "description": "最多返回几条候选串联(mine 用)"
       },
       "refineTop": {
         "type": "number",
-        "description": "refine the top N chains with the model (for mine; larger is slower)"
+        "description": "对前 N 条串联调用模型提炼(mine 用,越大越慢)"
       },
       "status": {
         "type": "string",
-        "description": "list filter: draft (default)/enabled/disabled/rejected/all"
+        "description": "list 过滤:draft(默认)/enabled/disabled/rejected/all"
       },
       "origin": {
         "type": "string",
-        "description": "list filter: mined (mined from traces)/manual (defined by hand); empty means all"
+        "description": "list 过滤:mined(模型挖掘)/manual(人工预定义),留空为全部"
       },
       "enabled": {
         "type": "boolean",
-        "description": "target state for disable: true = enabled, false = disabled"
+        "description": "disable 的目标状态:true=启用,false=停用"
       },
       "limit": {
         "type": "number",
-        "description": "maximum number of rows returned by list"
+        "description": "list 返回条数上限"
       }
     }
   },

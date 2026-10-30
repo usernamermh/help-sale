@@ -1,8 +1,8 @@
 {
   "name": "embedding",
   "label": "文本向量",
-  "description": "Encode texts into fixed-dimension vectors (local lightweight BGE model, ~512 dims; falls back to character n-gram vectors when the model is missing); used for similarity scoring and clustering.",
-  "description_language": "en",
+  "description": "把文本转为固定维度向量(本地轻量 BGE 中文模型,约 512 维;模型缺失时自动回退字符 n-gram 向量);供相似度计算与聚类使用。",
+  "description_language": "zh",
   "category": "文本算法",
   "parameters": {
     "type": "object",
@@ -15,7 +15,7 @@
         "items": {
           "type": "string"
         },
-        "description": "texts to encode"
+        "description": "要编码的文本列表"
       }
     }
   },

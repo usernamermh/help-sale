@@ -1,8 +1,8 @@
 {
   "name": "similarity",
   "label": "语义相似度匹配",
-  "description": "Compute semantic similarity between texts (local lightweight BGE embeddings): for every query take the top-k most similar targets with cosine scores; falls back to character n-gram vectors when the model is missing.",
-  "description_language": "en",
+  "description": "计算文本之间的语义相似度(本地轻量 BGE 中文向量):对每条 queries 在 targets 中取 top-k 最相似结果并给出余弦得分;模型缺失时自动回退字符 n-gram 向量。",
+  "description_language": "zh",
   "category": "文本算法",
   "parameters": {
     "type": "object",
@@ -16,24 +16,24 @@
         "items": {
           "type": "string"
         },
-        "description": "query texts to match (e.g. every sentence the salesperson said)"
+        "description": "待匹配的查询文本(如销售说的每句话)"
       },
       "targets": {
         "type": "array",
         "items": {
           "type": "string"
         },
-        "description": "candidate target texts (e.g. the standard script library)"
+        "description": "候选目标文本(如标准话术库)"
       },
       "topK": {
         "type": "number",
         "default": 3,
-        "description": "number of nearest targets returned per query"
+        "description": "每条查询返回最相似的条数"
       },
       "threshold": {
         "type": "number",
         "default": 0,
-        "description": "similarity threshold (0-1); nothing below it is returned"
+        "description": "相似度阈值(0-1),低于阈值不返回"
       }
     }
   },

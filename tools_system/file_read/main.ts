@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -105,8 +106,13 @@ export async function execute(_ctx: ToolContext, params: any) {
 	const ext = path.extname(file);
 	let text = "";
 	let format = "text";
+	let contentHash = "";
+	let eolLabel = "";
 	if (TEXT_EXT.test(ext)) {
-		text = readFileSync(file, "utf8");
+		const rawBuf = readFileSync(file);
+		contentHash = createHash("sha256").update(rawBuf).digest("hex").slice(0, 12);
+		text = rawBuf.toString("utf8");
+		eolLabel = /\r\n/.test(text) ? "CRLF" : "LF";
 	} else if (XLSX_EXT.test(ext)) {
 		format = "excel";
 		let XLSX: any;
@@ -136,17 +142,35 @@ export async function execute(_ctx: ToolContext, params: any) {
 	} else {
 		return { content: [{ type: "text", text: `不支持的文件类型:${ext}(支持 txt/md/csv/json/yaml/log/xml/html/xlsx/pdf/pptx/docx 等)。` }] };
 	}
-	// 分页:按文本行切页(每页 50 行),支持模型传 page 翻页
+	// 分页:按文本行切页(每页 50 行),行号用文件的绝对行号
 	const PAGE_SIZE = 50;
 	const lines = text.split(/\r?\n/);
 	const totalPages = Math.max(Math.ceil(lines.length / PAGE_SIZE), 1);
 	const page = Math.max(Number(params?.page ?? 1) || 1, 1);
 	const p = Math.min(page, totalPages);
-	const pageLines = lines.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE);
-	const sliced = pageLines.join("\n").slice(0, MAX_CHARS);
-	const footer = totalPages > 1 ? `\n(第 ${p}/${totalPages} 页 · 共 ${lines.length} 行;用户要求查看更多时再传 page=${p + 1})` : "";
+	const startLine = (p - 1) * PAGE_SIZE + 1;
+	const pageLines = lines.slice(startLine - 1, startLine - 1 + PAGE_SIZE);
+	const width = String(startLine + Math.max(pageLines.length, 1) - 1).length;
+	const numbered = pageLines.map((line, i) => `${String(startLine + i).padStart(width)}| ${line}`).join("\n").slice(0, MAX_CHARS);
+	const isText = format === "text";
+	const header = isText ? `文件:${file}\n共 ${lines.length} 行 · hash=${contentHash} · 换行=${eolLabel}\n` : "";
+	const pageHint = totalPages > 1 ? `\n(第 ${p}/${totalPages} 页 · 共 ${lines.length} 行;查看更多传 page=${p + 1})` : "";
+	const footer = isText
+		? `${pageHint}\n(修改请用 file_write:op=patch 按行号改 / op=replace 整份替换,expectedHash=${contentHash})`
+		: `${pageHint}\n(非文本文件:不提供行号与 hash,不能用 file_write 编辑)`;
 	return {
-		content: [{ type: "text", text: sliced + footer + (lines.join("\n").length > MAX_CHARS ? `\n…(已截断)` : "") }],
-		details: { path: file, format, size: stat.size, chars: text.length, page: p, pageSize: PAGE_SIZE, totalLines: lines.length, totalPages, hasMore: p < totalPages },
+		content: [{ type: "text", text: header + numbered + footer }],
+		details: {
+			path: file,
+			format,
+			size: stat.size,
+			chars: text.length,
+			page: p,
+			pageSize: PAGE_SIZE,
+			totalLines: lines.length,
+			totalPages,
+			hasMore: p < totalPages,
+			...(isText ? { hash: contentHash, startLine } : {}),
+		},
 	};
 }

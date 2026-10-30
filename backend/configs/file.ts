@@ -46,6 +46,8 @@ export interface FileConfig {
 	chunker?: { size?: number; overlap?: number };
 	tools?: {
 		webSearch?: { apiKey?: string };
+		/** 文件写入工具:是否允许写到仓库目录之外 */
+		fileWrite?: { allowOutsideRepo?: boolean };
 		/** 工具编目:长尾工具(MCP/工作流)超过阈值时改为按需检索 */
 		catalog?: { enabled?: boolean; threshold?: number; topK?: number; maxInspect?: number; semanticFloorZh?: number; semanticFloorEn?: number; bilingual?: { enabled?: boolean; rewriteTimeoutMs?: number; perLanguageTopK?: number } };
 	};

@@ -1,8 +1,8 @@
 {
   "name": "keyword_extract_free",
   "label": "自由抽取标签",
-  "description": "Extract frequent free-form keywords from a conversation or text as tags (2-6 character n-gram frequency with stopword filtering, no external dependency).",
-  "description_language": "en",
+  "description": "从对话/文本中自由抽取高频关键词作为标签(2-6 字词频 + 停用词过滤,无外部依赖)。",
+  "description_language": "zh",
   "category": "文本算法",
   "parameters": {
     "type": "object",
@@ -12,13 +12,13 @@
     "properties": {
       "text": {
         "type": "string",
-        "description": "text to extract tags from"
+        "description": "要抽取标签的文本"
       },
       "maxKeywords": {
         "type": "number",
         "default": 5,
         "maximum": 20,
-        "description": "maximum number of tags"
+        "description": "最多返回标签数"
       }
     }
   },

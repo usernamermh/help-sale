@@ -1,8 +1,8 @@
 {
   "name": "insight_query",
   "label": "经营洞察",
-  "description": "Generate today's morning briefing, or view business trends over the last N days (analysis volume, top intents, task completion rate, vehicle model preference).",
-  "description_language": "en",
+  "description": "生成本日晨报,或查看近 N 天的经营趋势(分析量、热门意图、任务完成率、车型偏好)。",
+  "description_language": "zh",
   "category": "经营",
   "parameters": {
     "type": "object",
@@ -14,12 +14,12 @@
           "trend"
         ],
         "default": "morning",
-        "description": "insight kind"
+        "description": "洞察类型"
       },
       "days": {
         "type": "number",
         "maximum": 90,
-        "description": "trend window in days (for trend)"
+        "description": "趋势窗口天数(trend 用)"
       }
     }
   },

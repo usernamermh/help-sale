@@ -18,11 +18,10 @@ export interface ToolDiscoveryPromptOptions {
 export function getSearchToolsPrompt(options: ToolDiscoveryPromptOptions): string {
 	return `按需求检索可用工具清单(名称 + 一行描述,不含参数定义);命中后请用 get_tool_details 取该工具的完整参数,再用 call_tool 执行。当前编目共 ${options.catalogSize} 个工具。
 
-检索是「关键词词面 + 语义」双通道,所以 query 的写法直接决定命中率:
-1) **先把用户的中文需求翻成英文,再用英文写 query**(工具名与工具描述全部是英文,含工作流),例如 "list pull requests"、"search knowledge base for policy"、"customer follow-up review workflow",而不要写「列出 PR」——中文动作词在英文工具描述里没有对应词,检索会失效;
-2) 一句话说清"动作 + 对象"(动词 + 名词),比只写一个名词更容易命中;
-3) 要调已沉淀的工作流,query 里务必带上 "workflow" 这个词(如 "customer follow-up review workflow"):工作流的中文名只给界面看,模型侧只按英文描述索引,实测只写业务词会落到 PR review 这类工具上;
-4) 一次没命中就换个说法再检索(把中文换成英文动词、补上工具名/描述里可能出现的关键词),不要用同一个问法反复检索。`;
+检索是「关键词词面 + 语义」双通道,而且系统已按工具描述的语言分了两段(【中文描述的工具】/【英文描述的工具】),所以 query 只写一遍就够:
+1) 用一句"动作 + 对象"的自然语言写,中文即可(中英混写也行),例如「把 pull request 合并掉」「查最近的会话记录」「客户跟进复盘跑一遍」;
+2) 工具描述中英都有:本地工具与已沉淀的工作流是**中文**描述,外部 MCP 工具(名字带 mcp_)是**英文**描述 —— 两者各按自己的描述被检索到,不需要你猜该用哪种语言;
+3) 一次没命中就换个说法再检索(补上工具名或描述里可能出现的关键词),不要用同一个问法反复检索。`;
 }
 
 /** 检查层:只给这一个工具的完整参数 schema,把上下文占用压到最小。 */

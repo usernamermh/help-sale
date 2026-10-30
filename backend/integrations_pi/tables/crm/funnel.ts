@@ -85,19 +85,35 @@ export function getFunnelStats(db: DatabaseSync, tenantId: string, storeId?: str
 
 	const stageRows = db
 		.prepare(
-			`SELECT COALESCE(funnel_stage, 'new') AS stage_key, COUNT(*) AS count,
-			        AVG(CASE WHEN funnel_stage_changed_at IS NOT NULL THEN (unixepoch(?) - unixepoch(funnel_stage_changed_at)) / 86400.0 END) AS avg_days
+			`SELECT COALESCE(funnel_stage, 'new') AS stage_key, COUNT(*) AS count
 			 FROM customers c WHERE c.tenant_id = ?${clause}
-			 GROUP BY stage_key ORDER BY CASE stage_key WHEN 'new' THEN 1 WHEN 'contacted' THEN 2 WHEN 'test_drive' THEN 3 WHEN 'quote' THEN 4 WHEN 'closed_won' THEN 5 WHEN 'closed_lost' THEN 6 ELSE 7 END`,
-		)
-		.all(now.toISOString(), tenantId, ...params) as Array<{ stage_key: string; count: number; avg_days: number | null }>;
+       GROUP BY stage_key ORDER BY CASE stage_key WHEN 'new' THEN 1 WHEN 'contacted' THEN 2 WHEN 'test_drive' THEN 3 WHEN 'quote' THEN 4 WHEN 'closed_won' THEN 5 WHEN 'closed_lost' THEN 6 ELSE 7 END`,
+    )
+		.all(tenantId, ...params) as Array<{ stage_key: string; count: number }>;
 
-	const stages: FunnelStageStats[] = stageRows.map((r) => ({
-		stage: r.stage_key,
-		count: r.count,
-		share: total > 0 ? r.count / total : 0,
-		avgStayDays: r.avg_days != null ? Math.round(r.avg_days * 10) / 10 : null,
-	}));
+  // 阶段平均停留天数在 JS 里算:unixepoch() 是 SQLite 独有函数,MySQL 会报 FUNCTION does not exist
+  const stayRows = db
+		.prepare(`SELECT COALESCE(funnel_stage, 'new') AS stage_key, funnel_stage_changed_at FROM customers c WHERE c.tenant_id = ? AND funnel_stage_changed_at IS NOT NULL${clause}`)
+    .all(tenantId, ...params) as Array<{ stage_key: string; funnel_stage_changed_at: string }>;
+  const stayByStage = new Map<string, { sum: number; n: number }>();
+  for (const r of stayRows) {
+    const days = (now.getTime() - Date.parse(r.funnel_stage_changed_at)) / 86400000;
+    if (!Number.isFinite(days)) continue;
+    const agg = stayByStage.get(r.stage_key) ?? { sum: 0, n: 0 };
+    agg.sum += Math.max(0, days);
+    agg.n += 1;
+    stayByStage.set(r.stage_key, agg);
+  }
+
+  const stages: FunnelStageStats[] = stageRows.map((r) => {
+    const stay = stayByStage.get(r.stage_key);
+    return {
+      stage: r.stage_key,
+      count: r.count,
+      share: total > 0 ? r.count / total : 0,
+      avgStayDays: stay && stay.n > 0 ? Math.round((stay.sum / stay.n) * 10) / 10 : null,
+    };
+  });
 
 	const countOf = (stage: string) => stageRows.find((r) => r.stage_key === stage)?.count ?? 0;
 	const newCount = countOf("new");
@@ -119,8 +135,7 @@ export function getFunnelStats(db: DatabaseSync, tenantId: string, storeId?: str
 	return { total, stages, conversions, lostReasons: lostRows };
 }
 
-/** 沉默客户:N 天内无会话/任务/试驾记录的客户(默认 7 天)。 */
-/** 沉默客户:N 天内无会话/任务/试驾记录的客户(默认 7 天);时间基准用传入 now(默认为当前时间),保证测试可注入固定时间。 */
+/** 沉默客户:N 天内既没有新会话、也没有未完成跟进任务的客户(默认 7 天);时间基准用传入 now(保证测试可注入固定时间)。 */
 export function listSilentCustomers(db: DatabaseSync, tenantId: string, days = 7, storeId?: string, now: Date = new Date()): FunnelCustomer[] {
 	const { clause, params } = storeCustomerFilter(db, tenantId, storeId);
 	const since = new Date(now.getTime() - days * 86400000).toISOString();
@@ -130,10 +145,9 @@ export function listSilentCustomers(db: DatabaseSync, tenantId: string, days = 7
 			 WHERE c.tenant_id = ? AND COALESCE(c.funnel_stage, 'new') NOT IN ('closed_won', 'closed_lost')${clause}
 			   AND NOT EXISTS (SELECT 1 FROM conversations cv WHERE cv.tenant_id = c.tenant_id AND cv.customer_id = c.id AND cv.updated_at >= ?)
 			   AND NOT EXISTS (SELECT 1 FROM next_step_tasks t WHERE t.tenant_id = c.tenant_id AND t.customer_id = c.id AND t.status = 'pending' AND (t.due_at IS NULL OR t.due_at >= ?))
-			   AND NOT EXISTS (SELECT 1 FROM test_drives td WHERE td.tenant_id = c.tenant_id AND td.customer_id = c.id AND td.scheduled_at >= ?)
 			 LIMIT 200`,
 		)
-		.all(tenantId, since, since, since, ...params) as Record<string, unknown>[];
+		.all(tenantId, since, since, ...params) as Record<string, unknown>[];
 	return rows.map((r) => ({
 		id: String(r.id),
 		key: String(r.key),

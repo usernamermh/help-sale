@@ -1,8 +1,8 @@
 {
   "name": "terminal",
   "label": "终端执行",
-  "description": "Run a terminal command on this machine and return the output (15s timeout by default). Dangerous commands (delete/format/shutdown, ...) are blocked by a blacklist. Use it only when it is clearly safe and necessary, preferring read-only commands (query/list/inspect).",
-  "description_language": "en",
+  "description": "在当前机器执行终端命令并返回输出(默认 15 秒超时)。危险命令(删除/格式化/关机等)已黑名单拦截。仅应在确认安全且必要时使用;优先使用只读命令(查询、列出、检查)。",
+  "description_language": "zh",
   "category": "系统",
   "parameters": {
     "type": "object",
@@ -12,17 +12,17 @@
     "properties": {
       "command": {
         "type": "string",
-        "description": "command to run, e.g. dir / pwd / ls / git status"
+        "description": "要执行的命令,如 dir / pwd / ls / git status"
       },
       "timeoutMs": {
         "type": "number",
         "default": 15000,
         "maximum": 60000,
-        "description": "timeout in milliseconds"
+        "description": "超时毫秒"
       },
       "shell": {
         "type": "string",
-        "description": "shell to use (defaults to cmd on Windows, sh elsewhere)"
+        "description": "指定 shell(默认 Windows=cmd,其他=sh)"
       }
     }
   },
