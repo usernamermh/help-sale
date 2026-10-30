@@ -133,13 +133,18 @@ export function startSubagentConsumer(deps: SubagentRunnerDeps, tenantIds: strin
 		}
 		const tenants = tenantIds.length > 0 ? tenantIds : ["t_demo"];
 		for (const tenantId of tenants) {
-			// 按线程分组取 pending 卡片,逐线程消费(每个线程并发上限 MAX_CONCURRENCY)
-			const pending = listKanbanCards(deps.db, tenantId, { status: "pending" });
-			const threadIds = [...new Set(pending.map((c) => c.threadId))];
-			for (const threadId of threadIds) {
-				consumeKanbanSubagents(deps, tenantId, { limit: MAX_CONCURRENCY, threadId }).catch((error) => {
-					console.warn(`[subagents] 消费失败(${tenantId}/${threadId}): ${error instanceof Error ? error.message : String(error)}`);
-				});
+			// 整段都要兜住:轮询里的数据库异常若不接住会从定时器冒出去,直接把服务带崩
+			try {
+				// 按线程分组取 pending 卡片,逐线程消费(每个线程并发上限 MAX_CONCURRENCY)
+				const pending = listKanbanCards(deps.db, tenantId, { status: "pending" });
+				const threadIds = [...new Set(pending.map((c) => c.threadId))];
+				for (const threadId of threadIds) {
+					consumeKanbanSubagents(deps, tenantId, { limit: MAX_CONCURRENCY, threadId }).catch((error) => {
+						console.warn(`[subagents] 消费失败(${tenantId}/${threadId}): ${error instanceof Error ? error.message : String(error)}`);
+					});
+				}
+			} catch (error) {
+				console.warn(`[subagents] 轮询失败(${tenantId}): ${error instanceof Error ? error.message : String(error)}`);
 			}
 		}
 	}, config.subagentPollIntervalMs);
