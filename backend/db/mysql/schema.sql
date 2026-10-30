@@ -411,3 +411,35 @@ CREATE TABLE IF NOT EXISTS thread_summaries (
 	updated_at VARCHAR(255) NOT NULL DEFAULT '',
 	UNIQUE (tenant_id, thread_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS weixin_users (
+	id VARCHAR(64) PRIMARY KEY,
+	tenant_id VARCHAR(64) NOT NULL,
+	openid VARCHAR(128) NOT NULL,
+	nickname VARCHAR(255),
+	bound_kind VARCHAR(32),
+	bound_id VARCHAR(64),
+	thread_id VARCHAR(64),
+	last_active_at VARCHAR(40),
+	created_at VARCHAR(40) NOT NULL DEFAULT '',
+	UNIQUE KEY uq_wxu_tenant_openid (tenant_id, openid),
+	KEY idx_wxu_tenant (tenant_id, last_active_at),
+	KEY idx_wxu_thread (tenant_id, thread_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS weixin_messages (
+	id VARCHAR(64) PRIMARY KEY,
+	tenant_id VARCHAR(64) NOT NULL,
+	openid VARCHAR(128) NOT NULL,
+	direction VARCHAR(16) NOT NULL,
+	message_id VARCHAR(128),
+	msg_type VARCHAR(32) NOT NULL,
+	content MEDIUMTEXT NOT NULL,
+	thread_id VARCHAR(64),
+	run_id VARCHAR(64),
+	status VARCHAR(32) NOT NULL,
+	error TEXT,
+	created_at VARCHAR(40) NOT NULL DEFAULT '',
+	KEY idx_wxm_tenant (tenant_id, created_at),
+	KEY idx_wxm_msgid (tenant_id, direction, message_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

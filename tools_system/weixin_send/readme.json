@@ -1,0 +1,29 @@
+{
+  "name": "weixin_send",
+  "label": "发微信消息",
+  "description": "把一条消息发到微信(通过已扫码登录的 iLink 机器人)。action=list 先看可发送的微信联系人及其绑定关系;action=send 需要 to(微信 openid/群 id)和 text。内容会自动转成微信可读纯文本并按长度分条,context_token 失效会自动重试一次。",
+  "description_language": "zh",
+  "category": "渠道",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": ["send", "list"],
+        "description": "send(默认)发消息;list 列出最近联系过的微信用户与绑定关系"
+      },
+      "to": {
+        "type": "string",
+        "description": "接收方:微信联系人的 openid,或群会话 id(action=send 时必填)"
+      },
+      "text": {
+        "type": "string",
+        "description": "要发送的内容,支持 Markdown(发送前会转成纯文本)"
+      }
+    },
+    "required": []
+  },
+  "entry": "main.ts",
+  "function_list": ["main.execute"],
+  "toggleable": true
+}

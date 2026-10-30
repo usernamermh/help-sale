@@ -12,6 +12,7 @@
  *   defaults / company / userkey                → configs/defaults.ts
  *   subagents / automation / workflows / client → configs/features.ts
  *   milvus_backend / milvus_docker_compose      → configs/milvus.ts
+ *   weixin                                      → configs/weixin.ts
  *
  * 各段返回类型都由 Pick<AppConfig> 派生,漏赋值或写错字段会在编译期报错,不会静默产出残缺配置。
  * 新增配置项的顺序:types.ts 的 AppConfig 加字段 → 对应 configs 子文件赋值 → 配置文件写注释说明。
@@ -20,7 +21,7 @@
  * 缺项、类型不对、取值非法都会在加载配置时抛错并指出具体配置键(见 configs/primitives.ts);
  * 要"关掉/留空"请在配置文件里显式写 false / "" / []。
  */
-import { loadConfigFile, loadContextConfig, loadDataConfig, loadDefaultsConfig, loadFeaturesConfig, loadIntegrationsConfig, loadMilvusDeployConfig, loadModelConfig, loadRetrievalConfig, loadRuntimeConfig } from "./configs/index.js";
+import { loadConfigFile, loadContextConfig, loadDataConfig, loadDefaultsConfig, loadFeaturesConfig, loadIntegrationsConfig, loadMilvusDeployConfig, loadModelConfig, loadRetrievalConfig, loadRuntimeConfig, loadWeixinConfig } from "./configs/index.js";
 import type { AppConfig } from "./configs/types.js";
 
 /** 按配置段汇总出完整配置对象。 */
@@ -36,6 +37,7 @@ export function loadConfig(): AppConfig {
 		...loadDefaultsConfig(file),
 		...loadFeaturesConfig(file),
 		...loadMilvusDeployConfig(file),
+		...loadWeixinConfig(file),
 	};
 }
 

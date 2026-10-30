@@ -440,3 +440,34 @@ client:
   # 前端注入配置(页面脚本通过 window.APP_CONFIG 读取)
   # 工作流自动挖掘接口超时(毫秒)
   workflowMineTimeoutMs: 120000
+# ───────────────────────── 微信(iLink 机器人) ─────────────────────────
+# 扫码登录后,iLink 把微信消息长轮询推给服务,服务跑 agent 再把结果发回微信。
+weixin:
+  # 是否启用微信通道;false 时只保留状态查询接口,不启动长轮询
+  enabled: false
+  # iLink 服务入口(扫码登录返回的 baseurl 会覆盖成该账号实际接入点)
+  baseUrl: https://ilinkai.weixin.qq.com
+  # 扫码登录拿到的机器人账号与令牌;留空则用 data/weixin/account.json 里保存的登录结果
+  accountId: ""
+  token: ""
+  # 微信消息落到哪个租户
+  tenantId: t_demo
+  # 扫码登录用的 bot_type
+  botType: "3"
+  # 单条消息最大字符数(超出按段落/句子切分后分条发送)
+  maxMessageLength: 2000
+  # 发送失败重试次数与间隔(毫秒)
+  sendRetries: 2
+  sendRetryDelayMs: 1500
+  # 长轮询超时(毫秒;iLink 在响应里给的建议值优先)
+  pollTimeoutMs: 35000
+  # 同一条 message_id / 相同文本的去重窗口(秒)
+  dedupTtlSeconds: 300
+  # 单条消息跑 agent 的超时(毫秒),超时回兜底话术
+  agentTimeoutMs: 180000
+  # 收到消息是否自动跑 agent 并回复
+  autoReply: true
+  # 非文字消息 / agent 失败时的兜底回复
+  unsupportedText: "目前只支持文字消息,图片和语音请稍后再试。"
+  # 只接受这些微信 openid 的消息;空数组表示不限制
+  allowFrom: []

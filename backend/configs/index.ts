@@ -10,6 +10,7 @@
  *   context.compression                         → context.ts
  *   knowledge / chunker / vector                → retrieval.ts
  *   mysql / redis / notification / tools / mcp  → integrations.ts
+ *   weixin                                      → weixin.ts
  *   defaults / company / userkey                → defaults.ts
  *   subagents / automation / workflows / client → features.ts
  *   类型(完整 AppConfig + 各段切片)            → types.ts
@@ -26,5 +27,6 @@ export { loadIntegrationsConfig } from "./integrations.js";
 export { loadDefaultsConfig } from "./defaults.js";
 export { loadFeaturesConfig } from "./features.js";
 export { loadMilvusDeployConfig } from "./milvus.js";
+export { loadWeixinConfig } from "./weixin.js";
 export type * from "./types.js";
 export type { FileConfig } from "./file.js";

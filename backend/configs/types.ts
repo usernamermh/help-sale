@@ -44,6 +44,22 @@ export interface AppConfig {
 	/** SQL 追加拦截的关键字(tools.sql.extraBlockedKeywords) */
 	sqlExtraBlockedKeywords: string[]; // web_search 工具(Serper API)密钥
 	mcpServers: Array<{ name: string; url: string; headers?: Record<string, string>; pat?: string }>; // 外部 MCP Server 列表(MCP 客户端接入)
+	// 微信通道(weixin 段,iLink 机器人)
+	weixinEnabled: boolean;
+	weixinBaseUrl: string;
+	weixinAccountId: string;
+	weixinToken: string;
+	weixinTenantId: string;
+	weixinBotType: string;
+	weixinMaxMessageLength: number;
+	weixinSendRetries: number;
+	weixinSendRetryDelayMs: number;
+	weixinPollTimeoutMs: number;
+	weixinDedupTtlSeconds: number;
+	weixinAgentTimeoutMs: number;
+	weixinAutoReply: boolean;
+	weixinUnsupportedText: string;
+	weixinAllowFrom: string[];
 	knowledgeSearchLimit: number;
 	mysqlEnabled: boolean;
 	mysqlSchemaRebuild: boolean;
@@ -172,5 +188,10 @@ export type FeaturesConfig = Pick<AppConfig,
 	| "silentCustomerDays" | "silentWakeupEnabled" | "wakeupTaskTime"
 	| "workflowMineDays" | "workflowMineMinWindow" | "workflowMineMaxWindow" | "workflowMineMinCount"
 	| "workflowMineTopChains" | "workflowMineRefineTop" | "workflowMineTimeoutMs" | "workflowMineDedupe">;
+/** weixin 段:微信 iLink 机器人通道(登录凭据、租户、分片、去重与超时)。 */
+export type WeixinConfig = Pick<AppConfig,
+	| "weixinEnabled" | "weixinBaseUrl" | "weixinAccountId" | "weixinToken" | "weixinTenantId" | "weixinBotType"
+	| "weixinMaxMessageLength" | "weixinSendRetries" | "weixinSendRetryDelayMs" | "weixinPollTimeoutMs"
+	| "weixinDedupTtlSeconds" | "weixinAgentTimeoutMs" | "weixinAutoReply" | "weixinUnsupportedText" | "weixinAllowFrom">;
 /** milvus_backend + milvus_docker_compose 段:Milvus 部署清单(整体透出,不做字段级校验) */
 export type MilvusDeployConfig = Pick<AppConfig, "milvusBackend" | "milvusDockerCompose">;

@@ -77,6 +77,7 @@ backend/
   db/                       表结构、迁移、MySQL 客户端
   mcp/                      MCP 客户端 + 工具编目 + 检索(词面 BM25 + 语义 BGE)+ 双语 query 改写
 tools/ tools_system/        目录契约工具(readme.json + main.ts),新增工具只需加目录
+3party/weixin/              微信 iLink 接入:扫码登录、长轮询收消息、发送、绑定与审计
 front/                      前端页面(client.html 业务端 / console.html 控制台)
 scripts/                    启动、模型下载、数据导入
 opimize/catalog/            检索评测:语料、跑分脚本、报告
@@ -89,7 +90,7 @@ npm ci --prefix pi --ignore-scripts
 node scripts/gen-minimal-model-data.mjs        # 离线模型数据(models.dev 不可达时)
 npm run build:offline --prefix pi
 npm install --ignore-scripts                    # 根 workspace 链接 pi 包
-npm test                                        # 27 个测试文件 / 177 个用例
+npm test                                        # 28 个测试文件 / 191 个用例
 npm run typecheck && npm run typecheck:eval
 ```
 
@@ -127,6 +128,7 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 | `tools.fileWrite` | 文件写入工具是否允许写到仓库之外(`allowOutsideRepo`) |
 | `tools.catalog` | 工具编目与召回,见下 |
 | `tools.sql` | SQL 工具的行数上限、执行超时、追加拦截关键字(见「SQL 执行策略」) |
+| `weixin` | 微信 iLink 通道:登录凭据、租户、分片长度、发送重试、轮询超时、去重窗口、agent 超时、允许的联系人(见「微信接入」) |
 | `mcp.servers` | 外部 MCP Server 列表 |
 | `knowledge.searchLimit` | 知识检索默认条数 |
 | `vector` / `milvus_backend` / `milvus_docker_compose` | Milvus 旁路与单机部署参数 |
@@ -319,6 +321,40 @@ tools:
 - 外部工具元数据**含中文会打告警**:这类工具会被判为 `description_language=zh`,只参与中文那一路召回;
 - 长尾工具(MCP + 工作流)超过 `tools.catalog.threshold` 时按需取用:模型先用 `search_tools` 检索候选,再 `get_tool_details` 取参数,最后 `call_tool` 执行。
 
+# 微信接入(iLink 机器人)
+
+`3party/weixin` 把微信接到同一条 agent 链路上:扫码登录一个 iLink 机器人账号,长轮询收微信消息,跑一轮 agent,再把回答发回微信。收发都走 `ilink/bot/*` 协议,不依赖公众号后台配置。
+
+三步用起来:
+
+1. `weixin.enabled: true`,其余键照常配齐(`baseUrl`、`tenantId`、分片长度、超时、允许的联系人);
+2. `GET /api/v1/weixin/login` 拿二维码(`qrcodeUrl` 直接用微信扫),前端轮询 `GET /api/v1/weixin/login/:id` 到 `status=confirmed`,凭据落盘 `data/weixin/account.json`,轮询器自动启动;
+3. 在微信里给这个账号发消息,系统按"一条微信消息 → 一条 agent 线程 → 一条回复"处理。
+
+| 接口 | 作用 |
+| --- | --- |
+| `GET /api/v1/weixin/status` | 是否启用、是否已登录、轮询是否在跑、最近一次轮询时间与错误 |
+| `GET\|POST /api/v1/weixin/login` | 取登录二维码 |
+| `GET /api/v1/weixin/login/:id` | 轮询扫码状态(wait / scaned / confirmed / expired) |
+| `POST /api/v1/weixin/logout` | 停掉轮询并清空内存里的账号 |
+| `POST /api/v1/weixin/send` | 主动发消息:`{ to, text }` |
+| `GET /api/v1/weixin/users` | 最近联系过系统的微信用户及其绑定关系 |
+| `POST /api/v1/weixin/bind` | 把 openid 绑到销售或客户:`{ openid, kind: sales\|customers, id }` |
+| `GET /api/v1/weixin/messages` | 收发审计(方向、状态、线程、错误) |
+
+行为约定:
+
+- **按联系人串行**:同一个 openid 的消息排队处理,两条消息同时到也不会把一条线程写乱;
+- **幂等**:`message_id` 记在 `weixin_messages`,重投递直接跳过;
+- **context_token 回带**:每条出站消息带该联系人最新的 `context_token`;失效(-14 / -2 "unknown error")时自动去掉 token 重试一次;
+- **微信可读文本**:回复前把 Markdown 转成纯文本(标题去标记、表格拆成 `客户 · 金额` 行、链接保留地址),再按 `weixin.maxMessageLength` 分条;
+- **非文字消息**回 `weixin.unsupportedText`;agent 失败或超时(`weixin.agentTimeoutMs`)同样回这句;
+- **绑定后才带身份**:已绑定销售/客户的联系人,进入 agent 的 goal 会带一行 `(微信联系人已绑定 sales:xxx)`,提示词据此判断是谁在问;
+- **审计**:收到、回复、失败、被 `allowFrom` 拦下都写 `weixin_messages`。
+
+agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发消息,和收消息回复共用同一套发送实现。
+
+已知边界:只处理文字;群消息是否送达取决于 iLink 对该账号的投递策略;令牌过期或被踢下线需要重新扫码。
 # 工作流沉淀
 
 `workflow_manage` 管理"执行轨迹 → 可复用工作流"的链路:
@@ -370,7 +406,7 @@ tools:
 # 测试与评测
 
 ```bash
-npm test                 # 27 个测试文件 / 177 个用例
+npm test                 # 28 个测试文件 / 191 个用例
 npm run typecheck        # backend 业务代码
 npm run typecheck:eval   # 仓库根,额外覆盖 opimize/ 下的评测脚本
 ```

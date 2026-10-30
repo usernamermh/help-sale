@@ -111,6 +111,24 @@ export interface FileConfig {
 		timeoutMs?: number;
 		defaultTools?: string[];
 	};
+	/** 微信通道(iLink 机器人):登录凭据、租户、分片与超时 */
+	weixin?: {
+		enabled?: boolean;
+		baseUrl?: string;
+		accountId?: string;
+		token?: string;
+		tenantId?: string;
+		botType?: string;
+		maxMessageLength?: number;
+		sendRetries?: number;
+		sendRetryDelayMs?: number;
+		pollTimeoutMs?: number;
+		dedupTtlSeconds?: number;
+		agentTimeoutMs?: number;
+		autoReply?: boolean;
+		unsupportedText?: string;
+		allowFrom?: string[];
+	};
 	userkey?: string;
 	defaults?: {
 		insightsDays?: number;

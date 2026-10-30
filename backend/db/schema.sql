@@ -478,3 +478,36 @@ CREATE TABLE IF NOT EXISTS knowledge_embeddings (
 );
 CREATE INDEX IF NOT EXISTS idx_ke_tenant ON knowledge_embeddings (tenant_id, document_id);
 CREATE INDEX IF NOT EXISTS idx_ke_tenant_chunk ON knowledge_embeddings (tenant_id, chunk_id);
+
+-- v38:微信通道(iLink 机器人):登录绑定关系 + 收发审计
+CREATE TABLE IF NOT EXISTS weixin_users (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	openid TEXT NOT NULL,
+	nickname TEXT,
+	bound_kind TEXT,
+	bound_id TEXT,
+	thread_id TEXT,
+	last_active_at TEXT,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	UNIQUE (tenant_id, openid)
+);
+CREATE INDEX IF NOT EXISTS idx_wxu_tenant ON weixin_users (tenant_id, last_active_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wxu_thread ON weixin_users (tenant_id, thread_id);
+
+CREATE TABLE IF NOT EXISTS weixin_messages (
+	id TEXT PRIMARY KEY,
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	openid TEXT NOT NULL,
+	direction TEXT NOT NULL,
+	message_id TEXT,
+	msg_type TEXT NOT NULL,
+	content TEXT NOT NULL,
+	thread_id TEXT,
+	run_id TEXT,
+	status TEXT NOT NULL,
+	error TEXT,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_wxm_tenant ON weixin_messages (tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wxm_msgid ON weixin_messages (tenant_id, direction, message_id);

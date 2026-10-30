@@ -12,6 +12,7 @@ import type { ModelRuntime } from "./integrations_pi/models.js";
 import { registerRoutes } from "./services/routes/index.js";
 import type { RouteDeps } from "./services/routes/index.js";
 import { registerMcp } from "./mcp/index.js";
+import { registerWeixin } from "../3party/weixin/index.js";
 import { createSyncMysqlDb } from "./db/mysql/client.js";
 import { createReminderQueue, type ReminderQueue } from "./integrations_db/reminder-queue.js";
 import { closeStopSignal, initStopSignal } from "./services/stop-signal.js";
@@ -86,6 +87,8 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const deps: RouteDeps = { db, store, dataDir, logDir, runtime: options.runtime, streamFn: options.streamFn, reminders };
 	registerRoutes(app, deps);
 	registerMcp(app, { db, tenantId: config.tenantId });
+	// 微信通道(iLink 机器人):扫码登录、长轮询收消息、agent 回复;未启用时只挂状态接口
+	const stopWeixin = registerWeixin(app, { db, dataDir, store, runtime: options.runtime, streamFn: options.streamFn });
 
 	app.addHook("onResponse", async (request, reply) => {
 		if (!request.url.startsWith("/api/")) return;
@@ -159,6 +162,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	});
 
 	app.addHook("onClose", async () => {
+		stopWeixin();
 		stopSubagents();
 		stopAutomation();
 		await Promise.allSettled([store.close(), reminders.close(), closeStopSignal()]);
