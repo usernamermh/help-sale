@@ -28,6 +28,8 @@ export function loadIntegrationsConfig(file: FileConfig): IntegrationsConfig {
 		sqlMaxRows: num(file.tools?.sql?.maxRows, "tools.sql.maxRows"),
 		sqlTimeoutMs: num(file.tools?.sql?.timeoutMs, "tools.sql.timeoutMs"),
 		sqlExtraBlockedKeywords: strList(file.tools?.sql?.extraBlockedKeywords, "tools.sql.extraBlockedKeywords"),
+		riskDangerousTools: strList(file.tools?.risk?.dangerousTools, "tools.risk.dangerousTools"),
+		riskDangerousDefaultEnabled: bool(file.tools?.risk?.dangerousDefaultEnabled, "tools.risk.dangerousDefaultEnabled"),
 		toolsCatalogEnabled: bool(file.tools?.catalog?.enabled, "tools.catalog.enabled"),
 		toolsCatalogThreshold: num(file.tools?.catalog?.threshold, "tools.catalog.threshold"),
 		toolsCatalogTopK: num(file.tools?.catalog?.topK, "tools.catalog.topK"),

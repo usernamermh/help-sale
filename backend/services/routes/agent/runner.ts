@@ -5,6 +5,8 @@ import { config } from "../../../env.js";
 import { LOCAL_PROVIDER_ID, createModelRegistry, type ModelRuntime } from "../../../integrations_pi/models.js";
 import { getSubagentPrompt } from "../../../prompts/multi-agent.js";
 import { loadExternalAgentTools, externalToolPaths } from "../../external-tools.js";
+import { applyToolPolicy } from "../../../integrations_pi/agent-tools.js";
+import { listCapabilityStates } from "../../../integrations_pi/tables/agents/capabilities.js";
 import { isStopped } from "../../stop-signal.js";
 import { createTimelineRecorder } from "../../timeline.js";
 import { claimKanbanCard, finishKanbanCard, listKanbanCards, touchKanbanCard, type KanbanCard } from "./kanban.js";
@@ -60,7 +62,7 @@ async function runSubTask(deps: SubagentRunnerDeps, card: KanbanCard): Promise<s
 
 	const all = await loadExternalAgentTools(externalToolPaths(), { db: deps.db, tenantId: card.tenantId });
 	const allowed = (card.tools && card.tools.length > 0 ? card.tools : DEFAULT_SUBAGENT_TOOLS).filter((t) => !FORBIDDEN_SUBAGENT_TOOLS.has(t));
-	const tools = all.filter((t) => allowed.includes(t.name));
+	const tools = applyToolPolicy(all.filter((t) => allowed.includes(t.name)), listCapabilityStates(deps.db, card.tenantId), "subagent");
 
 	// 共享输出:主代理允许时,把其他已完成子代理的最新结论注入本子代理 prompt(并发池分批执行场景)
 	const sharedOutputs = collectSharedOutputs(deps.db, card);

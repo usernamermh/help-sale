@@ -90,7 +90,7 @@ npm ci --prefix pi --ignore-scripts
 node scripts/gen-minimal-model-data.mjs        # 离线模型数据(models.dev 不可达时)
 npm run build:offline --prefix pi
 npm install --ignore-scripts                    # 根 workspace 链接 pi 包
-npm test                                        # 30 个测试文件 / 205 个用例
+npm test                                        # 31 个测试文件 / 213 个用例
 npm run typecheck && npm run typecheck:eval
 ```
 
@@ -112,7 +112,22 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 
 # 配置
 
-所有运行时配置集中在仓库顶层 **[help-sale.config.yaml](help-sale.config.yaml)**,YAML 格式、支持注释。**每个字段都是必填**:代码里没有任何默认值,缺一项就在启动时报错并指出配置键;要"关掉/留空"请显式写 `false` / `""` / `[]` / `{}`。模板见 [help-sale.config.example.yaml](help-sale.config.example.yaml)。唯一的环境变量是 `CONFIG_PATH`,用于指定另一份配置文件。
+配置按"谁负责"分三层,避免把账户口令和部署参数混在一起:
+
+| 层 | 文件 | 谁负责 | 放什么 |
+| --- | --- | --- | --- |
+| 部署配置 | [help-sale.config.yaml](help-sale.config.yaml) | 部署方 / 云端管理员 | 监听与日志、存储模式与表名映射、模型端点与上下文窗口、向量与 Milvus、MCP server 清单、定时任务、默认条数、公司名、工具与召回策略 |
+| 账户与密钥 | [help-sale.secrets.example.yaml](help-sale.secrets.example.yaml)(模板) | 部署方或最终用户填账号口令 | 数据库账号与口令、Redis 口令、模型网关 key、外部检索 key、MCP PAT、微信机器人账号 |
+| 运行时落盘 | `data/weixin/account.json` 等 | 系统自己写 | 扫码登录令牌、长轮询游标、联系人上下文令牌 |
+
+规则:
+
+- 主配置里凡是账户/密钥类,统一写占位 —— `${SECRETS:mysql.password}`(从密钥文件取)或 `${ENV:MYSQL_PASSWORD}`(从环境变量取);占位取不到值会**启动即报错**,并指出是哪个键、哪个变量。
+- 密钥文件位置:`SECRETS_PATH` 指定,否则取主配置同目录下的 `help-sale.secrets.yaml`;敏感项仍明文留在主配置里时,启动会打印一条迁移告警(只报键名,不打印值)。
+- **每个字段都是必填**:代码里没有任何默认值,缺一项就在启动时报错并指出配置键;要"关掉/留空"请显式写 `false` / `""` / `[]` / `{}`。
+- 环境变量只有两个:`CONFIG_PATH`(主配置路径)与 `SECRETS_PATH`(密钥文件路径)。
+
+模板:[help-sale.config.example.yaml](help-sale.config.example.yaml) + [help-sale.secrets.example.yaml](help-sale.secrets.example.yaml)。
 
 主要配置段:
 
@@ -130,6 +145,7 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 | `tools.sql` | SQL 工具的行数上限、执行超时、追加拦截关键字(见「SQL 执行策略」) |
 | `weixin` | 微信 iLink 通道:登录凭据、租户、分片长度、发送重试、轮询超时、去重窗口、agent 超时、确认语、兜底话术、会话命令开关与条数、允许的联系人(见「微信接入」) |
 | `mcp.servers` | 外部 MCP Server 列表 |
+| `tools.risk` | 高危工具清单与默认开关(`dangerousTools` / `dangerousDefaultEnabled`) |
 | `knowledge.searchLimit` | 知识检索默认条数 |
 | `vector` / `milvus_backend` / `milvus_docker_compose` | Milvus 旁路与单机部署参数 |
 | `workflows.mine` | 工作流挖掘参数(回溯天数、窗口、最小次数、返回条数、提炼条数、去重) |
@@ -185,6 +201,8 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 - `requires` 是环境门槛(配置/环境变量/数据库),不满足时该工具隐藏;
 - `hidden: true` 的工具不出现在能力清单(模型仍可调用);
 - 新增/修改工具**重启服务即生效**,不需要改后端代码。
+
+风险分级与默认策略(`tools.risk`):能执行命令、控制机器、写任意路径这类工具(`dangerousTools`,默认 `terminal` / `computer` / `file_write`)在 `dangerousDefaultEnabled: false` 时**默认不挂载**,必须在控制台按租户显式开启;其余工具沿用"没有记录就是启用"的老规矩。
 
 当前挂载的本地工具(32 个):`conversation_query`、`customer_query`、`insight_query`、`knowledge_search`、`knowledge_ingest`、`knowledge_candidate`、`playbook_check`、`task_manage`、`workflow_manage`、`browser`、`chart_generate`、`cluster`、`computer`、`date_tool`、`dialog_extract`、`embedding`、`excel`、`file_read`、`file_write`、`kanban`、`keyword_extract_free`、`keyword_extract_strict`、`ppt`、`redis`、`similarity`、`sql`、`subagents`、`table_generate`、`terminal`、`txt`、`update_memory`、`web_search`(需配 Serper 密钥)。
 
@@ -335,6 +353,7 @@ tools:
 
 | 接口 | 作用 |
 | --- | --- |
+| `GET /api/v1/ready` | 就绪检查:业务库 / Redis / 模型网关逐项探测,不可用返回 503 |
 | `GET /api/v1/weixin/status` | 是否启用、是否已登录、轮询是否在跑、最近一次轮询时间与错误 |
 | `GET\|POST /api/v1/weixin/login` | 取登录二维码(控制台按钮走这条路) |
 | `GET /api/v1/weixin/login/:id` | 轮询扫码状态(wait / scaned / confirmed / expired) |
@@ -414,7 +433,7 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 # 测试与评测
 
 ```bash
-npm test                 # 30 个测试文件 / 205 个用例
+npm test                 # 31 个测试文件 / 213 个用例
 npm run typecheck        # backend 业务代码
 npm run typecheck:eval   # 仓库根,额外覆盖 opimize/ 下的评测脚本
 ```

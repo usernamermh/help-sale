@@ -10,6 +10,7 @@ import { checkWorkflowSteps, collectPlaceholders, loadStepToolNames, runWorkflow
 import type { TimelineRecorder } from "../services/timeline.js";
 import type { SessionStore } from "./sessions.js";
 import { config } from "../env.js";
+import { listCapabilityStates, type CapabilityState } from "./tables/agents/capabilities.js";
 import { McpClient, mcpToolToAgentTool } from "../mcp/client.js";
 import { ToolCatalog, type CatalogEntry } from "../mcp/catalog.js";
 import { createToolDiscoveryTools, type ToolRecallState } from "../mcp/tool-discovery.js";
@@ -148,6 +149,31 @@ export interface SalesAgentToolOptions {
 	workflowOrigins?: Array<"manual" | "mined">;
 }
 
+/**
+ * 工具挂载策略(能力开关 + 风险分级):
+ *   1) 租户显式关掉的工具不挂载;
+ *   2) "高危工具"(tools.risk.dangerousTools)默认不挂载 —— 能执行命令、控制机器、写任意路径这类,
+ *      必须在控制台按租户显式开启;tools.risk.dangerousDefaultEnabled=true 时保留旧行为;
+ *   3) 其余工具沿用"没有记录就是启用"。
+ */
+export function applyToolPolicy<T extends { name: string }>(tools: T[], states: CapabilityState[], scope = "agent"): T[] {
+	const explicit = new Map(states.map((state) => [state.name, state.enabled]));
+	const dangerous = new Set(config.riskDangerousTools);
+	const blocked: string[] = [];
+	const kept = tools.filter((tool) => {
+		const state = explicit.get(tool.name);
+		if (state === false) return false;
+		if (dangerous.has(tool.name) && state !== true && !config.riskDangerousDefaultEnabled) {
+			blocked.push(tool.name);
+			return false;
+		}
+		return true;
+	});
+	if (blocked.length > 0) {
+		console.warn(`[tools] ${scope} 未挂载高危工具(默认关闭,需按租户显式开启): ${blocked.join(", ")}`);
+	}
+	return kept;
+}
 export async function createSalesAgentTools(deps: SalesAgentToolDeps, opts: SalesAgentToolOptions = {}): Promise<Array<AgentTool<any, any>>> {
 	// check_fn 环境门槛:web_search/web 依赖配置的 Serper 密钥,未配置则自动隐藏
 	const external = await loadExternalAgentTools(TOOL_PATHS, { db: deps.db, tenantId: deps.tenantId, webSearchApiKey: config.webSearchApiKey });
@@ -192,7 +218,7 @@ export async function createSalesAgentTools(deps: SalesAgentToolDeps, opts: Sale
 	// 短路条件(工具少):全部直挂,不做编目、不触发 query 改写
 	if (!(config.toolsCatalogEnabled && longTail.length > config.toolsCatalogThreshold)) {
 		if (deps.recallState) deps.recallState.catalog = { active: false, toolCount: filteredExternal.length + longTail.length };
-		return [...filteredExternal, ...longTail, systemFinalTool()];
+		return applyToolPolicy([...filteredExternal, ...longTail, systemFinalTool()], listCapabilityStates(deps.db, deps.tenantId));
 	}
 	// 进编目:长尾工具(MCP + 工作流)总数超过阈值 —— 宿主据此决定是否触发双语 query 改写
 	if (deps.recallState) deps.recallState.catalog = { active: true, toolCount: filteredExternal.length + longTail.length };
@@ -214,7 +240,7 @@ export async function createSalesAgentTools(deps: SalesAgentToolDeps, opts: Sale
 	catalog.addMany(mcpTools.map((t) => toEntry(t, "mcp")));
 	catalog.addMany(workflowTools.map((t) => toEntry(t, "workflow")));
 	const discoveryTools = createToolDiscoveryTools(catalog, { topK: config.toolsCatalogTopK, maxInspect: config.toolsCatalogMaxInspect }, deps.recallState);	registerDynamicLabels(discoveryTools.map((t) => ({ name: t.name, label: t.label ?? t.name })));
-	return [...filteredExternal, ...discoveryTools, systemFinalTool()];
+	return applyToolPolicy([...filteredExternal, ...discoveryTools, systemFinalTool()], listCapabilityStates(deps.db, deps.tenantId));
 }
 
 /**

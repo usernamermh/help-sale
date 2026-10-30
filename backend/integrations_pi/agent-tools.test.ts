@@ -91,6 +91,20 @@ describe("工作流工具的语言标记", () => {
 		expect(String(tool.label)).toContain("客户跟进复盘");
 	});
 
+	it("高危工具默认不挂载,按租户显式开启后才出现", async () => {
+		// 关掉前置的网络依赖:MCP 在测试里不接
+		const before = await createSalesAgentTools({ db, tenantId: "t1", store: stubStore });
+		const dangerousNames = before.filter((t) => t.name === "terminal" || t.name === "computer").map((t) => t.name);
+		expect(dangerousNames).toEqual([]);
+
+		// 显式开启 terminal(能力表里写 enabled=true)
+		db.prepare("INSERT INTO agent_capabilities (tenant_id, capability_name, enabled, updated_at) VALUES (?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now'))").run("t1", "terminal", 1);
+		const after = await createSalesAgentTools({ db, tenantId: "t1", store: stubStore });
+		expect(after.some((t) => t.name === "terminal")).toBe(true);
+		// 仍没开启的 computer 继续保持关闭
+		expect(after.some((t) => t.name === "computer")).toBe(false);
+	});
+
 	it("英文工作流自动判成 en(两种语言都支持,各自走各自那一路召回)", async () => {
 		const wf = createWorkflow(db, "t1", {
 			name: "Customer follow-up review",

@@ -42,7 +42,11 @@ export interface AppConfig {
 	/** SQL 单条执行超时(tools.sql.timeoutMs) */
 	sqlTimeoutMs: number;
 	/** SQL 追加拦截的关键字(tools.sql.extraBlockedKeywords) */
-	sqlExtraBlockedKeywords: string[]; // web_search 工具(Serper API)密钥
+	sqlExtraBlockedKeywords: string[];
+	/** 高危工具清单(tools.risk.dangerousTools):默认不挂载,需按租户显式开启 */
+	riskDangerousTools: string[];
+	/** 高危工具是否默认开启(tools.risk.dangerousDefaultEnabled) */
+	riskDangerousDefaultEnabled: boolean; // web_search 工具(Serper API)密钥
 	mcpServers: Array<{ name: string; url: string; headers?: Record<string, string>; pat?: string }>; // 外部 MCP Server 列表(MCP 客户端接入)
 	// 微信通道(weixin 段,iLink 机器人)
 	weixinEnabled: boolean;
@@ -175,7 +179,7 @@ export type IntegrationsConfig = Pick<AppConfig,
 	| "mysqlEnabled" | "mysqlSchemaRebuild" | "mysqlConnectTimeout" | "mysqlHost" | "mysqlPort" | "mysqlUser" | "mysqlPassword" | "mysqlDatabase"
 	| "redisEnabled" | "redisHost" | "redisPort" | "redisPassword"
 	| "notificationEnabled" | "notificationWebhookUrl"
-	| "webSearchApiKey" | "fileWriteAllowOutsideRepo" | "sqlMaxRows" | "sqlTimeoutMs" | "sqlExtraBlockedKeywords" | "mcpServers"
+	| "webSearchApiKey" | "fileWriteAllowOutsideRepo" | "sqlMaxRows" | "sqlTimeoutMs" | "sqlExtraBlockedKeywords" | "riskDangerousTools" | "riskDangerousDefaultEnabled" | "mcpServers"
 	| "toolsCatalogEnabled" | "toolsCatalogThreshold" | "toolsCatalogTopK" | "toolsCatalogMaxInspect" | "toolsCatalogSemanticFloorZh" | "toolsCatalogSemanticFloorEn"
 	| "toolsCatalogBilingualEnabled" | "toolsCatalogRewriteTimeoutMs" | "toolsCatalogPerLanguageTopK">;
 /** defaults + company + userkey 段:业务默认条数、公司与调用方标识。 */

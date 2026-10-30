@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
+import { loadSecretsDocument, mergeSecrets, resolvePlaceholders } from "./secrets.js";
 
 // 所有运行配置只从 help-sale.config.yaml 读取,不允许环境变量覆盖。
 // 唯一例外:CONFIG_PATH 仅用于指定配置文件路径(不是配置项本身)。
@@ -50,6 +51,7 @@ export interface FileConfig {
 		fileWrite?: { allowOutsideRepo?: boolean };
 		/** SQL 工具:返回行数上限、执行超时、追加拦截的关键字 */
 		sql?: { maxRows?: number; timeoutMs?: number; extraBlockedKeywords?: string[] };
+		risk?: { dangerousTools?: string[]; dangerousDefaultEnabled?: boolean };
 		/** 工具编目:长尾工具(MCP/工作流)超过阈值时改为按需检索 */
 		catalog?: { enabled?: boolean; threshold?: number; topK?: number; maxInspect?: number; semanticFloorZh?: number; semanticFloorEn?: number; bilingual?: { enabled?: boolean; rewriteTimeoutMs?: number; perLanguageTopK?: number } };
 	};
@@ -186,5 +188,17 @@ export function loadConfigFile(): FileConfig {
 	if (typeof parsed !== "object" || Array.isArray(parsed)) {
 		throw new Error(`配置文件 ${file} 顶层必须是键值映射(yaml mapping)`);
 	}
-	return parsed as FileConfig;
+	// 账户与密钥:先由密钥文件补缺,再统一解析 ${ENV:...} / ${SECRETS:...} 占位
+	const secrets = loadSecretsDocument(file);
+	const root = parsed as Record<string, unknown>;
+	const { plaintextKeys } = mergeSecrets(root, secrets);
+	const resolved = resolvePlaceholders(root, secrets) as Record<string, unknown>;
+	if (plaintextKeys.length > 0) {
+		console.warn(
+			`[config] 以下账户/密钥仍直接写在主配置里:${plaintextKeys.join(", ")}。` +
+				`建议迁到 ${secrets.source ?? path.join(path.dirname(file), "help-sale.secrets.yaml")},` +
+				`或写成 \${ENV:变量名} 由部署环境注入。`,
+		);
+	}
+	return resolved as FileConfig;
 }
