@@ -18,6 +18,7 @@ import { registerWeixin } from "../3party/weixin/index.js";
 import { resolveTenant } from "./services/tenant-context.js";
 import { withTenantGuard } from "./db/tenant-guard.js";
 import { assertTableMappingComplete } from "./db/schema-audit.js";
+import { createTenantQuota } from "./services/tenant-quota.js";
 import { createSyncMysqlDb } from "./db/mysql/client.js";
 import { createReminderQueue, type ReminderQueue } from "./integrations_db/reminder-queue.js";
 import { closeStopSignal, initStopSignal } from "./services/stop-signal.js";
@@ -102,6 +103,19 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 			return reply.code(resolved.error.status).send({ error: "tenant_not_allowed", message: resolved.error.message });
 		}
 		request.tenantId = resolved.tenantId ?? config.tenantId;
+
+		// 每租户请求限流:超出的请求立刻拒绝,不占用共享资源(单租户刷量不影响其他租户)
+		const gate = await quota.tryAcquireRequest(request.tenantId);
+		if (!gate.allowed) {
+			appendRuntimeLog(logDir, {
+				level: "error",
+				type: "tenant_throttled",
+				message: `${request.method} ${request.url} 触发租户限流(建议 ${Math.ceil(gate.retryAfterMs / 1000)}s 后重试)`,
+				meta: { tenantId: request.tenantId },
+			}, { fileName: config.logRuntimeFile, level: config.logLevel, maxBytes: config.logMaxBytes });
+			reply.header("Retry-After", String(Math.ceil(gate.retryAfterMs / 1000)));
+			return reply.code(429).send({ error: "tenant_rate_limited", message: `请求过于频繁,请 ${Math.ceil(gate.retryAfterMs / 1000)} 秒后重试`, retryAfterMs: gate.retryAfterMs });
+		}
 	});
 
 	initStopSignal({
@@ -117,7 +131,16 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		password: config.redisPassword,
 	});
 
-	const deps: RouteDeps = { db, store, dataDir, logDir, runtime: options.runtime, streamFn: options.streamFn, reminders };
+	// 每租户额度:请求令牌桶 + agent 并发槽位(Redis 可用则跨实例共享)
+	const quota = createTenantQuota({
+		enabled: config.tenantRateLimitEnabled,
+		requestPerMinute: config.tenantRequestPerMinute,
+		requestBurst: config.tenantRequestBurst,
+		agentConcurrency: config.tenantAgentConcurrency,
+		retryAfterSeconds: config.tenantRetryAfterSeconds,
+		redis: { enabled: config.redisEnabled, host: config.redisHost, port: config.redisPort, password: config.redisPassword },
+	});
+	const deps: RouteDeps = { db, store, dataDir, logDir, runtime: options.runtime, streamFn: options.streamFn, reminders, quota };
 
 	// ── 多实例协调(Redis 可用才支持多实例) ──
 	const cluster = createClusterCoordinator({
@@ -146,7 +169,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	// 外部 MCP 工具列表:启动就预热,之后在缓存过期前后台续期,别让用户消息等外部握手
 	const stopMcpWarmup = startMcpToolWarmup(config.mcpServers);
 	// 微信通道(iLink 机器人):扫码登录、长轮询收消息、agent 回复;未启用时只挂状态接口
-	const stopWeixin = registerWeixin(app, { db, dataDir, store, runtime: options.runtime, streamFn: options.streamFn, isLeader: () => cluster.isLeader("weixin-poller") });
+	const stopWeixin = registerWeixin(app, { db, dataDir, store, runtime: options.runtime, streamFn: options.streamFn, quota, isLeader: () => cluster.isLeader("weixin-poller") });
 
 	app.addHook("onResponse", async (request, reply) => {
 		if (!request.url.startsWith("/api/")) return;
@@ -230,6 +253,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		stopSubagents();
 		stopAutomation();
 		await cluster.close();
+		await quota.close();
 		await Promise.allSettled([store.close(), reminders.close(), closeStopSignal()]);
 		db.close();
 	});

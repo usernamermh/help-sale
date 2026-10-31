@@ -15,6 +15,7 @@ import { sendWeixinText, type WeixinSendOptions } from "./send.js";
 import { maskId } from "./text.js";
 import { WeixinDedup, readAccount, readSyncBuf, setContextToken, writeSyncBuf } from "./store.js";
 import { runWeixinCommand } from "./commands.js";
+import type { TenantQuota } from "../../backend/services/tenant-quota.js";
 import { publishThreadEvent } from "../../backend/services/thread-events.js";
 import type { WeixinAccount, WeixinInbound } from "./types.js";
 
@@ -29,6 +30,8 @@ export interface WeixinRuntimeDeps {
 	store: SessionStore;
 	runtime?: ModelRuntime;
 	streamFn?: StreamFn;
+	/** 每租户额度:微信侧的 agent 轮次同样受限,超限先等一会儿再回忙话术 */
+	quota?: TenantQuota;
 	/** 多实例:只有主实例才拉 iLink 消息(同一条游标不能被两个进程抢) */
 	isLeader?: () => boolean;
 }
@@ -52,7 +55,18 @@ function weixinHistory(db: DatabaseSync) {
  */
 function createAgentRunner(deps: WeixinRuntimeDeps): WeixinAgentRunner {
 	return async ({ tenantId, threadId, goal, history }) => {
+		// 每租户并发上限:先等一小会儿(退避重试),一直拿不到就回忙话术,不占用执行资源
+		let slot = await deps.quota?.tryAcquireAgentRun(tenantId);
+		if (slot && !slot.allowed) {
+			for (let attempt = 0; attempt < 3 && slot && !slot.allowed; attempt++) {
+				await sleep(Math.min(5000, Math.max(1000, slot.retryAfterMs)));
+				slot = await deps.quota!.tryAcquireAgentRun(tenantId);
+			}
+			if (!slot.allowed) return { answer: config.weixinBusyText };
+		}
+		try {
 		const result = await runSalesAgent(
+
 			{ db: deps.db, tenantId, store: deps.store, runtime: deps.runtime, streamFn: deps.streamFn },
 			{ goal, history, threadId },
 		);
@@ -62,6 +76,9 @@ function createAgentRunner(deps: WeixinRuntimeDeps): WeixinAgentRunner {
 			publishThreadEvent({ type: "message", tenantId, threadId, role: "assistant", text: answer });
 		}
 		return { runId: result.runId, answer };
+		} finally {
+			if (slot?.allowed) await deps.quota?.releaseAgentRun(tenantId);
+		}
 	};
 }
 

@@ -12,6 +12,8 @@ export function loadIntegrationsConfig(file: FileConfig): IntegrationsConfig {
 		mysqlEnabled: bool(file.mysql?.enabled, "mysql.enabled"),
 		mysqlSchemaRebuild: bool(file.mysql?.schemaRebuild, "mysql.schemaRebuild"),
 		mysqlConnectTimeout: num(file.mysql?.connectTimeout, "mysql.connectTimeout"),
+		mysqlConnectionLimit: num(file.mysql?.connectionLimit, "mysql.connectionLimit"),
+		mysqlQueryTimeoutMs: num(file.mysql?.queryTimeoutMs, "mysql.queryTimeoutMs"),
 		mysqlHost: str(file.mysql?.host, "mysql.host"),
 		mysqlPort: num(file.mysql?.port, "mysql.port"),
 		mysqlUser: str(file.mysql?.user, "mysql.user"),

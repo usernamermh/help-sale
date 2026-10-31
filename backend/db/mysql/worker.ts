@@ -102,7 +102,8 @@ parentPort!.on("message", async (msg: any) => {
 				user: msg.user,
 				password: msg.password,
 				database: msg.database,
-				connectionLimit: 2,
+				// 池大小来自配置(隔离目标:单个租户的慢查询不该占满连接池)
+				connectionLimit: Number(msg.connectionLimit) > 0 ? Number(msg.connectionLimit) : 10,
 				decimalNumbers: true,
 				supportBigNumbers: false,
 				timezone: "Z",

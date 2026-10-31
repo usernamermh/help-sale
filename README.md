@@ -90,7 +90,7 @@ npm ci --prefix pi --ignore-scripts
 node scripts/gen-minimal-model-data.mjs        # 离线模型数据(models.dev 不可达时)
 npm run build:offline --prefix pi
 npm install --ignore-scripts                    # 根 workspace 链接 pi 包
-npm test                                        # 38 个测试文件 / 247 个用例
+npm test                                        # 39 个测试文件 / 251 个用例
 npm run typecheck && npm run typecheck:eval
 ```
 
@@ -161,6 +161,17 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 
 隔离不是"表里加一个 tenant_id"就结束的事,它是贯穿身份、数据、缓存、队列、后台任务与可观测性的一条契约。这里写清本项目当前的做法、强制点和仍依赖人工的部分。
 
+## 每租户额度:让单个租户吃不满共享资源
+
+隔离不只是"数据别串号",还要**保证一个租户的用量不拖垮别人**。这一层由三件事组成:
+
+| 机制 | 位置 | 行为 |
+| --- | --- | --- |
+| **请求限流**(令牌桶) | `backend/services/tenant-quota.ts` + `app.ts` 请求钩子 | 每租户 `tenant.rateLimit.requestPerMinute` 次/分钟、桶容量 `requestBurst`;超出返回 **429 + `Retry-After`**,不进入业务逻辑 |
+| **每租户 agent 并发** | 同上;`/agent/run`、`run-stream`、微信通道都受它约束 | 同时在跑的 agent 轮次不超过 `tenant.rateLimit.agentConcurrency`;HTTP 侧超限返回 429,微信侧等待后回 `weixin.busyText` |
+| **连接池与查询超时** | `mysql.connectionLimit`、`mysql.queryTimeoutMs` | 池大小可配(避免一个租户的慢查询占满连接);业务查询有超时,不会无限挂住 |
+
+额度后端:Redis 可用时**跨实例共享**(多实例下仍是"每租户一份",不会被实例数放大);Redis 不可用时退化为进程内计数(单实例部署)。被限流会写 `runtime.log`(`type=tenant_throttled`,带 `tenantId`),便于排查是谁在刷。
 ## 隔离等级怎么选
 
 | 方案 | 隔离强度 | 运维成本 | 适用 |
@@ -495,7 +506,7 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 # 测试与评测
 
 ```bash
-npm test                 # 38 个测试文件 / 247 个用例
+npm test                 # 39 个测试文件 / 251 个用例
 npm run typecheck        # backend 业务代码
 npm run typecheck:eval   # 仓库根,额外覆盖 opimize/ 下的评测脚本
 ```

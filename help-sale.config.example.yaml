@@ -54,6 +54,17 @@ tenant:
   dataIsolationMode: "enforce"
   # 集成方 API Key → 租户 ID 的映射,值放密钥文件(tenant.apiKeys),这里留空
   apiKeys: {}
+  # 每租户限流与并发配额:保证单个租户吃不满共享资源(无 Redis 时退化为进程内计数)
+  rateLimit:
+    enabled: true
+    # 每租户每分钟请求上限(令牌桶)
+    requestPerMinute: 600
+    # 令牌桶突发容量
+    requestBurst: 120
+    # 每租户同时在跑的 agent 轮次上限
+    agentConcurrency: 3
+    # 被限流时返回的 Retry-After(秒)
+    retryAfterSeconds: 5
 model:
   modelId: your-model-id
   baseUrl: http://your-llm-gateway/v1
@@ -275,6 +286,10 @@ mysql:
   enabled: true
   schemaRebuild: false
   connectTimeout: 8000
+  # 查询连接池大小(每租户不抢连接的前提下放宽;小池会让一个慢查询占满)
+  connectionLimit: 20
+  # 业务查询超时(毫秒;与 tools.sql.timeoutMs 分开,这里管业务库查询)
+  queryTimeoutMs: 15000
   host: your-mysql-host
   port: 3306
   user: ${SECRETS:mysql.user}
@@ -320,6 +335,8 @@ weixin:
   autoReply: true
   ackText: 收到，正在处理，请稍等。
   unsupportedText: 目前只支持文字消息，图片和语音请稍后再试。
+  # 该租户 agent 并发已满时的回复(单租户排队不影响别人,但仍要告知本人)
+  busyText: 当前同时处理的会话较多，请稍后再发一次。
   commandsEnabled: true
   sessionsLimit: 10
   allowFrom: []

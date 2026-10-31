@@ -19,6 +19,12 @@ export function registerThreadRoutes(app: FastifyInstance, deps: RouteDeps): voi
 	app.post<{ Body: { goal?: string; customerKey?: string; conversationId?: string; history?: AgentMessage[] } }>("/api/v1/agent/run", async (request, reply) => {
 		const { goal, customerKey, conversationId, history } = request.body ?? {};
 		if (!goal || !goal.trim()) return reply.code(400).send({ error: "goal is required" });
+		// 每租户 agent 并发额度:超出的请求直接拒,避免一个租户把执行资源吃满
+		const slot = await deps.quota.tryAcquireAgentRun(request.tenantId);
+		if (!slot.allowed) {
+			reply.header("Retry-After", String(Math.ceil(slot.retryAfterMs / 1000)));
+			return reply.code(429).send({ error: "tenant_busy", message: `该租户同时执行的任务已达上限(${slot.retryAfterMs}ms 后重试)`, retryAfterMs: slot.retryAfterMs });
+		}
 		let result;
 		try {
 			result = await runSalesAgent(
@@ -32,6 +38,9 @@ export function registerThreadRoutes(app: FastifyInstance, deps: RouteDeps): voi
 				detail: { error: error instanceof Error ? error.message : String(error), goal: goal.slice(0, 200) },
 			});
 			return reply.code(500).send({ error: "agent_run_failed", message: error instanceof Error ? error.message : String(error) });
+		}
+		finally {
+			await deps.quota.releaseAgentRun(request.tenantId);
 		}
 		return { runId: result.runId, final: result.final, hasResponse: Boolean(result.final) };
 	});
@@ -155,6 +164,13 @@ export function registerThreadRoutes(app: FastifyInstance, deps: RouteDeps): voi
 		const built = buildContextForThread(deps.db, request.tenantId, thread.id, { goal });
 		let history = built.messages.map((m) => ({ role: m.role as AgentMessage["role"], content: stripChartsForHistory(m.content) })) as AgentMessage[];
 		
+		// 每租户 agent 并发额度:超限就正常回 429(此时还没 hijack,能正常发响应)
+		const streamSlot = await deps.quota.tryAcquireAgentRun(request.tenantId);
+		if (!streamSlot.allowed) {
+			reply.header("Retry-After", String(Math.ceil(streamSlot.retryAfterMs / 1000)));
+			return reply.code(429).send({ error: "tenant_busy", message: `该租户同时执行的任务已达上限(${streamSlot.retryAfterMs}ms 后重试)`, retryAfterMs: streamSlot.retryAfterMs });
+		}
+
 		// "接管原生 HTTP 响应"、用来做流式输出
 		// reply.hijack(); —— 接管响应，Fastify 别再插手
 		reply.hijack();
@@ -207,6 +223,8 @@ export function registerThreadRoutes(app: FastifyInstance, deps: RouteDeps): voi
 				write({ type: "error", error: error instanceof Error ? error.message : String(error) });
 				reply.raw.end();
 			}
+		} finally {
+			await deps.quota.releaseAgentRun(request.tenantId);
 		}
 		return reply;
 	});

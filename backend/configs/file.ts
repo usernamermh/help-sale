@@ -24,7 +24,7 @@ export interface FileConfig {
 		businessDbPath?: string;
 		sessionDbPath?: string;
 	};
-	tenant?: { defaultTenantId?: string; headerTenantAllowed?: boolean; trustedTenantIds?: string[]; dataIsolationMode?: string; apiKeys?: Record<string, string> };
+	tenant?: { defaultTenantId?: string; headerTenantAllowed?: boolean; trustedTenantIds?: string[]; dataIsolationMode?: string; apiKeys?: Record<string, string>; rateLimit?: { enabled?: boolean; requestPerMinute?: number; requestBurst?: number; agentConcurrency?: number; retryAfterSeconds?: number } };
 	model?: {
 		modelId?: string;
 		baseUrl?: string;
@@ -60,7 +60,7 @@ export interface FileConfig {
 	};
 	knowledge?: { searchLimit?: number };
 	logging?: { enabled?: boolean; dir?: string; maxBytes?: number; level?: "debug" | "info" | "error"; runtimeFile?: string };
-	mysql?: { enabled?: boolean; schemaRebuild?: boolean; connectTimeout?: number; host?: string; port?: number; user?: string; password?: string; database?: string };
+	mysql?: { enabled?: boolean; schemaRebuild?: boolean; connectTimeout?: number; host?: string; port?: number; user?: string; password?: string; database?: string; connectionLimit?: number; queryTimeoutMs?: number };
 	redis?: { enabled?: boolean; host?: string; port?: number; password?: string; leaderLeaseMs?: number };
 	notification?: { enabled?: boolean; webhookUrl?: string };
 	company?: { name?: string; team?: string };
@@ -132,6 +132,7 @@ export interface FileConfig {
 		autoReply?: boolean;
 		ackText?: string;
 		unsupportedText?: string;
+		busyText?: string;
 		commandsEnabled?: boolean;
 		sessionsLimit?: number;
 		allowFrom?: string[];

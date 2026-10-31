@@ -5,6 +5,7 @@ import type { FastifyInstance } from "fastify";
 import type { ModelRuntime } from "../../integrations_pi/models.js";
 import type { ReminderQueue } from "../../integrations_db/reminder-queue.js";
 import type { SessionStore } from "../../integrations_pi/sessions.js";
+import type { TenantQuota } from "../../services/tenant-quota.js";
 import { getSalespersonById, upsertSalesperson } from "../../integrations_pi/tables/sales/stores.js";
 /** 销售上下文(原 v1 pi/business/analysis.ts 的类型,现归路由层) */
 export interface SalesContext {
@@ -24,6 +25,8 @@ declare module "fastify" {
 
 export interface RouteDeps {
 	db: DatabaseSync;
+	/** 每租户限流与并发额度(单租户吃不满共享资源) */
+	quota: TenantQuota;
 	store: SessionStore;
 	dataDir: string;
 	/** 运行日志目录(logging.dir 解析后的绝对路径) */

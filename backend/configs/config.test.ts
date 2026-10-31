@@ -139,7 +139,7 @@ describe("配置:各段取值落到对应字段", () => {
 		const cfg = loadConfig();
 		const undefinedKeys = Object.entries(cfg).filter(([, v]) => v === undefined).map(([k]) => k);
 		expect(undefinedKeys).toEqual([]);
-		expect(Object.keys(cfg)).toHaveLength(137);
+		expect(Object.keys(cfg)).toHaveLength(145);
 	});
 });
 
@@ -207,6 +207,6 @@ describe("配置:代码内不提供任何默认值", () => {
 		process.env.CONFIG_PATH = path.join(repoRoot, "help-sale.config.example.yaml");
 		process.env.SECRETS_PATH = path.join(repoRoot, "help-sale.secrets.example.yaml");
 		const cfg = await reload();
-		expect(Object.keys(cfg)).toHaveLength(137);
+		expect(Object.keys(cfg)).toHaveLength(145);
 	});
 });

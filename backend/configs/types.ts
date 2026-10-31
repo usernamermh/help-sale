@@ -64,6 +64,8 @@ export interface AppConfig {
 	weixinAutoReply: boolean;
 	weixinAckText: string;
 	weixinUnsupportedText: string;
+	/** 该租户 agent 并发已满时的回复话术 */
+	weixinBusyText: string;
 	weixinCommandsEnabled: boolean;
 	weixinSessionsLimit: number;
 	weixinAllowFrom: string[];
@@ -71,6 +73,10 @@ export interface AppConfig {
 	mysqlEnabled: boolean;
 	mysqlSchemaRebuild: boolean;
 	mysqlConnectTimeout: number;
+	/** 查询连接池大小(mysql.connectionLimit):按"每租户不抢连接"的目标放宽 */
+	mysqlConnectionLimit: number;
+	/** 业务查询超时(mysql.queryTimeoutMs) */
+	mysqlQueryTimeoutMs: number;
 	mysqlHost: string;
 	mysqlPort: number;
 	mysqlUser: string;
@@ -97,6 +103,16 @@ export interface AppConfig {
 	tenantDataIsolationMode: "off" | "warn" | "enforce";
 	/** 集成方 API Key → 租户 ID(来自密钥文件 tenant.apiKeys) */
 	tenantApiKeys: Record<string, string>;
+	/** 每租户限流开关(tenant.rateLimit.enabled) */
+	tenantRateLimitEnabled: boolean;
+	/** 每租户每分钟请求上限 */
+	tenantRequestPerMinute: number;
+	/** 令牌桶突发容量 */
+	tenantRequestBurst: number;
+	/** 每租户同时在跑的 agent 轮次上限 */
+	tenantAgentConcurrency: number;
+	/** 被限流时建议的等待秒数 */
+	tenantRetryAfterSeconds: number;
 	// 业务默认值(defaults 段)
 	insightsDays: number;
 	improvementsDays: number;
@@ -177,7 +193,7 @@ export interface AppConfig {
 /** server + logging 段:监听地址与运行日志。 */
 export type RuntimeConfig = Pick<AppConfig, "host" | "port" | "logEnabled" | "logDir" | "logMaxBytes" | "logLevel" | "logRuntimeFile">;
 /** data + tenant 段:存储模式、表名映射、路径与默认租户。 */
-export type DataConfig = Pick<AppConfig, "dataMode" | "databaseId" | "tables" | "dataDir" | "memoryFile" | "businessDbPath" | "sessionDbPath" | "tenantId" | "tenantHeaderAllowed" | "tenantTrustedIds" | "tenantDataIsolationMode" | "tenantApiKeys">;
+export type DataConfig = Pick<AppConfig, "dataMode" | "databaseId" | "tables" | "dataDir" | "memoryFile" | "businessDbPath" | "sessionDbPath" | "tenantId" | "tenantHeaderAllowed" | "tenantTrustedIds" | "tenantDataIsolationMode" | "tenantApiKeys" | "tenantRateLimitEnabled" | "tenantRequestPerMinute" | "tenantRequestBurst" | "tenantAgentConcurrency" | "tenantRetryAfterSeconds">;
 /** model 段:模型端点、密钥、上下文窗口与额外请求体。 */
 export type ModelConfig = Pick<AppConfig, "modelId" | "modelBaseUrl" | "modelApiKey" | "modelProxy" | "modelContextWindow" | "modelMaxTokens" | "modelExtraBody">;
 /** context.compression 段:长对话记忆压缩参数。 */
@@ -191,7 +207,7 @@ export type RetrievalConfig = Pick<AppConfig,
 /** mysql + redis + notification + tools + mcp 段:中间件与外部工具接入。 */
 export type IntegrationsConfig = Pick<AppConfig,
 	| "mysqlEnabled" | "mysqlSchemaRebuild" | "mysqlConnectTimeout" | "mysqlHost" | "mysqlPort" | "mysqlUser" | "mysqlPassword" | "mysqlDatabase"
-	| "redisEnabled" | "redisHost" | "redisPort" | "redisPassword" | "redisLeaderLeaseMs"
+	| "redisEnabled" | "redisHost" | "redisPort" | "redisPassword" | "redisLeaderLeaseMs" | "mysqlConnectionLimit" | "mysqlQueryTimeoutMs"
 	| "notificationEnabled" | "notificationWebhookUrl"
 	| "webSearchApiKey" | "fileWriteAllowOutsideRepo" | "sqlMaxRows" | "sqlTimeoutMs" | "sqlExtraBlockedKeywords" | "riskDangerousTools" | "riskDangerousDefaultEnabled" | "mcpServers"
 	| "toolsCatalogEnabled" | "toolsCatalogThreshold" | "toolsCatalogTopK" | "toolsCatalogMaxInspect" | "toolsCatalogSemanticFloorZh" | "toolsCatalogSemanticFloorEn"
@@ -213,6 +229,6 @@ export type FeaturesConfig = Pick<AppConfig,
 export type WeixinConfig = Pick<AppConfig,
 	| "weixinEnabled" | "weixinBaseUrl" | "weixinAccountId" | "weixinToken" | "weixinTenantId" | "weixinBotType"
 	| "weixinMaxMessageLength" | "weixinSendRetries" | "weixinSendRetryDelayMs" | "weixinPollTimeoutMs"
-	| "weixinDedupTtlSeconds" | "weixinAgentTimeoutMs" | "weixinAutoReply" | "weixinAckText" | "weixinUnsupportedText" | "weixinCommandsEnabled" | "weixinSessionsLimit" | "weixinAllowFrom">;
+	| "weixinDedupTtlSeconds" | "weixinAgentTimeoutMs" | "weixinAutoReply" | "weixinAckText" | "weixinUnsupportedText" | "weixinBusyText" | "weixinCommandsEnabled" | "weixinSessionsLimit" | "weixinAllowFrom">;
 /** milvus_backend + milvus_docker_compose 段:Milvus 部署清单(整体透出,不做字段级校验) */
 export type MilvusDeployConfig = Pick<AppConfig, "milvusBackend" | "milvusDockerCompose">;

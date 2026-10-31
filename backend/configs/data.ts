@@ -1,4 +1,4 @@
-import { parseTables, storageMode, str, bool, strList, strMap } from "./primitives.js";
+import { parseTables, storageMode, str, num, bool, strList, strMap } from "./primitives.js";
 import type { FileConfig } from "./file.js";
 import type { DataConfig } from "./types.js";
 
@@ -20,5 +20,10 @@ export function loadDataConfig(file: FileConfig): DataConfig {
 		tenantTrustedIds: strList(file.tenant?.trustedTenantIds, "tenant.trustedTenantIds"),
 		tenantDataIsolationMode: str(file.tenant?.dataIsolationMode, "tenant.dataIsolationMode") as "off" | "warn" | "enforce",
 		tenantApiKeys: strMap(file.tenant?.apiKeys, "tenant.apiKeys"),
+		tenantRateLimitEnabled: bool(file.tenant?.rateLimit?.enabled, "tenant.rateLimit.enabled"),
+		tenantRequestPerMinute: num(file.tenant?.rateLimit?.requestPerMinute, "tenant.rateLimit.requestPerMinute"),
+		tenantRequestBurst: num(file.tenant?.rateLimit?.requestBurst, "tenant.rateLimit.requestBurst"),
+		tenantAgentConcurrency: num(file.tenant?.rateLimit?.agentConcurrency, "tenant.rateLimit.agentConcurrency"),
+		tenantRetryAfterSeconds: num(file.tenant?.rateLimit?.retryAfterSeconds, "tenant.rateLimit.retryAfterSeconds"),
 	};
 }

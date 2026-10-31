@@ -45,6 +45,8 @@ export class SyncMysqlDb {
 			password: string;
 			database: string;
 			schemaSql?: string;
+			/** 查询连接池大小(mysql.connectionLimit) */
+			connectionLimit?: number;
 			forceRebuild?: boolean;
 			timeoutMs?: number;
 			/** 单条查询超时(毫秒),来自配置 tools.sql.timeoutMs */
@@ -56,7 +58,7 @@ export class SyncMysqlDb {
 		this.resultBuf = new SharedArrayBuffer(RESULT_BUF_BYTES);
 		this.resultView = new Int32Array(this.resultBuf);
 		this.timeoutMs = opts.timeoutMs ?? config.mysqlConnectTimeout;
-		this.queryTimeoutMs = opts.queryTimeoutMs ?? config.sqlTimeoutMs;
+		this.queryTimeoutMs = opts.queryTimeoutMs ?? config.mysqlQueryTimeoutMs;
 		this.worker.on("error", () => {
 			// worker 异常:把 pending 请求标记失败,否则主线程可能无限等待
 			if (Atomics.load(this.resultView, 0) === 0) {    // Atomics 是 JavaScript 的一个内置对象，专门用于多线程共享内存的安全操作。 原子地读取 resultView 中索引 0 处的值。
@@ -92,6 +94,7 @@ export class SyncMysqlDb {
 			database: opts.database,
 			resultBuf: this.resultBuf,
 			schemaSql: opts.schemaSql,
+			connectionLimit: opts.connectionLimit,
 			forceRebuild: opts.forceRebuild === true,
 		};
 		this.worker.postMessage(init);
@@ -202,7 +205,8 @@ export function createSyncMysqlDb(): SyncMysqlDb {
 		password: config.mysqlPassword,
 		database: config.mysqlDatabase,
 		schemaSql,
+		connectionLimit: config.mysqlConnectionLimit,
 		forceRebuild: config.mysqlSchemaRebuild,
-		queryTimeoutMs: config.sqlTimeoutMs,
+		queryTimeoutMs: config.mysqlQueryTimeoutMs,
 	});
 }

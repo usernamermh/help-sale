@@ -26,6 +26,7 @@ export function loadWeixinConfig(file: FileConfig): WeixinConfig {
 		weixinAutoReply: bool(w?.autoReply, "weixin.autoReply"),
 		weixinAckText: str(w?.ackText, "weixin.ackText"),
 		weixinUnsupportedText: str(w?.unsupportedText, "weixin.unsupportedText"),
+		weixinBusyText: str(w?.busyText, "weixin.busyText"),
 		weixinCommandsEnabled: bool(w?.commandsEnabled, "weixin.commandsEnabled"),
 		weixinSessionsLimit: num(w?.sessionsLimit, "weixin.sessionsLimit"),
 		weixinAllowFrom: strList(w?.allowFrom, "weixin.allowFrom"),

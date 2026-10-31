@@ -10,7 +10,7 @@ const LEVEL_RANK: Record<RuntimeLogLevel, number> = { debug: 0, info: 1, error: 
 export interface RuntimeLogEntry {
 	ts: string;
 	level: RuntimeLogLevel;
-	type: "request" | "startup" | "error" | "debug" | "tenant_rejected";
+	type: "request" | "startup" | "error" | "debug" | "tenant_rejected" | "tenant_throttled";
 	message: string;
 	meta?: unknown;
 }
