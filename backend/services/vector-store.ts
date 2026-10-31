@@ -93,7 +93,7 @@ export async function indexDocumentVectors(
 	const ins = db.prepare(
 		`INSERT INTO knowledge_embeddings (id, tenant_id, document_id, chunk_id, chunk_index, dimension, model, vector_json)
 		 VALUES (?,?,?,?,?,?,?,?)
-		 ON CONFLICT(chunk_id) DO UPDATE SET vector_json = excluded.vector_json, dimension = excluded.dimension, model = excluded.model, chunk_index = excluded.chunk_index, document_id = excluded.document_id`,
+		 ON CONFLICT(tenant_id, chunk_id) DO UPDATE SET vector_json = excluded.vector_json, dimension = excluded.dimension, model = excluded.model, chunk_index = excluded.chunk_index, document_id = excluded.document_id`,
 	);
 	db.exec("BEGIN");
 	try {

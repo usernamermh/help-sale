@@ -85,8 +85,73 @@ async function ensureColumns(p: Pool, schemaSql: string): Promise<string[]> {
 			if (want && have.len > 0 && Number(want[1]) > have.len) {
 				await (p as unknown as { query: (o: unknown) => Promise<unknown> }).query({ sql: `ALTER TABLE \`${table}\` MODIFY COLUMN ${ddl}` });
 				changes.push(`${table}.${name}(列宽 ${have.len}→${want[1]})`);
+				continue;
+			}
+			// 类型升级(只升不降):VARCHAR → TEXT/MEDIUMTEXT,或 TEXT → MEDIUMTEXT。
+			// 用于修"早期把长文本列写成 VARCHAR(255),MySQL 模式下写入直接报 Data too long"这类问题。
+			const textRank: Record<string, number> = { varchar: 1, char: 1, tinytext: 2, text: 2, mediumtext: 3, longtext: 4 };
+			// 注意:ddl 是"列名 + 类型"整行,必须剥掉列名再判断类型,否则 ^ 锚定永远匹配不上
+			const typePart = ddl.replace(/^`?[a-zA-Z_][a-zA-Z0-9_]*`?\s+/, "");
+			const wantText = /^(tinytext|text|mediumtext|longtext)\b/i.exec(typePart);
+			const haveRank = textRank[have.type] ?? 0;
+			const wantRank = wantText ? textRank[wantText[1].toLowerCase()] ?? 0 : 0;
+			if (wantRank > haveRank && haveRank > 0) {
+				await (p as unknown as { query: (o: unknown) => Promise<unknown> }).query({ sql: `ALTER TABLE \`${table}\` MODIFY COLUMN ${ddl}` });
+				changes.push(`${table}.${name}(类型 ${have.type}→${wantText![1].toLowerCase()})`);
 			}
 		}
+		changes.push(...(await ensureIndexes(p, table, block[2])));
+	}
+	return changes;
+}
+
+/**
+ * 补索引:按 schema 里的 KEY / UNIQUE KEY 定义比对 information_schema.statistics,
+ * **按列组合**判断是否已存在(不依赖索引名,兼容 MySQL 自动命名的 UNIQUE(col1,col2))。
+ * ADD INDEX 在 MySQL 8 是 online 操作,且幂等,所以放进启动自愈是安全的。
+ */
+async function ensureIndexes(p: Pool, table: string, body: string): Promise<string[]> {
+	const changes: string[] = [];
+	const wanted = new Map<string, { unique: boolean; cols: string[]; ddl: string }>();
+	for (const rawLine of body.split("\n")) {
+		const line = rawLine.trim().replace(/,$/, "");
+		if (!line) continue;
+		const m = /^(UNIQUE\s+)?(?:KEY|INDEX)\s+`?(\w+)`?\s*\(([^)]*)\)/i.exec(line);
+		const mUnnamed = /^UNIQUE\s*\(([^)]*)\)/i.exec(line);
+		const unique = Boolean(m?.[1] ?? mUnnamed);
+		const colsRaw = m?.[3] ?? mUnnamed?.[1];
+		if (!colsRaw) continue;
+		const cols = colsRaw
+			.split(",")
+			.map((c) => c.trim().replace(/`/g, "").replace(/\s+(ASC|DESC)$/i, "").split(/\s+/)[0].toLowerCase())
+			.filter(Boolean);
+		if (cols.length === 0) continue;
+		const name = m?.[2] ?? `uq_${table}_${cols.join("_")}`;
+		wanted.set(cols.join(","), { unique, cols, ddl: `${unique ? "UNIQUE KEY" : "KEY"} \`${name.substring(0, 60)}\` (${cols.map((c) => `\`${c}\``).join(", ")})` });
+	}
+	if (wanted.size === 0) return changes;
+
+	const [rows] = (await (p as unknown as { query: (o: unknown) => Promise<[Array<Record<string, unknown>>, unknown]> }).query({
+		sql: "SELECT INDEX_NAME AS name, SEQ_IN_INDEX AS seq, COLUMN_NAME AS col, NON_UNIQUE AS nu FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? ORDER BY INDEX_NAME, SEQ_IN_INDEX",
+		values: [table],
+	})) as [Array<Record<string, unknown>>, unknown];
+	const existingSig = new Set<string>();
+	const grouped = new Map<string, { cols: string[]; unique: boolean }>();
+	for (const r of rows) {
+		if (String(r.name) === "PRIMARY") continue;
+		const key = String(r.name);
+		const entry = grouped.get(key) ?? { cols: [], unique: Number(r.nu) === 0 };
+		entry.cols.push(String(r.col).toLowerCase());
+		grouped.set(key, entry);
+	}
+	// 签名 = 唯一性 + 列组合:普通索引不能顶替唯一索引(否则 UNIQUE 定义会被静默跳过)
+	for (const entry of grouped.values()) existingSig.add(`${entry.unique ? "u" : "n"}:${entry.cols.join(",")}`);
+
+	for (const [sig, def] of wanted) {
+		const wantSig = `${def.unique ? "u" : "n"}:${sig}`;
+		if (existingSig.has(wantSig)) continue;
+		await (p as unknown as { query: (o: unknown) => Promise<unknown> }).query({ sql: `ALTER TABLE \`${table}\` ADD ${def.ddl}` });
+		changes.push(`${table}.[${sig}](补索引)`);
 	}
 	return changes;
 }

@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS digests (
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	UNIQUE (tenant_id, digest_date)
 );
+CREATE INDEX IF NOT EXISTS idx_digests_created ON digests (tenant_id, created_at);
 
 -- v5:知识沉淀候选(loop F6:分析产出话术候选,一键确认入库)
 CREATE TABLE IF NOT EXISTS knowledge_candidates (
@@ -149,6 +150,7 @@ CREATE TABLE IF NOT EXISTS agent_events (
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_agent_events_conv ON agent_events (tenant_id, conversation_id, seq);
+CREATE INDEX IF NOT EXISTS idx_agent_events_created ON agent_events (tenant_id, created_at);
 
 -- v7:客户画像标签(loop zhiji 语义标签:由分析自动聚合)
 CREATE TABLE IF NOT EXISTS customer_tags (
@@ -305,6 +307,7 @@ CREATE TABLE IF NOT EXISTS tool_call_cache (
 	UNIQUE (tenant_id, tool_name, cache_key)
 );
 CREATE INDEX IF NOT EXISTS idx_tcc_tenant ON tool_call_cache (tenant_id, tool_name);
+CREATE INDEX IF NOT EXISTS idx_tcc_last_used ON tool_call_cache (tenant_id, last_used_at);
 
 -- v18:自动任务执行记录(晨报/周报/沉默唤醒等,前端可查看状态)
 CREATE TABLE IF NOT EXISTS automation_runs (
@@ -329,6 +332,7 @@ CREATE TABLE IF NOT EXISTS reflection_cases (
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_rc_tenant ON reflection_cases (tenant_id, case_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_rc_created ON reflection_cases (tenant_id, created_at);
 
 -- v20:会话摘要(中期记忆:thread 长对话压缩落库,超长 history 注入摘要)
 CREATE TABLE IF NOT EXISTS thread_summaries (
@@ -464,7 +468,7 @@ CREATE TABLE IF NOT EXISTS keyword_hits (
 	sales_name TEXT,
 	customer_name TEXT,
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-	UNIQUE (keyword_id, conversation_id)
+	UNIQUE (tenant_id, keyword_id, conversation_id)
 );
 CREATE INDEX IF NOT EXISTS idx_kh_keyword ON keyword_hits (tenant_id, keyword_id, created_at DESC);
 
@@ -473,7 +477,7 @@ CREATE TABLE IF NOT EXISTS knowledge_embeddings (
 	id TEXT PRIMARY KEY,
 	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
 	document_id TEXT NOT NULL,
-	chunk_id TEXT NOT NULL UNIQUE,
+	chunk_id TEXT NOT NULL,
 	chunk_index INTEGER NOT NULL,
 	dimension INTEGER NOT NULL,
 	model TEXT NOT NULL,
@@ -481,7 +485,7 @@ CREATE TABLE IF NOT EXISTS knowledge_embeddings (
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_ke_tenant ON knowledge_embeddings (tenant_id, document_id);
-CREATE INDEX IF NOT EXISTS idx_ke_tenant_chunk ON knowledge_embeddings (tenant_id, chunk_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ke_tenant_chunk ON knowledge_embeddings (tenant_id, chunk_id);
 
 -- v38:微信通道(iLink 机器人):登录绑定关系 + 收发审计
 CREATE TABLE IF NOT EXISTS weixin_users (

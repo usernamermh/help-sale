@@ -71,7 +71,8 @@ CREATE TABLE IF NOT EXISTS digests (
 	content TEXT NOT NULL,
 	stats_json MEDIUMTEXT NOT NULL,
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
-	UNIQUE KEY uq_digests_date (tenant_id, digest_date)
+	UNIQUE KEY uq_digests_date (tenant_id, digest_date),
+	KEY idx_digests_created (tenant_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS knowledge_candidates (
@@ -103,7 +104,8 @@ CREATE TABLE IF NOT EXISTS agent_events (
 	tool_name VARCHAR(128),
 	payload_json MEDIUMTEXT,
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
-	KEY idx_agent_events_conv (tenant_id, conversation_id, seq)
+	KEY idx_agent_events_conv (tenant_id, conversation_id, seq),
+	KEY idx_agent_events_created (tenant_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS customer_tags (
@@ -215,9 +217,8 @@ CREATE TABLE IF NOT EXISTS knowledge_embeddings (
 	model VARCHAR(128) NOT NULL,
 	vector_json MEDIUMTEXT NOT NULL,
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
-	UNIQUE KEY uq_ke_chunk (chunk_id),
-	KEY idx_ke_tenant (tenant_id, document_id),
-	KEY idx_ke_tenant_chunk (tenant_id, chunk_id)
+	UNIQUE KEY uq_ke_tenant_chunk (tenant_id, chunk_id),
+	KEY idx_ke_tenant (tenant_id, document_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS stores (
@@ -277,7 +278,8 @@ CREATE TABLE IF NOT EXISTS tool_call_cache (
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	last_used_at VARCHAR(40),
 	UNIQUE KEY uq_tcc (tenant_id, tool_name, cache_key),
-	KEY idx_tcc_tenant (tenant_id, tool_name)
+	KEY idx_tcc_tenant (tenant_id, tool_name),
+	KEY idx_tcc_last_used (tenant_id, last_used_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 由 SQLite schema 转换补建(看板/关键字/定时任务/反思/计划/摘要等)
@@ -286,11 +288,11 @@ CREATE TABLE IF NOT EXISTS agent_plans (
 	run_id VARCHAR(255) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	thread_id VARCHAR(255),
-	goal VARCHAR(255) NOT NULL,
+	goal MEDIUMTEXT NOT NULL,
 	plan_json MEDIUMTEXT NOT NULL,
 	status VARCHAR(255) NOT NULL DEFAULT 'planned',
-	executed_tools_json VARCHAR(255),
-	verification_json VARCHAR(255),
+	executed_tools_json MEDIUMTEXT,
+	verification_json MEDIUMTEXT,
 	created_at VARCHAR(255) NOT NULL DEFAULT '',
 	updated_at VARCHAR(255) NOT NULL DEFAULT '',
   KEY idx_ap_run (tenant_id, run_id)
@@ -374,7 +376,7 @@ CREATE TABLE IF NOT EXISTS keyword_hits (
 	sales_name VARCHAR(255),
 	customer_name VARCHAR(255),
 	created_at VARCHAR(255) NOT NULL DEFAULT '',
-	UNIQUE (keyword_id, conversation_id),
+	UNIQUE KEY uq_kh_keyword_conv (tenant_id, keyword_id, conversation_id),
   KEY idx_kh_keyword (tenant_id, keyword_id, created_at DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -399,16 +401,17 @@ CREATE TABLE IF NOT EXISTS reflection_cases (
 	tenant_id VARCHAR(64) NOT NULL,
 	case_type VARCHAR(255) NOT NULL,
 	ref_id VARCHAR(255),
-	detail_json VARCHAR(255),
+	detail_json MEDIUMTEXT,
 	created_at VARCHAR(255) NOT NULL DEFAULT '',
-  KEY idx_rc_tenant (tenant_id, case_type, created_at DESC)
+  KEY idx_rc_tenant (tenant_id, case_type, created_at DESC),
+  KEY idx_rc_created (tenant_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS thread_summaries (
   id VARCHAR(64) PRIMARY KEY,
 	tenant_id VARCHAR(64) NOT NULL,
 	thread_id VARCHAR(255) NOT NULL,
-	summary VARCHAR(255) NOT NULL,
+	summary MEDIUMTEXT NOT NULL,
 	message_seq_until INT NOT NULL DEFAULT 0,
 	created_at VARCHAR(255) NOT NULL DEFAULT '',
 	updated_at VARCHAR(255) NOT NULL DEFAULT '',

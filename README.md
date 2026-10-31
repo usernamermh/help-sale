@@ -483,6 +483,37 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 - 内置任务与自定义任务都可通过 `/api/v1/automations*` 查看、触发、改期;
 - 到期提醒:开启 `redis` 时走 Redis 队列(关闭则退化为内存队列),`notification.webhookUrl` 非空时推送 JSON。
 
+# 表结构与横向扩展
+
+数据库是共享库 + `tenant_id` 列,所以"能不能横向扩"取决于表结构本身。下面是现状体检、本次落地与下一步。
+
+## 体检:分片视角看现有表
+
+| 维度 | 现状 | 结论 |
+| --- | --- | --- |
+| 分片键 | 34 张业务表全部有 `tenant_id`;业务访问(补完 20 处漏写后)一律是"租户 + 主键"定位 | ✅ **分片前提已满足** —— 任意一条查询都能定位单个分片,不需要跨分片路由 |
+| 跨租户 JOIN | 现有的 JOIN(`customers`/`sales`/`stores`/`conversations`)都在同一租户内;跨租户操作集中在"枚举租户"的循环里 | ✅ 可分片 |
+| 主键 | 34 张表是 `id VARCHAR(64) PRIMARY KEY`,只有 `agent_capabilities` 是 `(tenant_id, name)` 复合主键 | ⚠️ 同租户数据不聚簇:按租户归档要逐行删,随机 UUID 主键还有写放大 |
+| 唯一约束 | 2 处不是租户内唯一(`knowledge_embeddings.chunk_id`、`keyword_hits(keyword_id, conversation_id)`) | ⚠️ 分片后跨分片唯一性无法保证 |
+| 时间轴索引 | 18 张带 `created_at` 的表缺 `(tenant_id, created_at)` 索引(工作流挖掘、清理、列表都要用) | ⚠️ 本次补了最关键的 4 张 |
+| 长文本列 | 5 个列在 MySQL 侧是 `VARCHAR(255)` 却要存长文本 | ❌ **真实缺陷**:写长内容直接报 `Data too long`(SQLite 侧是 TEXT,所以一直没暴露) |
+
+## 本次落地
+
+1. **会截断的列改 MEDIUMTEXT**:`thread_summaries.summary`(摘要上限 1200 字)、`agent_plans.goal/executed_tools_json/verification_json`、`reflection_cases.detail_json`;
+2. **唯一约束租户化**:`knowledge_embeddings` 用 `uq_ke_tenant_chunk (tenant_id, chunk_id)`;`keyword_hits` 用 `uq_kh_keyword_conv (tenant_id, keyword_id, conversation_id)`;写入侧 `ON CONFLICT` 目标同步改;
+3. **补时间轴索引**:`agent_events`、`digests`、`reflection_cases`、`tool_call_cache`;
+4. **结构自愈升级**:MySQL 启动自愈从"补列/放宽列宽"扩展到**补索引**(按列组合+唯一性比对,幂等)与**类型升级**(VARCHAR → TEXT/MEDIUMTEXT,只升不降);
+5. **索引清理脚本**:`scripts/mysql-index-cleanup.sql`(启动自愈不删索引,要删的走脚本)。
+
+## 下一步(要真正分片才需要)
+
+1. **主键复合化**:大表(`agent_events`、`weixin_messages`、`conversation_messages`、`knowledge_chunks`)改成 `PRIMARY KEY (tenant_id, id)`,换取同租户聚簇、按租户范围归档、减少写放大 —— 需要重建表,配在线 DDL(gh-ost/pt-osc);
+2. **租户 → 数据源路由**:`config.mysql.*` 现在全局一份;要支持"大租户独立库/实例",需要 `tenantId → 数据源` 路由与每数据源独立连接池(因为每行都有 `tenant_id`,"按租户导出 → 导入专属库"是现成迁移路径);
+3. **类型收敛**:`VARCHAR(255)` 存 `status`/`created_at` 这类短值偏浪费,可在重建时收敛到 32/40;
+4. **分区表**:`agent_events`/`weixin_messages` 按 `created_at` RANGE 分区,历史分区可归档。
+
+
 # 数据存储
 
 - `data.mode=local`:SQLite(默认),库文件在 `data.businessDbPath`,会话库在 `sessionDbPath`;
