@@ -19,7 +19,7 @@ export function createDigest(
 	db.prepare(
 		"INSERT INTO digests (id, tenant_id, digest_date, title, content, stats_json) VALUES (?,?,?,?,?,?)",
 	).run(id, input.tenantId, input.digestDate, input.title, input.content, input.statsJson);
-	return db.prepare("SELECT * FROM digests WHERE id = ?").get(id) as unknown as DigestRecord;
+	return db.prepare("SELECT * FROM digests WHERE tenant_id = ? AND id = ?").get(input.tenantId, id) as unknown as DigestRecord;
 }
 
 export function getDigestByDate(db: DatabaseSync, tenantId: string, digestDate: string): DigestRecord | undefined {

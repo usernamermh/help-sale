@@ -107,8 +107,8 @@ export async function reviewCandidate(db: DatabaseSync, tenantId: string, candid
 	}
 
 	db.prepare(
-		"UPDATE knowledge_candidates SET suggest_action = ?, matched_title = ?, similarity_score = ?, old_title = ?, old_content = ?, review_note = ? WHERE id = ?",
-	).run(action, best?.title ?? null, best?.score ?? null, oldTitle ?? null, oldContent ?? null, note, candidateId);
+		"UPDATE knowledge_candidates SET suggest_action = ?, matched_title = ?, similarity_score = ?, old_title = ?, old_content = ?, review_note = ? WHERE tenant_id = ? AND id = ?",
+	).run(action, best?.title ?? null, best?.score ?? null, oldTitle ?? null, oldContent ?? null, note, tenantId, candidateId);
 	return getCandidate(db, tenantId, candidateId);
 }
 
@@ -143,8 +143,8 @@ export async function approveCandidate(db: DatabaseSync, tenantId: string, candi
 	} // skip:不落库
 
 	db.prepare(
-		"UPDATE knowledge_candidates SET status = 'approved', approved_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'), review_note = ? WHERE id = ?",
-	).run(c.reviewNote ?? null, candidateId);
+		"UPDATE knowledge_candidates SET status = 'approved', approved_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'), review_note = ? WHERE tenant_id = ? AND id = ?",
+	).run(c.reviewNote ?? null, tenantId, candidateId);
 
 	const record = getCandidate(db, tenantId, candidateId)!;
 	return { ...record, documentId };
@@ -153,7 +153,7 @@ export async function approveCandidate(db: DatabaseSync, tenantId: string, candi
 export function rejectCandidate(db: DatabaseSync, tenantId: string, candidateId: string): CandidateRecord | undefined {
 	const existing = getCandidate(db, tenantId, candidateId);
 	if (!existing) return undefined;
-	db.prepare("UPDATE knowledge_candidates SET status = 'rejected' WHERE id = ?").run(candidateId);
+	db.prepare("UPDATE knowledge_candidates SET status = 'rejected' WHERE tenant_id = ? AND id = ?").run(tenantId, candidateId);
 	return getCandidate(db, tenantId, candidateId);
 }
 

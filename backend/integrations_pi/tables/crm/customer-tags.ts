@@ -31,8 +31,8 @@ export function upsertCustomerTag(db: DatabaseSync, input: CustomerTagInput): vo
 		db.prepare(
 			`UPDATE customer_tags
 			 SET weight = weight + 1, source = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
-			 WHERE id = ?`,
-		).run(input.source ?? null, existing.id);
+			 WHERE tenant_id = ? AND id = ?`,
+		).run(input.source ?? null, tenantId, existing.id);
 		return;
 	}
 	db.prepare(

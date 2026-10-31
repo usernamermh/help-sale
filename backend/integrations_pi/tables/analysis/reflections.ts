@@ -20,7 +20,7 @@ export function createReflectionCase(
 	db.prepare(
 		"INSERT INTO reflection_cases (id, tenant_id, case_type, ref_id, detail_json) VALUES (?,?,?,?,?)",
 	).run(id, input.tenantId, input.caseType, input.refId ?? null, input.detail !== undefined ? JSON.stringify(input.detail) : null);
-	return db.prepare("SELECT * FROM reflection_cases WHERE id = ?").get(id) as unknown as ReflectionCase;
+	return db.prepare("SELECT * FROM reflection_cases WHERE tenant_id = ? AND id = ?").get(input.tenantId, id) as unknown as ReflectionCase;
 }
 
 export function listReflectionCases(

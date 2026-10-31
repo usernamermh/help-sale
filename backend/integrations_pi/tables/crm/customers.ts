@@ -36,7 +36,7 @@ export function upsertCustomer(db: DatabaseSync, input: CustomerInput): Customer
 		db.prepare(
 			`UPDATE customers
 			 SET name = ?, company = ?, stage = ?, notes = ?, phone = ?, region = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
-			 WHERE id = ?`,
+			 WHERE tenant_id = ? AND id = ?`,
 		).run(
 			input.name ?? existing.name,
 			input.company ?? existing.company,
@@ -44,9 +44,10 @@ export function upsertCustomer(db: DatabaseSync, input: CustomerInput): Customer
 			input.notes ?? existing.notes,
 			input.phone ?? existing.phone ?? null,
 			input.region !== undefined ? input.region : existing.region ?? null,
+			input.tenantId,
 			existing.id,
 		);
-		return db.prepare("SELECT * FROM customers WHERE id = ?").get(existing.id) as unknown as CustomerRow;
+		return db.prepare("SELECT * FROM customers WHERE tenant_id = ? AND id = ?").get(input.tenantId, existing.id) as unknown as CustomerRow;
 	}
 
 	const id = randomUUID();
@@ -63,7 +64,7 @@ export function upsertCustomer(db: DatabaseSync, input: CustomerInput): Customer
 		input.phone ?? null,
 		input.region ?? null,
 	);
-	return db.prepare("SELECT * FROM customers WHERE id = ?").get(id) as unknown as CustomerRow;
+	return db.prepare("SELECT * FROM customers WHERE tenant_id = ? AND id = ?").get(input.tenantId, id) as unknown as CustomerRow;
 }
 
 export function getCustomer(db: DatabaseSync, tenantId: string, key: string): CustomerRow | undefined {

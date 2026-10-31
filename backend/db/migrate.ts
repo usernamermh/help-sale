@@ -80,7 +80,7 @@ export function migrate(db: DatabaseSync): void {
 		addCol("deals", "discount_amount", "REAL NOT NULL DEFAULT 0");
 		addCol("next_step_tasks", "sales_id", "TEXT REFERENCES sales(id) ON DELETE SET NULL");
 		// 存量客户阶段回填:成交→closed_won;洽谈中/未知→contacted
-		db.exec(`UPDATE customers SET funnel_stage = CASE
+		db.exec(`/* system */ UPDATE customers SET funnel_stage = CASE
 			WHEN stage IN ('成交','已成交','closed') THEN 'closed_won'
 			WHEN stage IS NOT NULL AND stage <> '' THEN 'contacted'
 			ELSE funnel_stage END,
@@ -249,7 +249,7 @@ export function migrate(db: DatabaseSync): void {
 		addCol("workflows", "origin", "TEXT NOT NULL DEFAULT 'manual'");
 		addCol("workflows", "source_signature", "TEXT");
 		// 既有记录:已启用/停用的按人工预定义看待;此前挖掘产出若存在则归为 mined
-		db.exec("UPDATE workflows SET origin = 'mined' WHERE source_signature IS NOT NULL;");
+		db.exec("/* system */ UPDATE workflows SET origin = 'mined' WHERE source_signature IS NOT NULL;");
 		db.exec("CREATE INDEX IF NOT EXISTS idx_wf_sig ON workflows (tenant_id, source_signature);");
 		db.exec(`CREATE TABLE IF NOT EXISTS knowledge_embeddings (
 			id TEXT PRIMARY KEY,

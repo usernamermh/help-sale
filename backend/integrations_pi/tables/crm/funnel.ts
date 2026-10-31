@@ -48,14 +48,14 @@ export function setFunnelStage(
 		 SET funnel_stage = ?, lost_reason = CASE WHEN ? = 'closed_lost' THEN ? ELSE lost_reason END,
 		     funnel_stage_changed_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
 		     updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
-		 WHERE id = ?`,
-	).run(stage, stage, lostReason ?? null, row.id);
-	return funnelCustomerRow(db, row.id);
+		 WHERE tenant_id = ? AND id = ?`,
+	).run(stage, stage, lostReason ?? null, tenantId, row.id);
+	return funnelCustomerRow(db, tenantId, row.id);
 }
 
 /** 把客户行映射为漏斗视图行(兼容 mysql 同步桥的行命名)。 */
-export function funnelCustomerRow(db: DatabaseSync, customerId: string): FunnelCustomer {
-	const r = db.prepare("SELECT * FROM customers WHERE id = ?").get(customerId) as Record<string, unknown>;
+export function funnelCustomerRow(db: DatabaseSync, tenantId: string, customerId: string): FunnelCustomer {
+	const r = db.prepare("SELECT * FROM customers WHERE tenant_id = ? AND id = ?").get(tenantId, customerId) as Record<string, unknown>;
 	return {
 		id: String(r.id),
 		key: String(r.key),

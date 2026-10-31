@@ -34,7 +34,7 @@ export function recordAgentPlan(
 	db.prepare(
 		"INSERT INTO agent_plans (id, run_id, tenant_id, thread_id, goal, plan_json, status) VALUES (?,?,?,?,?,?,?)",
 	).run(id, input.runId, input.tenantId, input.threadId ?? null, input.goal, JSON.stringify(input.plan), input.status ?? "planned");
-	return db.prepare("SELECT * FROM agent_plans WHERE id = ?").get(id) as unknown as AgentPlan;
+	return db.prepare("SELECT * FROM agent_plans WHERE tenant_id = ? AND id = ?").get(input.tenantId, id) as unknown as AgentPlan;
 }
 
 export function getAgentPlanByRun(db: DatabaseSync, tenantId: string, runId: string): AgentPlan | undefined {
@@ -53,8 +53,8 @@ export function updateAgentPlan(
 	const existing = getAgentPlanByRun(db, tenantId, runId);
 	if (!existing) return undefined;
 	db.prepare(
-		"UPDATE agent_plans SET status = ?, executed_tools_json = ?, verification_json = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?",
-	).run(patch.status ?? existing.status, patch.executedTools ? JSON.stringify(patch.executedTools) : existing.executedToolsJson, patch.verification !== undefined ? JSON.stringify(patch.verification) : existing.verificationJson, existing.id);
+		"UPDATE agent_plans SET status = ?, executed_tools_json = ?, verification_json = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE tenant_id = ? AND id = ?",
+	).run(patch.status ?? existing.status, patch.executedTools ? JSON.stringify(patch.executedTools) : existing.executedToolsJson, patch.verification !== undefined ? JSON.stringify(patch.verification) : existing.verificationJson, tenantId, existing.id);
 	return getAgentPlanByRun(db, tenantId, runId);
 }
 

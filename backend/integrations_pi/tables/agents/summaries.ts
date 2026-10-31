@@ -18,8 +18,8 @@ export function upsertThreadSummary(
 	const existing = getThreadSummary(db, input.tenantId, input.threadId);
 	if (existing) {
 		db.prepare(
-			"UPDATE thread_summaries SET summary = ?, message_seq_until = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?",
-		).run(input.summary, input.messageSeqUntil, existing.id);
+			"UPDATE thread_summaries SET summary = ?, message_seq_until = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE tenant_id = ? AND id = ?",
+		).run(input.summary, input.messageSeqUntil, input.tenantId, existing.id);
 		return getThreadSummary(db, input.tenantId, input.threadId)!;
 	}
 	const id = randomUUID();

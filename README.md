@@ -90,7 +90,7 @@ npm ci --prefix pi --ignore-scripts
 node scripts/gen-minimal-model-data.mjs        # 离线模型数据(models.dev 不可达时)
 npm run build:offline --prefix pi
 npm install --ignore-scripts                    # 根 workspace 链接 pi 包
-npm test                                        # 37 个测试文件 / 240 个用例
+npm test                                        # 38 个测试文件 / 247 个用例
 npm run typecheck && npm run typecheck:eval
 ```
 
@@ -185,6 +185,7 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
    - 系统级语句(租户枚举、建表补列、清库)必须显式带 `/* system */` 标记才放行,把"跨租户操作"从"忘了写"变成"故意写"。
    - **覆盖范围取决于 `data.tables` 映射**:该映射现在与 schema 一致(35 张表全量声明,`tenants` 是唯一的全局表),所以守卫覆盖全部 34 张租户表;新增表时要同步补映射,否则那张表不会被强制要求带租户条件。
    - **启动自检**:启动时用 `backend/db/schema-audit.ts` 把两份 schema 的表名与 `data.tables` 的**键**比对,缺键直接启动失败并点名(值允许改成实际物理表名,键不能缺) —— 避免"新加的表忘了进映射 → 守卫静默不覆盖"。
+   - **静态检查**(`backend/db/table-usage-audit.ts`,随 `npm test` 一起跑):扫描代码里的 SQL 字面量,发现两类问题 ——① 自包含语句涉及业务表却没有 `tenant_id`;② 写死了不在 `data.tables` 映射里的表名。带 `${}` 插值的语句交给运行时守卫,DDL 与 `/* system */` 标记的语句跳过;`tenants` 作为唯一全局表不参与判定。
 3. **工具侧强制**:`sql` 工具要求业务表必须用 `:tenantId` 占位符,由工具注入当前租户;写死租户值、缺占位符都会被拦,读写都有审计。
 4. **后台任务按租户枚举**:定时任务与子代理消费者都从库里枚举租户逐个处理,不再只服务"配置里的那个租户";一次执行绑定一个租户上下文。
 5. **队列与缓存带租户维度**:Redis 到期提醒队列的成员是 `tenantId::taskId`,删除/读取都按租户取值,跨租户误删不可能;工具结果缓存按 `(tenant_id, tool_name, cache_key)` 分键。
@@ -494,7 +495,7 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 # 测试与评测
 
 ```bash
-npm test                 # 37 个测试文件 / 240 个用例
+npm test                 # 38 个测试文件 / 247 个用例
 npm run typecheck        # backend 业务代码
 npm run typecheck:eval   # 仓库根,额外覆盖 opimize/ 下的评测脚本
 ```

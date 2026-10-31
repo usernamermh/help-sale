@@ -22,7 +22,7 @@ export function setBuiltinJobEnabled(db: DatabaseSync, tenantId: string, jobKey:
 		.prepare("SELECT id FROM builtin_job_settings WHERE tenant_id = ? AND job_key = ?")
 		.get(tenantId, jobKey) as { id: string } | undefined;
 	if (existing) {
-		db.prepare("UPDATE builtin_job_settings SET enabled = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?").run(enabled ? 1 : 0, existing.id);
+		db.prepare("UPDATE builtin_job_settings SET enabled = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE tenant_id = ? AND id = ?").run(enabled ? 1 : 0, tenantId, existing.id);
 	} else {
 		db.prepare("INSERT INTO builtin_job_settings (id, tenant_id, job_key, enabled) VALUES (?,?,?,?)").run(randomUUID(), tenantId, jobKey, enabled ? 1 : 0);
 	}

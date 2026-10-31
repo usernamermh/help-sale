@@ -61,7 +61,7 @@ export function updateAutomationJob(
 	const existing = getAutomationJob(db, tenantId, id);
 	if (!existing) return undefined;
 	db.prepare(
-		`UPDATE automation_jobs SET name = ?, schedule_type = ?, interval_days = ?, interval_unit = ?, once_date = ?, weekday = ?, schedule_time = ?, description = ?, action_json = ?, enabled = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`,
+		`UPDATE automation_jobs SET name = ?, schedule_type = ?, interval_days = ?, interval_unit = ?, once_date = ?, weekday = ?, schedule_time = ?, description = ?, action_json = ?, enabled = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE tenant_id = ? AND id = ?`,
 	).run(
 		patch.name ?? existing.name,
 		patch.scheduleType ?? existing.scheduleType,
@@ -73,6 +73,7 @@ export function updateAutomationJob(
 		patch.description !== undefined ? patch.description : existing.description,
 		patch.action !== undefined ? JSON.stringify(patch.action) : existing.actionJson,
 		patch.enabled !== undefined ? (patch.enabled ? 1 : 0) : existing.enabled ? 1 : 0,
+		tenantId,
 		id,
 	);
 	return getAutomationJob(db, tenantId, id);

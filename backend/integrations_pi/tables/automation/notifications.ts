@@ -19,7 +19,7 @@ export function createNotificationLog(
 	db.prepare(
 		"INSERT INTO notification_logs (id, tenant_id, channel, title, content_json, status) VALUES (?,?,?,?,?,?)",
 	).run(id, input.tenantId, input.channel ?? "webhook", input.title, input.contentJson, input.status ?? "sent");
-	return db.prepare("SELECT * FROM notification_logs WHERE id = ?").get(id) as unknown as NotificationLogRecord;
+	return db.prepare("SELECT * FROM notification_logs WHERE tenant_id = ? AND id = ?").get(input.tenantId, id) as unknown as NotificationLogRecord;
 }
 
 export function listNotificationLogs(db: DatabaseSync, tenantId: string, limit = 20): NotificationLogRecord[] {
