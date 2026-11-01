@@ -17,6 +17,11 @@ export interface McpServerConfig {
  * 按 url 缓存 5 分钟;真正调用工具时仍走实时 tools/call。
  */
 const toolsCache = new Map<string, { tools: McpTool[]; at: number }>();
+
+/** 缓存键 = URL + 凭证:同一 URL 在不同租户下可能是不同的 PAT/请求头,不能互相复用工具列表。 */
+function cacheKeyOf(cfg: McpServerConfig): string {
+	return `${cfg.url}|${cfg.pat ?? ""}|${JSON.stringify(cfg.headers ?? {})}`;
+}
 /** 连接失败后的退避窗口:避免每次运行都为一个连不上的外部 server 付连接超时。 */
 const FAILURE_BACKOFF_MS = 5 * 60 * 1000;
 const failureBackoff = new Map<string, number>();
@@ -36,6 +41,11 @@ export class McpClient {
 	private initialized = false;
 
 	constructor(private cfg: McpServerConfig) {}
+
+	/** 本客户端的缓存键(URL + 凭证):缓存与退避都按它分桶。 */
+	private cacheKey(): string {
+		return cacheKeyOf(this.cfg);
+	}
 
 	private async rpc<T = unknown>(method: string, params?: unknown): Promise<T> {
 		const id = ++this._id;
@@ -106,21 +116,21 @@ export class McpClient {
 
 	/** 拉取外部工具列表(带缓存与失败退避)。 */
 	async listTools(): Promise<McpTool[]> {
-		const cached = toolsCache.get(this.cfg.url);
+		const cached = toolsCache.get(this.cacheKey());
 		if (cached && Date.now() - cached.at < TOOLS_TTL_MS) return cached.tools;
 		// 失败退避:最近刚连不上的 server 不再让用户消息等着重试,改由后台预热去探活
-		const blockedUntil = failureBackoff.get(this.cfg.url) ?? 0;
+		const blockedUntil = failureBackoff.get(this.cacheKey()) ?? 0;
 		if (Date.now() < blockedUntil) {
 			const left = Math.ceil((blockedUntil - Date.now()) / 1000);
 			throw new Error(`MCP ${this.cfg.name} 最近连接失败,${left}s 内不再尝试(后台会继续预热)`);
 		}
 		try {
 			const tools = await this.listToolsFresh();
-			toolsCache.set(this.cfg.url, { tools, at: Date.now() });
-			failureBackoff.delete(this.cfg.url);
+			toolsCache.set(this.cacheKey(), { tools, at: Date.now() });
+			failureBackoff.delete(this.cacheKey());
 			return tools;
 		} catch (error) {
-			failureBackoff.set(this.cfg.url, Date.now() + FAILURE_BACKOFF_MS);
+			failureBackoff.set(this.cacheKey(), Date.now() + FAILURE_BACKOFF_MS);
 			throw error;
 		}
 	}
@@ -211,7 +221,7 @@ export async function refreshMcpTools(servers: McpServerConfig[]): Promise<{ ok:
 	for (const server of servers) {
 		try {
 			await new McpClient(server).listToolsFresh();
-			failureBackoff.delete(server.url); // 后台探活成功,解除退避
+			failureBackoff.delete(cacheKeyOf(server)); // 后台探活成功,解除退避
 			ok.push(server.name);
 		} catch (error) {
 			failed.push(server.name);

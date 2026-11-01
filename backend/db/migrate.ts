@@ -279,6 +279,14 @@ export function migrate(db: DatabaseSync): void {
 			UNIQUE (tenant_id, username)
 		);`);
 		db.exec("CREATE INDEX IF NOT EXISTS idx_users_tenant_role ON users (tenant_id, role);");
+		// 每租户凭证覆盖(模型端点/密钥、web_search key、MCP server 列表等)
+		db.exec(`CREATE TABLE IF NOT EXISTS tenant_secrets (
+			tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+			name TEXT NOT NULL,
+			value TEXT NOT NULL,
+			updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+			PRIMARY KEY (tenant_id, name)
+		);`);
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }

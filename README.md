@@ -198,6 +198,20 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 
 网页端会先探测 `/api/v1/auth/me`,未登录只弹登录框(不打业务接口),令牌存 `localStorage`,401 自动回到登录框;右下角「退出登录」清掉本地令牌。
 
+## 每租户凭证(tenant_secrets)
+
+全局配置里的密钥可以被单个租户覆盖一份,让"大租户自带密钥 / 自带外部系统"不用改全局配置。名字与全局配置一一对应:
+
+| 凭证名 | 覆盖什么 |
+| --- | --- |
+| `model.modelId` / `model.baseUrl` / `model.apiKey` / `model.proxy` | 该租户的模型端点与密钥 |
+| `tools.webSearch.apiKey` | `web_search` 工具的密钥(同时决定该工具是否满足启用门槛) |
+| `mcp.servers` | 该租户的外部 MCP server 列表(JSON 数组,结构同 `mcp.servers`) |
+
+解析规则是"租户覆盖优先,缺项回退全局":模型运行时按配置指纹缓存,凭证一改就用新实例;MCP 工具列表的缓存与失败退避都按 `URL + 凭证` 分桶,不同租户不会互相复用。
+
+管理接口(仅管理员):`GET /api/v1/tenants/:id/secrets` 看有哪些覆盖项与**脱敏**生效值、`PUT /api/v1/tenants/:id/secrets/:name` 覆盖、`DELETE` 回到全局。值只存在服务端,列表接口永远不回传明文。
+
 ## 数据库强制点
 
 1. **租户上下文权威解析**(`backend/services/tenant-context.ts`)

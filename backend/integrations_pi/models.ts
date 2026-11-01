@@ -13,6 +13,16 @@ const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "
 export interface ModelRuntime {
 	models: ReturnType<typeof createModels>;
 	streamFn: StreamFn;
+	/** 本运行时实际使用的模型 id(可能来自租户级覆盖) */
+	modelId: string;
+}
+
+/** 模型端点覆盖(按租户凭证解析出来,缺项由调用方回退全局配置) */
+export interface ModelOverrides {
+	modelId: string;
+	baseUrl: string;
+	apiKey: string;
+	proxy: string;
 }
 
 /** 模型提供方固定为项目自建的 local-llm(内网 OpenAI 兼容端点),不再从配置读取 */
@@ -21,17 +31,18 @@ export const LOCAL_PROVIDER_ID = "local-llm";
 /** 模型运行时:配置统一来自全局 config 实例,不经过入参传递。 */
 /** 获取配置对应的模型实例;配置缺失/不存在时在源头抛错(fail-fast),避免 undefined 下沉到运行时。 */
 export function requiredModel(runtime: ModelRuntime): Model<any> {
-	const model = runtime.models.getModel(LOCAL_PROVIDER_ID, appConfig.modelId);
-	if (!model) throw new Error(`model not found: ${LOCAL_PROVIDER_ID}/${appConfig.modelId}`);
+	const model = runtime.models.getModel(LOCAL_PROVIDER_ID, runtime.modelId);
+	if (!model) throw new Error(`model not found: ${LOCAL_PROVIDER_ID}/${runtime.modelId}`);
 	return model;
 }
 
-export function createModelRegistry(): ModelRuntime {
+export function createModelRegistry(overrides?: Partial<ModelOverrides>): ModelRuntime {
+	const modelId = overrides?.modelId ?? appConfig.modelId;
 	const providers = {
 		[LOCAL_PROVIDER_ID]: createLocalProvider({
-			baseUrl: appConfig.modelBaseUrl,
-			modelId: appConfig.modelId,
-			apiKey: appConfig.modelApiKey,
+			baseUrl: overrides?.baseUrl ?? appConfig.modelBaseUrl,
+			modelId,
+			apiKey: overrides?.apiKey ?? appConfig.modelApiKey,
 			contextWindow: appConfig.modelContextWindow,
 			maxTokens: appConfig.modelMaxTokens,
 		}),
@@ -40,7 +51,7 @@ export function createModelRegistry(): ModelRuntime {
 	for (const provider of Object.values(providers)) models.setProvider(provider);
 
 	const extraBody = appConfig.modelExtraBody;
-	const proxy = appConfig.modelProxy;
+	const proxy = overrides?.proxy ?? appConfig.modelProxy;
 	const rawLogDir = appConfig.logDir;
 	const logDir = path.isAbsolute(rawLogDir) ? rawLogDir : path.join(repoRoot, rawLogDir);
 
@@ -89,7 +100,7 @@ export function createModelRegistry(): ModelRuntime {
 		return models.stream(model, context, { ...(options ?? {}), fetch: fetchImpl });
 	};
 
-	return { models, streamFn };
+	return { models, streamFn, modelId };
 }
 
 export function resolveModel(config?: Pick<AppConfig, "modelId">) {

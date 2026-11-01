@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { Agent, type AgentMessage, type StreamFn } from "@earendil-works/pi-agent-core";
-import { createModelRegistry, requiredModel, type ModelRuntime } from "./models.js";
+import { requiredModel, type ModelRuntime } from "./models.js";
+import { modelRuntimeFor } from "../services/tenant-credentials.js";
 import { getSalesAgentSystemPrompt } from "../prompts/sales-agent.js";
 import { getPlannerPrompt, getCoordinatorPrompt } from "../prompts/multi-agent.js";
 import { createPlanTools, createSalesAgentTools, systemPlanTool } from "./agent-tools.js";
@@ -193,7 +194,8 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 	const { db, tenantId, store } = deps;
 	if (!input.goal || !input.goal.trim()) throw new Error("goal is empty");
 
-	const runtime = deps.runtime ?? createModelRegistry();
+	// 模型运行时按租户解析:租户在 tenant_secrets 里覆盖了端点/密钥就用它的,否则用全局配置
+	const runtime = deps.runtime ?? modelRuntimeFor(deps.db, deps.tenantId);
 	const streamFn = deps.streamFn ?? runtime.streamFn;
 
 	const model = requiredModel(runtime);
@@ -342,7 +344,8 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 
 /** 规划阶段:只用 emit_plan,输出执行计划(不执行任何工具)。 */
 export async function runPlanPhase(deps: SalesAgentDeps, input: { goal: string; signal?: AbortSignal }): Promise<PlanDetails> {
-	const runtime = deps.runtime ?? createModelRegistry();
+	// 模型运行时按租户解析:租户在 tenant_secrets 里覆盖了端点/密钥就用它的,否则用全局配置
+	const runtime = deps.runtime ?? modelRuntimeFor(deps.db, deps.tenantId);
 	const streamFn = deps.streamFn ?? runtime.streamFn;
 	const model = requiredModel(runtime);
 
@@ -409,7 +412,8 @@ export async function submitMultiAgentFlow(deps: SalesAgentDeps, input: SalesAge
 }
 /** 多代理汇总阶段:等待当前会话子代理全部完成(后台消费者驱动),协调者读看板汇总输出。 */
 export async function collectMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentInput, plan: PlanDetails, opts: { threadId?: string; cardIds?: string[] } = {}): Promise<SalesAgentResult> {
-	const runtime = deps.runtime ?? createModelRegistry();
+	// 模型运行时按租户解析:租户在 tenant_secrets 里覆盖了端点/密钥就用它的,否则用全局配置
+	const runtime = deps.runtime ?? modelRuntimeFor(deps.db, deps.tenantId);
 	const streamFn = deps.streamFn ?? runtime.streamFn;
 	const model = requiredModel(runtime);
 	const threadId = opts.threadId ?? input.threadId ?? "default";
@@ -480,7 +484,8 @@ export async function collectMultiAgentFlow(deps: SalesAgentDeps, input: SalesAg
 
 /** 多代理执行流:主代理把子任务写上看板 -> 子代理并行执行 -> 协调者读看板检查结果并 emit_final。 */
 export async function runMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentInput, plan: PlanDetails): Promise<SalesAgentResult> {
-	const runtime = deps.runtime ?? createModelRegistry();
+	// 模型运行时按租户解析:租户在 tenant_secrets 里覆盖了端点/密钥就用它的,否则用全局配置
+	const runtime = deps.runtime ?? modelRuntimeFor(deps.db, deps.tenantId);
 	const streamFn = deps.streamFn ?? runtime.streamFn;
 	const model = requiredModel(runtime);
 	const subtasks = plan.subtasks ?? [];

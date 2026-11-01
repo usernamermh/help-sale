@@ -41,6 +41,7 @@ data:
     weixin_messages: weixin_messages
     weixin_threads: weixin_threads
     users: users
+    tenant_secrets: tenant_secrets
   dataDir: backend/data
   memoryFile: backend/data/memory.md
   businessDbPath: backend/data/business.db

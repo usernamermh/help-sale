@@ -8,6 +8,16 @@ import type { FastifyInstance } from "fastify";
 import { config } from "../../env.js";
 import { requireAdmin, type RouteDeps } from "./helpers.js";
 import { removeChunkVectors } from "../vector-store.js";
+import { deleteTenantSecret, listTenantSecrets, TENANT_SECRET_NAMES, writeTenantSecret } from "../../integrations_pi/tables/agents/tenant-secrets.js";
+import { tenantMcpServers, tenantModelConfig, tenantWebSearchKey } from "../tenant-credentials.js";
+
+/** 密钥脱敏:只露前 4 位与后 2 位,便于核对"是不是那一串"。 */
+function mask(value: string): string {
+	const v = String(value ?? "");
+	if (!v) return "";
+	if (v.length <= 8) return "*".repeat(v.length);
+	return `${v.slice(0, 4)}…${v.slice(-2)}(共 ${v.length} 位)`;
+}
 
 /** 租户表的物理表名(listTenantIds 用)。 */
 function tenantTable(): string {
@@ -84,6 +94,51 @@ export function registerTenantRoutes(app: FastifyInstance, deps: RouteDeps): voi
 		return { ok: true };
 	});
 
+	/** 租户凭证:只看得到"有哪些项",看不到值(值只在服务端使用)。 */
+	app.get<{ Params: { id: string } }>("/api/v1/tenants/:id/secrets", async (request, reply) => {
+		if (!requireAdmin(request, reply)) return;
+		const tenantId = request.params.id;
+		const exists = deps.db.prepare(`/* system */ SELECT id FROM ${tenantTable()} WHERE id = ?`).get(tenantId);
+		if (!exists) return reply.code(404).send({ error: "not_found", message: "租户不存在。" });
+		const overridden = new Set(listTenantSecrets(deps.db, tenantId).map((row) => row.name));
+		return {
+			tenantId,
+			supported: TENANT_SECRET_NAMES,
+			overridden: [...overridden],
+			updatedAt: Object.fromEntries(listTenantSecrets(deps.db, tenantId).map((row) => [row.name, row.updatedAt])),
+			// 生效值只给"是否来自租户覆盖"和脱敏预览,便于确认配置对不对
+			effective: {
+				"model.modelId": { value: tenantModelConfig(deps.db, tenantId).modelId, fromTenant: overridden.has("model.modelId") },
+				"model.baseUrl": { value: tenantModelConfig(deps.db, tenantId).baseUrl, fromTenant: overridden.has("model.baseUrl") },
+				"model.apiKey": { masked: mask(tenantModelConfig(deps.db, tenantId).apiKey), fromTenant: overridden.has("model.apiKey") },
+				"tools.webSearch.apiKey": { masked: mask(tenantWebSearchKey(deps.db, tenantId)), fromTenant: overridden.has("tools.webSearch.apiKey") },
+				"mcp.servers": { count: tenantMcpServers(deps.db, tenantId).length, fromTenant: overridden.has("mcp.servers") },
+			},
+		};
+	});
+
+	app.put<{ Params: { id: string; name: string }; Body: { value?: string } }>("/api/v1/tenants/:id/secrets/:name", async (request, reply) => {
+		if (!requireAdmin(request, reply)) return;
+		const name = String(request.params.name ?? "");
+		if (!TENANT_SECRET_NAMES.includes(name as (typeof TENANT_SECRET_NAMES)[number])) {
+			return reply.code(400).send({ error: "invalid_request", message: `不支持的凭证名:${name}`, supported: TENANT_SECRET_NAMES });
+		}
+		if (typeof request.body?.value !== "string" || request.body.value.trim() === "") {
+			return reply.code(400).send({ error: "invalid_request", message: "value 必填(要清除请用 DELETE)。" });
+		}
+		const tenantId = request.params.id;
+		const exists = deps.db.prepare(`/* system */ SELECT id FROM ${tenantTable()} WHERE id = ?`).get(tenantId);
+		if (!exists) return reply.code(404).send({ error: "not_found", message: "租户不存在。" });
+		writeTenantSecret(deps.db, tenantId, name, request.body.value);
+		return { ok: true, tenantId, name };
+	});
+
+	app.delete<{ Params: { id: string; name: string } }>("/api/v1/tenants/:id/secrets/:name", async (request, reply) => {
+		if (!requireAdmin(request, reply)) return;
+		const removed = deleteTenantSecret(deps.db, request.params.id, String(request.params.name ?? ""));
+		if (!removed) return reply.code(404).send({ error: "not_found", message: "该租户没有覆盖这一项。" });
+		return { ok: true };
+	});
 	/** 按租户导出:每张业务表一行 JSON,便于迁到专属库(配合 docs 里的迁移说明)。 */
 	app.get<{ Params: { id: string }; Querystring: { limit?: string } }>("/api/v1/tenants/:id/export", async (request, reply) => {
 		if (!requireAdmin(request, reply)) return;

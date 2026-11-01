@@ -15,6 +15,7 @@ import { McpClient, mcpToolToAgentTool } from "../mcp/client.js";
 import { ToolCatalog, type CatalogEntry } from "../mcp/catalog.js";
 import { createToolDiscoveryTools, type ToolRecallState } from "../mcp/tool-discovery.js";
 import { detectDescriptionLanguage, type DescriptionLanguage } from "../mcp/retrieval.js";
+import { tenantMcpServers, tenantWebSearchKey } from "../services/tenant-credentials.js";
 
 export interface SalesAgentToolDeps {
 	db: DatabaseSync;
@@ -176,7 +177,8 @@ export function applyToolPolicy<T extends { name: string }>(tools: T[], states: 
 }
 export async function createSalesAgentTools(deps: SalesAgentToolDeps, opts: SalesAgentToolOptions = {}): Promise<Array<AgentTool<any, any>>> {
 	// check_fn 环境门槛:web_search/web 依赖配置的 Serper 密钥,未配置则自动隐藏
-	const external = await loadExternalAgentTools(TOOL_PATHS, { db: deps.db, tenantId: deps.tenantId, webSearchApiKey: config.webSearchApiKey });
+	// 外部工具的门槛与密钥按租户解析(tenant_secrets 覆盖优先)
+	const external = await loadExternalAgentTools(TOOL_PATHS, { db: deps.db, tenantId: deps.tenantId, webSearchApiKey: tenantWebSearchKey(deps.db, deps.tenantId) });
 	// 场景分组:按 readme 的 category 过滤,只挂载指定分类工具(模型上下文只看需要的工具)
 	const filteredExternal = opts.toolsets?.length ? external.filter((t) => opts.toolsets!.includes((t as unknown as { category?: string }).category ?? "")) : external;
 	const workflows = listWorkflows(deps.db, deps.tenantId).filter((w) => w.status === "enabled");
@@ -199,7 +201,7 @@ export async function createSalesAgentTools(deps: SalesAgentToolDeps, opts: Sale
 	const mcpTools: AgentTool<any, any>[] = [];
 	// 测试环境(vitest)不连外部 MCP:它是网络依赖,握手延迟/抖动会拖慢甚至拖垮用例;
 	// 生产/开发环境照常接入,失败只告警不影响本地工具。
-	const mcpServers = process.env.VITEST ? [] : config.mcpServers;
+	const mcpServers = process.env.VITEST ? [] : tenantMcpServers(deps.db, deps.tenantId);
 	for (const srv of mcpServers) {
 		try {
 			const client = new McpClient(srv);
