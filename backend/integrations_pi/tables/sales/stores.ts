@@ -151,9 +151,9 @@ export function listDeals(db: DatabaseSync, tenantId: string, query: DealListQue
 		`SELECT d.*, cu.name AS customerName, cu.key AS customerKey, cu.phone AS customerPhone,
 		        s.name AS salesName, s.phone AS salesPhone, st.name AS storeName
 		 FROM deals d
-		 LEFT JOIN customers cu ON cu.id = d.customer_id
-		 LEFT JOIN sales s ON s.id = d.sales_id
-		 LEFT JOIN stores st ON st.id = d.store_id
+		 LEFT JOIN customers cu ON cu.id = d.customer_id AND cu.tenant_id = d.tenant_id
+		 LEFT JOIN sales s ON s.id = d.sales_id AND s.tenant_id = d.tenant_id
+		 LEFT JOIN stores st ON st.id = d.store_id AND st.tenant_id = d.tenant_id
 		 WHERE ${where.join(" AND ")}
 		 ORDER BY d.dealed_at DESC
 		 LIMIT ${limit}`,
@@ -192,8 +192,8 @@ export function getStoreOverview(db: DatabaseSync, tenantId: string, query: Stor
 	const orders = db.prepare(
 		`SELECT d.*, c.name AS customerName, s.name AS salesName
 		 FROM deals d
-		 LEFT JOIN customers c ON c.id = d.customer_id
-		 LEFT JOIN sales s ON s.id = d.sales_id
+		 LEFT JOIN customers c ON c.id = d.customer_id AND c.tenant_id = d.tenant_id
+		 LEFT JOIN sales s ON s.id = d.sales_id AND s.tenant_id = d.tenant_id
 		 WHERE ${ordersWhere.join(" AND ")}
 		 ORDER BY d.dealed_at DESC`
 	).all(...dealParams) as unknown as Array<DealRow & { customerName: string | null; salesName: string | null }>;
