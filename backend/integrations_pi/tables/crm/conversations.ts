@@ -77,8 +77,8 @@ export function getConversation(db: DatabaseSync, tenantId: string, id: string):
 		.prepare(
 			`SELECT c.*, cu.key AS customer_key, cu.name AS customer_name, st.name AS store_name
 			 FROM conversations c
-			 LEFT JOIN customers cu ON cu.id = c.customer_id
-			 LEFT JOIN stores st ON st.id = c.store_id
+			 LEFT JOIN customers cu ON cu.id = c.customer_id AND cu.tenant_id = c.tenant_id
+			 LEFT JOIN stores st ON st.id = c.store_id AND st.tenant_id = c.tenant_id
 			 WHERE c.tenant_id = ? AND c.id = ?`,
 		)
 		.get(tenantId, id) as Record<string, unknown> | undefined;
@@ -90,8 +90,8 @@ export function listConversations(db: DatabaseSync, tenantId: string, limit: num
 		.prepare(
 			`SELECT c.*, cu.key AS customer_key, cu.name AS customer_name, st.name AS store_name
 			 FROM conversations c
-			 LEFT JOIN customers cu ON cu.id = c.customer_id
-			 LEFT JOIN stores st ON st.id = c.store_id
+			 LEFT JOIN customers cu ON cu.id = c.customer_id AND cu.tenant_id = c.tenant_id
+			 LEFT JOIN stores st ON st.id = c.store_id AND st.tenant_id = c.tenant_id
 			 WHERE c.tenant_id = ?
 			 ORDER BY c.updated_at DESC LIMIT ?`,
 		)

@@ -2,12 +2,14 @@ import type { FastifyInstance } from "fastify";
 import { requireTenant } from "../../integrations_pi/tables/crm/customers.js";
 import { registerAgentRoutes } from "./agent/index.js";
 import { registerAssistantRoutes } from "./assistant.js";
+import { registerAuthRoutes } from "./auth.js";
 import { registerAutomationRoutes } from "./automation.js";
 import { registerConversationRoutes } from "./conversations.js";
 import { registerConsoleRoutes } from "./console.js";
 import { registerKeywordRoutes } from "./keywords.js";
 import { registerHealthRoutes } from "./health.js";
 import { registerTaskRoutes } from "./tasks.js";
+import { registerTenantRoutes } from "./tenants.js";
 import { registerThreadRoutes } from "./threads.js";
 import { registerKnowledgeRoutes } from "./knowledge.js";
 import { registerNotificationRoutes } from "./notifications.js";
@@ -26,6 +28,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 		requireTenant(deps.db, request.tenantId, "API 租户");
 	});
 
+	registerAuthRoutes(app, deps);
 	registerAssistantRoutes(app, deps);
 	registerKnowledgeRoutes(app, deps);
 	registerVectorRoutes(app, deps);
@@ -41,4 +44,5 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	registerThreadRoutes(app, deps);
 	registerTaskRoutes(app, deps);
 	registerHealthRoutes(app, deps);
+	registerTenantRoutes(app, deps);
 }

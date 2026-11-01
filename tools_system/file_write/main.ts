@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { config } from "../../backend/env.js";
-import { repoRoot } from "../_shared/file-utils.js";
+import { fileScopeFor, resolveToolPath, type FileScope, type FileScopeOverride } from "../_shared/file-utils.js";
 
 /**
  * 通用文件写入工具(替代原来"只允许新建文件"的 file_write_new)。
@@ -16,7 +16,7 @@ import { repoRoot } from "../_shared/file-utils.js";
  *       写入保留原文件的换行风格(CRLF/LF)与 BOM;原子写(同目录临时文件 + rename)。
  */
 
-interface ToolContext { db: unknown; tenantId: string; }
+interface ToolContext { db: unknown; tenantId: string; fileScope?: FileScopeOverride; }
 
 const MAX_CONTENT_BYTES = 2 * 1024 * 1024;
 const HASH_ID_LEN = 12;
@@ -82,13 +82,18 @@ function atomicWrite(target: string, text: string): { hash: string; bytes: numbe
 	return { hash: sha256(buf), bytes: buf.length };
 }
 
-/** 路径策略:allowOutsideRepo=false 时只允许仓库内路径 */
-function resolveTarget(raw: string): { target?: string; error?: string } {
-	const target = path.resolve(raw);
-	if (config.fileWriteAllowOutsideRepo) return { target };
-	const root = repoRoot();
-	if (target === root || target.startsWith(root + path.sep)) return { target };
-	return { error: `路径超出仓库范围(tools.fileWrite.allowOutsideRepo=false):${target}` };
+/** 文件策略:按租户分目录时,每个租户只能看到自己的目录(tools.files.tenantScoped) */
+function fileScope(ctx: ToolContext): FileScope {
+	return fileScopeFor(ctx, {
+		tenantScoped: config.filesTenantScoped,
+		tenantRootDir: config.filesTenantRootDir,
+		allowOutsideRepo: config.fileWriteAllowOutsideRepo,
+	});
+}
+
+function resolveTarget(raw: string, ctx: ToolContext): { target?: string; error?: string } {
+	const resolved = resolveToolPath(raw, fileScope(ctx));
+	return resolved.path ? { target: resolved.path } : { error: resolved.error };
 }
 
 /** 校验模型给的哈希:允许完整 sha256,也允许 >=8 位前缀(大小写不敏感) */
@@ -102,12 +107,12 @@ function linesOf(content: string): string[] {
 	return body.length === 0 ? [] : body.split(/\r?\n/);
 }
 
-export async function execute(_ctx: ToolContext, params: any) {
+export async function execute(ctx: ToolContext, params: any) {
 	const filePath = String(params?.filePath ?? "").trim();
 	const op = String(params?.op ?? "").trim();
 	if (!filePath) return fail("需要 filePath(任意本地路径,或仓库内路径)。");
 	if (!["create", "replace", "patch"].includes(op)) return fail("op 必填,取值只能是 create / replace / patch。");
-	const resolved = resolveTarget(filePath);
+	const resolved = resolveTarget(filePath, ctx);
 	if (!resolved.target) return fail(resolved.error ?? "路径不合法");
 	const target = resolved.target;
 

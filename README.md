@@ -140,7 +140,8 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 | `context.compression` | 长对话增量压缩阈值 |
 | `chunker` | 知识分块大小与重叠 |
 | `tools.webSearch` | Serper 密钥(`web_search` 工具的启用门槛) |
-| `tools.fileWrite` | 文件写入工具是否允许写到仓库之外(`allowOutsideRepo`) |
+| `tools.fileWrite` / `tools.files` | 文件写入是否允许写到仓库之外、文件读写是否按租户分目录(`tenantScoped` / `tenantRootDir`) |
+| `auth` | 登录与 RBAC:开关、令牌有效期、令牌密钥、初始管理员(见「登录与账号」) |
 | `tools.catalog` | 工具编目与召回,见下 |
 | `tools.sql` | SQL 工具的行数上限、执行超时、追加拦截关键字(见「SQL 执行策略」) |
 | `weixin` | 微信 iLink 通道:登录凭据、租户、分片长度、发送重试、轮询超时、去重窗口、agent 超时、确认语、兜底话术、会话命令开关与条数、允许的联系人(见「微信接入」) |
@@ -152,7 +153,7 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 | `logging` | 日志开关、目录、级别、运行日志文件名、单文件上限 |
 | `subagents` | 多代理并发、轮询间隔、超时、子代理默认工具 |
 | `defaults` | 各工具/接口的默认条数与窗口(洞察天数、列表条数、提醒批大小…) |
-| `mysql` / `redis` | 中间件连接与开关 |
+| `mysql` / `redis` | 中间件连接与开关;`mysql.autoMigrate=false` 时启动只做只读结构自检(配合最小权限数据库账号) |
 | `notification` | 到期提醒推送开关与 Webhook |
 | `automation` | 定时任务:晨报、周报、沉默客户唤醒的时间与开关 |
 | `company` / `userkey` / `client` | 公司名(写入提示词)、调用方标识、前端注入参数 |
@@ -172,6 +173,31 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 | **连接池与查询超时** | `mysql.connectionLimit`、`mysql.queryTimeoutMs` | 池大小可配(避免一个租户的慢查询占满连接);业务查询有超时,不会无限挂住 |
 
 额度后端:Redis 可用时**跨实例共享**(多实例下仍是"每租户一份",不会被实例数放大);Redis 不可用时退化为进程内计数(单实例部署)。被限流会写 `runtime.log`(`type=tenant_throttled`,带 `tenantId`),便于排查是谁在刷。
+## 登录与账号(RBAC)
+
+`auth.enabled: true` 后,业务接口只认两种凭证:
+
+| 凭证 | 谁在用 | 租户怎么定 | 角色 |
+| --- | --- | --- | --- |
+| 登录令牌 `Authorization: Bearer hsu1.…` | 控制台/网页 | **令牌里的租户是权威的**,请求头覆盖不了 | 账号自己的角色 |
+| 集成方 API Key(`x-api-key` 或 `Authorization: Bearer <key>`) | 脚本/外部系统 | `tenant.apiKeys` 映射 | `member`(不能做管理员操作) |
+
+令牌是无状态 HMAC 签名串(载荷含租户、账号、角色、有效期),密钥来自密钥文件 `auth.tokenSecret`,有效期 `auth.tokenTtlHours`;每次请求还会回查账号是否仍存在且启用,所以**停用账号立即失效**。初始管理员由 `auth.bootstrap` 在启动时幂等创建(该租户没有启用的管理员时才建),密码取自密钥文件。
+
+**角色边界**:`admin` 可以管账号(`/api/v1/auth/users*`)与租户(`/api/v1/tenants*`);`member` 只能用业务功能。
+
+**租户管理面**(仅管理员):
+
+| 接口 | 作用 |
+| --- | --- |
+| `GET /api/v1/tenants` | 租户列表 + 每个租户的数据行数 |
+| `POST /api/v1/tenants` | 新建租户(`id` / `name` / `slug`) |
+| `PATCH /api/v1/tenants/:id` | 改名 |
+| `GET /api/v1/tenants/:id/export?limit=…` | 按租户导出全部业务表 JSON(迁到专属库的原料) |
+| `DELETE /api/v1/tenants/:id?confirm=<id>` | 清除该租户:先删向量,再按 `tenant_id` 删业务表,最后删租户行;默认租户拒绝清除 |
+
+网页端会先探测 `/api/v1/auth/me`,未登录只弹登录框(不打业务接口),令牌存 `localStorage`,401 自动回到登录框;右下角「退出登录」清掉本地令牌。
+
 ## 数据库强制点
 
 1. **租户上下文权威解析**(`backend/services/tenant-context.ts`)
@@ -181,7 +207,9 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
    - 请求头声明的租户必须落在 `tenant.trustedTenantIds` 清单内,否则 403;
    - 每次拒绝都会写 `runtime.log`(`type: tenant_rejected`),便于排查与告警。
 2. **数据层强制**(`backend/db/tenant-guard.ts`)
-   - 所有数据库访问都经过统一的 `prepare` 入口:语句只要涉及业务表却整句没有 `tenant_id` 谓词,就按 `tenant.dataIsolationMode` 处理 —— `off` 不查、`warn` 告警、`enforce` **直接抛错**;
+   - 所有数据库访问都经过统一的 `prepare` 与 `exec` 两个入口(`exec` 只放行事务控制与 DDL);
+   - 判定粒度是**表**:语句里出现的每张业务表都要有自己的租户谓词,或者通过同租户等值 JOIN(`a.tenant_id = b.tenant_id`)挂到一张已带谓词的表上。`SELECT c.* FROM customers c JOIN stores s ON c.store_id = s.id WHERE s.tenant_id = ?` 这类"只写半边条件"的语句会被拦下;同源的 FTS 镜像表(`knowledge_chunks_fts`)上的租户条件等价于业务表上的条件;
+   - 违规时按 `tenant.dataIsolationMode` 处理 —— `off` 不查、`warn` 告警、`enforce` **直接抛错**;
    - 系统级语句(租户枚举、建表补列、清库)必须显式带 `/* system */` 标记才放行,把"跨租户操作"从"忘了写"变成"故意写"。
    - **覆盖范围取决于 `data.tables` 映射**:该映射现在与 schema 一致(35 张表全量声明,`tenants` 是唯一的全局表),所以守卫覆盖全部 34 张租户表;新增表时要同步补映射,否则那张表不会被强制要求带租户条件。
    - **启动自检**:启动时用 `backend/db/schema-audit.ts` 把两份 schema 的表名与 `data.tables` 的**键**比对,缺键直接启动失败并点名(值允许改成实际物理表名,键不能缺) —— 避免"新加的表忘了进映射 → 守卫静默不覆盖"。
@@ -250,6 +278,12 @@ MySQL **没有** PostgreSQL 那样的行级安全(RLS),数据库层不会替我�
 | `txt` | 读**仓库内**文本文件(txt/md/csv/json/yaml/log/xml/html) | 读 |
 | `file_read` | 读**任意路径**文件;文本文件带行号/哈希,Excel/PDF/PPT/DOCX 只做文本抽取 | 读 |
 | `file_write` | 写文本文件:`create` 新建、`replace` 整份替换、`patch` 按行号局部修改 | 写 |
+
+**路径策略**(读写三个工具共用一套):
+
+- `tools.files.tenantScoped: true` 时,每个租户只能访问 `<tools.files.tenantRootDir>/<tenantId>/` 之内的文件(相对路径按租户目录解析,`../` 与绝对路径越界一律拒绝),租户之间物理隔离;
+- `tools.files.tenantScoped: false` 时按老规则:`tools.fileWrite.allowOutsideRepo: true` 允许任意本地路径,否则只允许仓库内路径;
+- 高危工具的挂载门槛不变:`tools.risk.dangerousTools` 里的 `file_write` 默认不挂载,需按租户显式开启。
 
 ## 读:`txt` / `file_read` 返回什么
 
@@ -475,7 +509,8 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 2. **唯一约束租户化**:`knowledge_embeddings` 用 `uq_ke_tenant_chunk (tenant_id, chunk_id)`;`keyword_hits` 用 `uq_kh_keyword_conv (tenant_id, keyword_id, conversation_id)`;写入侧 `ON CONFLICT` 目标同步改;
 3. **补时间轴索引**:`agent_events`、`digests`、`reflection_cases`、`tool_call_cache`;
 4. **结构自愈升级**:MySQL 启动自愈从"补列/放宽列宽"扩展到**补索引**(按列组合+唯一性比对,幂等)与**类型升级**(VARCHAR → TEXT/MEDIUMTEXT,只升不降);
-5. **索引清理脚本**:`scripts/mysql-index-cleanup.sql`(启动自愈不删索引,要删的走脚本)。
+5. **最小权限数据库账号**:`scripts/mysql-grants.sql` 建两个账号 —— `help_sale_rw`(只有业务表 DML)与 `help_sale_ro`(只读);设 `mysql.autoMigrate=false` 后启动只做**只读结构自检**(比对 information_schema 后写告警,不执行任何 DDL),这样应用账号不需要 CREATE/ALTER;
+6. **清库脚本**:`scripts/mysql-index-cleanup.sql`(启动自愈不删索引,要删的走脚本)。
 6. **主键复合化**:33 张租户表主键改 `PRIMARY KEY (tenant_id, id)`,同租户数据物理聚簇(迁移脚本 `scripts/mysql-pk-rebuild.sql`,大表用 gh-ost/pt-osc 跑);
 
 ## 下一步(要真正分片才需要)
@@ -483,6 +518,15 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 1. **租户 → 数据源路由**:`config.mysql.*` 现在全局一份;要支持"大租户独立库/实例",需要 `tenantId → 数据源` 路由与每数据源独立连接池(因为每行都有 `tenant_id`,"按租户导出 → 导入专属库"是现成迁移路径);
 2. **类型收敛**:`VARCHAR(255)` 存 `status`/`created_at` 这类短值偏浪费,可在重建时收敛到 32/40;
 3. **分区表**:`agent_events`/`weixin_messages` 按 `created_at` RANGE 分区,历史分区可归档。
+
+## 分区与归档
+
+`agent_events` / `weixin_messages` 是增长最快、且天然按时间滚动的两张表,所以给出月分区方案(`scripts/mysql-partition.sql`,维护窗口执行):
+
+- 分区列是 `created_at`(零填充 ISO 字符串,字典序即时间序),分区要求分区列出现在唯一键里,所以脚本会把主键从 `(tenant_id, id)` 扩成 `(tenant_id, id, created_at)` —— `(tenant_id, id)` 仍是前缀,按租户 + id 定位照样走主键;
+- 历史归档 = `ALTER TABLE … DROP PARTITION p2026_09`(秒级删整月,不产生大事务),需要留档就先 `SELECT … PARTITION (p2026_09)` 导出;
+- 新月份先用 `pmax` 承接,到窗口再用 `REORGANIZE PARTITION` 拆出来;回滚是先 `REMOVE PARTITIONING` 再把主键改回 `(tenant_id, id)`;
+- 启动体检把"主键多带一列"也算达标(只要求期望的列是前缀),所以跑过分区脚本的库不会一直报警。
 
 ## 主键与两侧 schema 的差异
 

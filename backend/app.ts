@@ -16,6 +16,8 @@ import { startMcpToolWarmup } from "./mcp/warmup.js";
 import { warmupAgentTools } from "./integrations_pi/agent-tools.js";
 import { registerWeixin } from "../3party/weixin/index.js";
 import { resolveTenant } from "./services/tenant-context.js";
+import { resolveIdentity } from "./services/auth.js";
+import { countAdmins, createUser } from "./integrations_pi/tables/agents/users.js";
 import { withTenantGuard } from "./db/tenant-guard.js";
 import { assertTableMappingComplete } from "./db/schema-audit.js";
 import { createTenantQuota } from "./services/tenant-quota.js";
@@ -47,6 +49,16 @@ export interface AppOptions {
  * 应用装配:数据库/会话库 → 路由 → MCP → 静态页 → 定时任务与子代理消费者。
  * 业务逻辑都在 services/routes/<功能>.ts,这里只做接线。
  */
+/** 免登录路径:登录入口、健康检查与静态页(其余业务接口在 auth.enabled=true 时必须带令牌或 API Key)。 */
+export function isAuthExemptPath(url: string): boolean {
+	const path = String(url ?? "").split("?")[0];
+	if (path === "/api/v1/auth/login") return true;
+	if (path === "/api/v1/health" || path === "/api/v1/ready") return true;
+	if (path === "/" || path === "/console") return true;
+	if (path.startsWith("/vendor/")) return true;
+	return false;
+}
+
 export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const app = Fastify({ logger: options.logger ?? false });
 
@@ -82,28 +94,48 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	const store = openSessionStore(dataDir, sessionDbPath);
 
 	if (options.ensureTenant !== false) requireTenant(db, config.tenantId, "示例租户");
+	if (options.ensureTenant !== false && config.authEnabled) {
+		requireTenant(db, config.authBootstrapTenantId, "初始管理员租户");
+		if (countAdmins(db, config.authBootstrapTenantId) === 0) {
+			createUser(db, { tenantId: config.authBootstrapTenantId, username: config.authBootstrapUsername, password: config.authBootstrapPassword, role: "admin" });
+			console.log(`[auth] 已创建初始管理员:${config.authBootstrapUsername}@${config.authBootstrapTenantId}(密码取自密钥文件,登录后请立即修改)`);
+		}
+	}
 
 	app.decorateRequest("tenantId", "");
+	app.decorateRequest("tenantRole", undefined);
+	app.decorateRequest("tenantUserId", undefined);
 	// 租户不再由调用方随意声明:凭证(API Key)优先,请求头只在配置允许时才认,且要落在受信清单内
 	app.addHook("preHandler", async (request, reply) => {
-		const resolved = resolveTenant({
-			headers: request.headers as Record<string, string | string[] | undefined>,
-			apiKeys: config.tenantApiKeys,
-			headerAllowed: config.tenantHeaderAllowed,
-			trustedTenantIds: config.tenantTrustedIds,
-			defaultTenantId: config.tenantId,
-		});
-		if (resolved.error) {
-			appendRuntimeLog(logDir, {
-				level: "error",
-				type: "tenant_rejected",
-				message: `${request.method} ${request.url} 租户校验失败: ${resolved.error.message}`,
-				meta: { tenantHeader: (request.headers["x-tenant-id"] as string | undefined) ?? null },
-			}, { fileName: config.logRuntimeFile, level: config.logLevel, maxBytes: config.logMaxBytes });
-			return reply.code(resolved.error.status).send({ error: "tenant_not_allowed", message: resolved.error.message });
+		const headers = request.headers as Record<string, string | string[] | undefined>;
+		// 登录令牌优先:令牌里的租户是权威的,并且带着角色(admin/member)
+		const authExempt = isAuthExemptPath(request.url);
+		const identity = config.authEnabled ? resolveIdentity(db, headers, { enabled: true, tokenTtlHours: config.authTokenTtlHours, tokenSecret: config.authTokenSecret }) : { hasToken: false as const };
+		if (identity.identity) {
+			request.tenantId = identity.identity.tenantId;
+			request.tenantRole = identity.identity.role;
+			request.tenantUserId = identity.identity.userId;
+		} else {
+			if (identity.error) {
+				appendRuntimeLog(logDir, { level: "error", type: "tenant_rejected", message: `${request.method} ${request.url} 令牌校验失败: ${identity.error}` }, { fileName: config.logRuntimeFile, level: config.logLevel, maxBytes: config.logMaxBytes });
+				return reply.code(401).send({ error: "unauthenticated", message: identity.error });
+			}
+			if (authExempt) {
+				request.tenantId = resolveTenant({ headers, apiKeys: config.tenantApiKeys, headerAllowed: config.tenantHeaderAllowed, trustedTenantIds: config.tenantTrustedIds, defaultTenantId: config.tenantId }).tenantId ?? config.tenantId;
+			} else {
+				const resolved = resolveTenant({ headers, apiKeys: config.tenantApiKeys, headerAllowed: config.tenantHeaderAllowed, trustedTenantIds: config.tenantTrustedIds, defaultTenantId: config.tenantId });
+				if (resolved.error) {
+					appendRuntimeLog(logDir, { level: "error", type: "tenant_rejected", message: `${request.method} ${request.url} 租户校验失败: ${resolved.error.message}`, meta: { tenantHeader: (request.headers["x-tenant-id"] as string | undefined) ?? null } }, { fileName: config.logRuntimeFile, level: config.logLevel, maxBytes: config.logMaxBytes });
+					return reply.code(resolved.error.status).send({ error: "tenant_not_allowed", message: resolved.error.message });
+				}
+				// 开启登录后:只有集成方 API Key 能免登录,请求头/默认租户不足以进入业务接口
+				if (config.authEnabled && resolved.source !== "api-key") {
+					return reply.code(401).send({ error: "unauthenticated", message: "请先登录(Authorization: Bearer <token>),或使用集成方 API Key(x-api-key)。" });
+				}
+				request.tenantId = resolved.tenantId ?? config.tenantId;
+				request.tenantRole = resolved.source === "api-key" ? "member" : undefined;
+			}
 		}
-		request.tenantId = resolved.tenantId ?? config.tenantId;
-
 		// 每租户请求限流:超出的请求立刻拒绝,不占用共享资源(单租户刷量不影响其他租户)
 		const gate = await quota.tryAcquireRequest(request.tenantId);
 		if (!gate.allowed) {
@@ -191,7 +223,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 
 	// ── 静态页(front/):client.html 外壳 + client_functions 内联拼接 + vendor 原样返回 ──
 	const injectClientConfig = (html: string) =>
-		html.split("__CLIENT_CONFIG__").join(JSON.stringify({ tenantId: config.tenantId, workflowMineTimeoutMs: config.workflowMineTimeoutMs }));
+		html.split("__CLIENT_CONFIG__").join(JSON.stringify({ tenantId: config.tenantId, workflowMineTimeoutMs: config.workflowMineTimeoutMs, authEnabled: config.authEnabled }));
 	const injectTenant = (html: string) => html.split("__APP_TENANT_ID__").join(JSON.stringify(config.tenantId));
 	const CLIENT_FUNC_FILES = ["base.js", "charts.js", "origin_dialog.js", "subagents_record.js", "current_turn_record.js", "function_supports.js", "history_dialogs.js", "keywords_manager.js", "ontime_tasks.js", "workflow.js", "live_updates.js", "init.js"];
 	const clientFuncsHtml = () =>

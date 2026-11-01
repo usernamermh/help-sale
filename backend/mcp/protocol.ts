@@ -76,7 +76,7 @@ export class McpServer {
 						protocolVersion: p.protocolVersion ?? this.protocolVersion,
 						capabilities: { tools: { listChanged: false } },
 						serverInfo: { name: "help-sale-mcp", version: "0.1.0" },
-						instructions: "助销 agent 业务工具(客户查询/知识库/表格图表等)。调用 tools/call 执行,租户通过请求头 x-tenant-id 传递。",
+						instructions: "助销 agent 业务工具(客户查询/知识库/表格图表等)。调用 tools/call 执行;租户按服务端 tenant.* 规则解析(凭证 Authorization: Bearer / x-api-key 优先,请求头 x-tenant-id 只在配置允许时生效)。",
 					};
 					return { jsonrpc: "2.0", id, result };
 				}

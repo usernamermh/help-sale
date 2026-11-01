@@ -49,6 +49,8 @@ export interface FileConfig {
 		webSearch?: { apiKey?: string };
 		/** 文件写入工具:是否允许写到仓库目录之外 */
 		fileWrite?: { allowOutsideRepo?: boolean };
+		/** 文件读写工具的目录策略:按租户分目录 / 租户文件根目录 */
+		files?: { tenantScoped?: boolean; tenantRootDir?: string };
 		/** SQL 工具:返回行数上限、执行超时、追加拦截的关键字 */
 		sql?: { maxRows?: number; timeoutMs?: number; extraBlockedKeywords?: string[] };
 		risk?: { dangerousTools?: string[]; dangerousDefaultEnabled?: boolean };
@@ -60,9 +62,16 @@ export interface FileConfig {
 	};
 	knowledge?: { searchLimit?: number };
 	logging?: { enabled?: boolean; dir?: string; maxBytes?: number; level?: "debug" | "info" | "error"; runtimeFile?: string };
-	mysql?: { enabled?: boolean; schemaRebuild?: boolean; connectTimeout?: number; host?: string; port?: number; user?: string; password?: string; database?: string; connectionLimit?: number; queryTimeoutMs?: number };
+	mysql?: { enabled?: boolean; schemaRebuild?: boolean; autoMigrate?: boolean; connectTimeout?: number; host?: string; port?: number; user?: string; password?: string; database?: string; connectionLimit?: number; queryTimeoutMs?: number };
 	redis?: { enabled?: boolean; host?: string; port?: number; password?: string; leaderLeaseMs?: number };
 	notification?: { enabled?: boolean; webhookUrl?: string };
+	/** 登录与 RBAC:开关、令牌有效期、令牌密钥与初始管理员 */
+	auth?: {
+		enabled?: boolean;
+		tokenTtlHours?: number;
+		tokenSecret?: string;
+		bootstrap?: { tenantId?: string; username?: string; password?: string };
+	};
 	company?: { name?: string; team?: string };
 	client?: { workflowMineTimeoutMs?: number };
 	/** 工作流挖掘参数(全部可选,缺省用代码内默认值,便于向后兼容旧配置文件) */

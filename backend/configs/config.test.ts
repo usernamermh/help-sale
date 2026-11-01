@@ -58,11 +58,12 @@ describe("配置:各段取值落到对应字段", () => {
 			raw.context = { compression: { enabled: false, thresholdRatio: 0.5, keepHead: 1, keepTail: 5, minMessages: 4, maxSummaryChars: 300 } };
 			raw.knowledge.searchLimit = 7;
 			raw.chunker.size = 333;
-			raw.tools = { webSearch: { apiKey: "cmp-serper" }, fileWrite: { allowOutsideRepo: false }, sql: { maxRows: 50, timeoutMs: 5000, extraBlockedKeywords: ["union"] }, risk: { dangerousTools: ["terminal", "sql"], dangerousDefaultEnabled: true }, catalog: { enabled: true, threshold: 20, topK: 8, maxInspect: 3, semanticFloorZh: 0.42, semanticFloorEn: 0.6, bilingual: { enabled: true, rewriteTimeoutMs: 20000, perLanguageTopK: 8 } } };
+			raw.tools = { webSearch: { apiKey: "cmp-serper" }, fileWrite: { allowOutsideRepo: false }, files: { tenantScoped: true, tenantRootDir: "cmp_files" }, sql: { maxRows: 50, timeoutMs: 5000, extraBlockedKeywords: ["union"] }, risk: { dangerousTools: ["terminal", "sql"], dangerousDefaultEnabled: true }, catalog: { enabled: true, threshold: 20, topK: 8, maxInspect: 3, semanticFloorZh: 0.42, semanticFloorEn: 0.6, bilingual: { enabled: true, rewriteTimeoutMs: 20000, perLanguageTopK: 8 } } };
 			raw.mcp = { servers: [{ name: "cmp", url: "https://cmp.example/mcp", headers: { "X-Tenant-Id": "t9" } }] };
 			raw.mysql.port = 3399;
 			raw.redis.port = 6399;
 			raw.notification = { enabled: true, webhookUrl: "https://cmp.example/hook" };
+			raw.auth = { enabled: true, tokenTtlHours: 3, tokenSecret: "cmp-secret", bootstrap: { tenantId: "cmp-tenant", username: "cmp-admin", password: "cmp-password" } };
 			raw.company = { name: "对照公司", team: "对照团队" };
 			raw.userkey = "cmp-userkey";
 			raw.defaults.customersLimit = 11;
@@ -95,6 +96,8 @@ describe("配置:各段取值落到对应字段", () => {
 		expect(cfg.chunkerSize).toBe(333);
 			expect(cfg.webSearchApiKey).toBe("cmp-serper");
 			expect(cfg.fileWriteAllowOutsideRepo).toBe(false);
+			expect(cfg.filesTenantScoped).toBe(true);
+			expect(cfg.filesTenantRootDir).toBe("cmp_files");
 			expect(cfg.sqlMaxRows).toBe(50);
 			expect(cfg.sqlTimeoutMs).toBe(5000);
 			expect(cfg.sqlExtraBlockedKeywords).toEqual(["union"]);
@@ -116,6 +119,11 @@ describe("配置:各段取值落到对应字段", () => {
 		expect(cfg.redisPort).toBe(6399);
 		expect(cfg.notificationEnabled).toBe(true);
 		expect(cfg.notificationWebhookUrl).toBe("https://cmp.example/hook");
+		// 登录与 RBAC
+		expect(cfg.authEnabled).toBe(true);
+		expect(cfg.authTokenTtlHours).toBe(3);
+		expect(cfg.authTokenSecret).toBe("cmp-secret");
+		expect(cfg.authBootstrapUsername).toBe("cmp-admin");
 		// defaults / company / userkey
 		expect(cfg.companyName).toBe("对照公司");
 		expect(cfg.teamName).toBe("对照团队");
@@ -139,7 +147,7 @@ describe("配置:各段取值落到对应字段", () => {
 		const cfg = loadConfig();
 		const undefinedKeys = Object.entries(cfg).filter(([, v]) => v === undefined).map(([k]) => k);
 		expect(undefinedKeys).toEqual([]);
-		expect(Object.keys(cfg)).toHaveLength(145);
+		expect(Object.keys(cfg)).toHaveLength(154);
 	});
 });
 
@@ -207,6 +215,6 @@ describe("配置:代码内不提供任何默认值", () => {
 		process.env.CONFIG_PATH = path.join(repoRoot, "help-sale.config.example.yaml");
 		process.env.SECRETS_PATH = path.join(repoRoot, "help-sale.secrets.example.yaml");
 		const cfg = await reload();
-		expect(Object.keys(cfg)).toHaveLength(145);
+		expect(Object.keys(cfg)).toHaveLength(154);
 	});
 });

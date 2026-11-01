@@ -46,7 +46,7 @@ export async function execute(ctx: ToolContext, params: any) {
 					.prepare(
 						`SELECT kc.id, kc.document_id, kc.content, kd.title
 						 FROM knowledge_chunks kc
-						 JOIN knowledge_documents kd ON kd.id = kc.document_id
+						 JOIN knowledge_documents kd ON kd.id = kc.document_id AND kd.tenant_id = kc.tenant_id
 						 WHERE kc.tenant_id = ? AND kd.category LIKE ?
 						 ORDER BY kd.created_at, kc.chunk_index`,
 					)
@@ -55,7 +55,7 @@ export async function execute(ctx: ToolContext, params: any) {
 					.prepare(
 						`SELECT kc.id, kc.document_id, kc.content, kd.title
 						 FROM knowledge_chunks kc
-						 JOIN knowledge_documents kd ON kd.id = kc.document_id
+						 JOIN knowledge_documents kd ON kd.id = kc.document_id AND kd.tenant_id = kc.tenant_id
 						 WHERE kc.tenant_id = ?
 						 ORDER BY kd.created_at, kc.chunk_index`,
 					)
@@ -75,7 +75,7 @@ export async function execute(ctx: ToolContext, params: any) {
 			`SELECT c.id, c.sales_name, c.sales_id, c.updated_at, c.message_count,
 			        cus.key AS customer_key, cus.name AS customer_name
 			 FROM conversations c
-			 LEFT JOIN customers cus ON cus.id = c.customer_id
+			 LEFT JOIN customers cus ON cus.id = c.customer_id AND cus.tenant_id = c.tenant_id
 			 WHERE c.tenant_id = ? AND c.updated_at >= ?
 			   AND (? = '' OR c.sales_name = ? OR c.sales_id = ?)
 			 ORDER BY c.updated_at DESC LIMIT ?`,

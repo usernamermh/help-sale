@@ -93,7 +93,7 @@ export function listCustomers(db: DatabaseSync, tenantId: string, limit: number)
 	const rows = db
 		.prepare(
 			`SELECT cu.id, cu.key, cu.name, cu.phone, cu.stage, cu.region,
-			        (SELECT COUNT(*) FROM conversations c WHERE c.customer_id = cu.id) AS conversation_count
+			        (SELECT COUNT(*) FROM conversations c WHERE c.customer_id = cu.id AND c.tenant_id = cu.tenant_id) AS conversation_count
 			 FROM customers cu
 			 WHERE cu.tenant_id = ?
 			 ORDER BY cu.updated_at DESC, cu.key ASC

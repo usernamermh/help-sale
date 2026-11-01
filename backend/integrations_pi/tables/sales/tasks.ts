@@ -48,7 +48,7 @@ export function getTask(db: DatabaseSync, tenantId: string, id: string): TaskRec
 		.prepare(
 			`SELECT t.*, c.key AS customer_key, c.name AS customer_name
 			 FROM next_step_tasks t
-			 LEFT JOIN customers c ON c.id = t.customer_id
+			 LEFT JOIN customers c ON c.id = t.customer_id AND c.tenant_id = t.tenant_id
 			 WHERE t.tenant_id = ? AND t.id = ?`,
 		)
 		.get(tenantId, id) as Record<string, unknown> | undefined;
@@ -79,7 +79,7 @@ export function listTasks(db: DatabaseSync, query: ListTasksQuery): TaskRecord[]
 		.prepare(
 			`SELECT t.*, c.key AS customer_key, c.name AS customer_name
 			 FROM next_step_tasks t
-			 LEFT JOIN customers c ON c.id = t.customer_id
+			 LEFT JOIN customers c ON c.id = t.customer_id AND c.tenant_id = t.tenant_id
 			 WHERE ${clauses.join(" AND ")}
 			 ORDER BY CASE WHEN t.due_at IS NULL THEN 1 ELSE 0 END, t.due_at ASC, t.created_at DESC
 			 LIMIT ?`,

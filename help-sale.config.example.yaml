@@ -40,6 +40,7 @@ data:
     weixin_users: weixin_users
     weixin_messages: weixin_messages
     weixin_threads: weixin_threads
+    users: users
   dataDir: backend/data
   memoryFile: backend/data/memory.md
   businessDbPath: backend/data/business.db
@@ -88,7 +89,12 @@ tools:
   webSearch:
     apiKey: ${SECRETS:tools.webSearch.apiKey}
   fileWrite:
-    allowOutsideRepo: true
+    # 文件写入工具是否允许写到仓库之外(按租户分目录时,这里保持 false 最安全)
+    allowOutsideRepo: false
+  files:
+    # 文件读写工具按租户分目录:每个租户只能访问 <tenantRootDir>/<tenantId>/ 里的文件
+    tenantScoped: true
+    tenantRootDir: data/tenant_files
   sql:
     maxRows: 200
     timeoutMs: 15000
@@ -111,6 +117,18 @@ tools:
       perLanguageTopK: 8
 mcp:
   servers: []
+auth:
+  # 登录与 RBAC:开启后业务接口必须带登录令牌(Authorization: Bearer <token>),集成方仍可用 API Key
+  enabled: true
+  # 登录令牌有效期(小时)
+  tokenTtlHours: 12
+  # 令牌签名密钥(放密钥文件)
+  tokenSecret: ${SECRETS:auth.tokenSecret}
+  # 初始管理员:启动时该租户若没有启用的管理员,就按这里创建一个(幂等,登录后请改密码)
+  bootstrap:
+    tenantId: t_demo
+    username: admin
+    password: ${SECRETS:auth.bootstrap.password}
 knowledge:
   searchLimit: 5
 vector:
@@ -285,6 +303,9 @@ defaults:
 mysql:
   enabled: true
   schemaRebuild: false
+  # 启动时是否允许自动做结构变更(建表/补列/补索引/升类型)。
+  # false = 只做只读结构自检,发现差异只告警不执行 —— 配合最小权限数据库账号(scripts/mysql-grants.sql)时的推荐值
+  autoMigrate: true
   connectTimeout: 8000
   # 查询连接池大小(每租户不抢连接的前提下放宽;小池会让一个慢查询占满)
   connectionLimit: 20

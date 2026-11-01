@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execute as fileWrite } from "../../tools_system/file_write/main.js";
@@ -23,7 +23,8 @@ afterEach(() => {
 
 const text = (r: { content: Array<{ text?: string }> }) => r.content.map((c) => c.text ?? "").join("\n");
 const target = (name = "note.md") => path.join(dir, name);
-const ctx = { db: null, tenantId: "t1" };
+// 这个用例组验证 CAS 行为,不验证目录策略:显式放开路径限制(目录策略另有专门用例)
+const ctx = { db: null, tenantId: "t1", fileScope: { tenantScoped: false, allowOutsideRepo: true } };
 
 describe("file_write:新建", () => {
 	it("新建成功并返回 hash;重复新建被拒绝并给出当前 hash", async () => {
@@ -167,5 +168,22 @@ describe("读取 → 编辑 联动", () => {
 		} finally {
 			rmSync(repoFile, { force: true });
 		}
+	});
+	it("按租户分目录时:只能写自己目录,越界与跨租户都被拒绝", async () => {
+		const root = mkdtempSync(path.join(os.tmpdir(), "file-scope-"));
+		const scoped = (tenantId: string) => ({ db: null, tenantId, fileScope: { tenantScoped: true, tenantRootDir: root } });
+
+		const created = await fileWrite(scoped("t1"), { filePath: "note.md", op: "create", content: "t1 的内容\n" });
+		expect(text(created)).toContain("已新建");
+		expect(existsSync(path.join(root, "t1", "note.md"))).toBe(true);
+
+		expect(text(await fileWrite(scoped("t1"), { filePath: "../escape.md", op: "create", content: "x" }))).toContain("本租户目录");
+		expect(text(await fileWrite(scoped("t1"), { filePath: path.join(root, "..", "outside.md"), op: "create", content: "x" }))).toContain("本租户目录");
+		expect(text(await txtRead(scoped("t2"), { filePath: "note.md" }))).toContain("文件不存在");
+		const t2Created = await fileWrite(scoped("t2"), { filePath: "note.md", op: "create", content: "t2 的内容\n" });
+		expect(text(t2Created)).toContain("已新建");
+		expect(readFileSync(path.join(root, "t2", "note.md"), "utf8")).toBe("t2 的内容\n");
+		expect(JSON.stringify(await txtRead(scoped("t1"), { filePath: "note.md" }))).toContain("t1 的内容");
+		rmSync(root, { recursive: true, force: true });
 	});
 });

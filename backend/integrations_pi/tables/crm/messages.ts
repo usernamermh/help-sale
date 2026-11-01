@@ -71,9 +71,9 @@ export function toolCacheKey(input: unknown): string {
 export function knowledgeVersion(db: DatabaseSync, tenantId: string): string {
 	const row = db
 		.prepare(
-			`SELECT (SELECT COUNT(*) FROM knowledge_documents WHERE tenant_id = ?) AS docs,
-			        (SELECT COUNT(*) FROM knowledge_chunks WHERE tenant_id = ?) AS chunks,
-			        (SELECT MAX(created_at) FROM knowledge_documents WHERE tenant_id = ?) AS latest`,
+			`SELECT (SELECT COUNT(*) FROM knowledge_documents WHERE knowledge_documents.tenant_id = ?) AS docs,
+			        (SELECT COUNT(*) FROM knowledge_chunks WHERE knowledge_chunks.tenant_id = ?) AS chunks,
+			        (SELECT MAX(created_at) FROM knowledge_documents WHERE knowledge_documents.tenant_id = ?) AS latest`,
 		)
 		.get(tenantId, tenantId, tenantId) as { docs: number; chunks: number; latest: string | null };
 	return `k${row.docs ?? 0}-${row.chunks ?? 0}-${row.latest ?? "0"}`;

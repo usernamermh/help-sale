@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto";
+import { fileScopeFor, resolveToolPath, type FileScopeOverride } from "../_shared/file-utils.js";
+import { config } from "../../backend/env.js";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 
-interface ToolContext { db: any; tenantId: string; }
+interface ToolContext { db: any; tenantId: string; fileScope?: FileScopeOverride; }
 
 const TEXT_EXT = /\.(txt|md|csv|json|yaml|yml|log|xml|html|js|ts|py|mjs)$/i;
 const XLSX_EXT = /\.(xlsx|xls)$/i;
@@ -94,10 +96,16 @@ async function extractZipText(file: string, entryRe: RegExp, textTagRe: RegExp, 
 	return parts.join("\n\n") || "(未找到文档内容)";
 }
 
-export async function execute(_ctx: ToolContext, params: any) {
+export async function execute(ctx: ToolContext, params: any) {
 	const raw = String(params?.filePath ?? "").trim();
 	if (!raw) return { content: [{ type: "text", text: "需要 filePath。" }] };
-	const file = path.resolve(raw);
+	const scoped = resolveToolPath(raw, fileScopeFor(ctx, {
+		tenantScoped: config.filesTenantScoped,
+		tenantRootDir: config.filesTenantRootDir,
+		allowOutsideRepo: config.fileWriteAllowOutsideRepo,
+	}));
+	if (!scoped.path) return { content: [{ type: "text", text: `路径不合法:${scoped.error ?? "越界访问被拒绝"}` }] };
+	const file = scoped.path;
 	if (!existsSync(file)) return { content: [{ type: "text", text: `文件不存在:${file}` }] };
 	const stat = statSync(file);
 	if (!stat.isFile()) return { content: [{ type: "text", text: "路径不是文件。" }] };

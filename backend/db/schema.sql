@@ -532,3 +532,4 @@ CREATE TABLE IF NOT EXISTS weixin_threads (
 	UNIQUE (tenant_id, openid, thread_id)
 );
 CREATE INDEX IF NOT EXISTS idx_wxt_tenant ON weixin_threads (tenant_id, openid, last_active_at DESC);
+ CREATE TABLE IF NOT EXISTS users ( 	id TEXT PRIMARY KEY, 	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE, 	username TEXT NOT NULL, 	password_hash TEXT NOT NULL, 	role TEXT NOT NULL DEFAULT 'member', 	enabled INTEGER NOT NULL DEFAULT 1, 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')), 	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')), 	UNIQUE (tenant_id, username) ); CREATE INDEX IF NOT EXISTS idx_users_tenant_role ON users (tenant_id, role);

@@ -75,7 +75,7 @@ async function streamRun(goal, wait, steps, signal) {
   resetRunPanel();
   const res = await fetch("/api/v1/agent/threads/" + currentThreadId + "/run-stream", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-tenant-id": "t_demo" },
+    headers: Object.assign({ "Content-Type": "application/json", "x-tenant-id": hsTenantId() }, hsAuthHeaders()),
     body: JSON.stringify({ goal }),
     signal,
   });
@@ -122,7 +122,7 @@ async function streamRun(goal, wait, steps, signal) {
     const sumTimer = setTimeout(() => sumCtrl.abort(new Error("汇总超时(180s)")), 180000);
     let r;
     try {
-      const res2 = await fetch("/api/v1/agent/threads/" + currentThreadId + "/multi-summary", { method: "POST", headers: { "Content-Type": "application/json", "x-tenant-id": "t_demo" }, body: JSON.stringify({ runId: multiState.runId }), signal: sumCtrl.signal });
+      const res2 = await fetch("/api/v1/agent/threads/" + currentThreadId + "/multi-summary", { method: "POST", headers: Object.assign({ "Content-Type": "application/json", "x-tenant-id": hsTenantId() }, hsAuthHeaders()), body: JSON.stringify({ runId: multiState.runId }), signal: sumCtrl.signal });
       r = await res2.json();
     } finally { clearTimeout(sumTimer); }
     const k2 = await api("/api/v1/kanban?threadId=" + encodeURIComponent(currentThreadId));

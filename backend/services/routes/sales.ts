@@ -117,7 +117,7 @@ export function getSalesWorkbench(db: DatabaseSync, tenantId: string, salesId: s
 	const tasks = db
 		.prepare(
 			`SELECT t.id, t.action, t.due_at, t.status, c.key AS customer_key, c.name AS customer_name
-			 FROM next_step_tasks t LEFT JOIN customers c ON c.id = t.customer_id
+			 FROM next_step_tasks t LEFT JOIN customers c ON c.id = t.customer_id AND c.tenant_id = t.tenant_id
 			 WHERE t.tenant_id = ? AND t.sales_id = ? AND t.status = 'pending' AND (t.due_at IS NULL OR t.due_at <= date('now', '+1 day'))
 			 ORDER BY (t.due_at IS NULL), t.due_at ASC`,
 		)

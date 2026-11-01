@@ -92,7 +92,7 @@ async function workflowMine() {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(new Error("挖掘超时(" + Math.round(timeoutMs / 1000) + "s)")), timeoutMs);
   try {
-    const res = await fetch("/api/v1/workflows/mine", { method: "POST", headers: { "Content-Type": "application/json", "x-tenant-id": tenantId }, body: JSON.stringify({}), signal: ctrl.signal });
+    const res = await fetch("/api/v1/workflows/mine", { method: "POST", headers: Object.assign({ "Content-Type": "application/json", "x-tenant-id": tenantId }, hsAuthHeaders()), body: JSON.stringify({}), signal: ctrl.signal });
     const j = await res.json();
     if (!res.ok) throw new Error(j.error || ("HTTP " + res.status));
     const mined = j.mined || [];

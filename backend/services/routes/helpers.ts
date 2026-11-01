@@ -1,7 +1,8 @@
 // 路由层公共辅助(deps 类型、角色/门店范围解析)
 import type { DatabaseSync } from "node:sqlite";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { config } from "../../env.js";
 import type { ModelRuntime } from "../../integrations_pi/models.js";
 import type { ReminderQueue } from "../../integrations_db/reminder-queue.js";
 import type { SessionStore } from "../../integrations_pi/sessions.js";
@@ -20,7 +21,22 @@ export interface SalesContext {
 declare module "fastify" {
 	interface FastifyRequest {
 		tenantId: string;
+		/** 登录身份:admin / member(未登录或未开启登录时为 undefined) */
+		tenantRole?: "admin" | "member";
+		/** 登录账号 id(令牌登录时才有) */
+		tenantUserId?: string;
 	}
+}
+
+/**
+ * 管理员专属操作的守卫:开启登录(auth.enabled=true)后,只有 admin 角色能过。
+ * 未开启登录时沿用旧行为(不拦),返回 true。
+ */
+export function requireAdmin(request: FastifyRequest, reply: FastifyReply): boolean {
+	if (!config.authEnabled) return true;
+	if (request.tenantRole === "admin") return true;
+	reply.code(403).send({ error: "forbidden", message: "该操作需要管理员权限(auth.enabled=true)。" });
+	return false;
 }
 
 export interface RouteDeps {

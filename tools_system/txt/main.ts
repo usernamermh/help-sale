@@ -1,22 +1,28 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { resolveRepoPath } from "../_shared/file-utils.js";
+import { fileScopeFor, resolveToolPath, type FileScopeOverride } from "../_shared/file-utils.js";
+import { config } from "../../backend/env.js";
 
 /**
  * 读取仓库内文本文件:输出**带绝对行号**的内容 + 总行数 + 内容 hash,
  * 让模型可以直接用 file_write(op=patch/replace, expectedHash=…) 精确修改。
  */
 
-interface ToolContext { db: unknown; tenantId: string; }
+interface ToolContext { db: unknown; tenantId: string; fileScope?: FileScopeOverride; }
 
 const ALLOWED = /\.(txt|md|csv|json|log|yaml|yml|xml|html)$/i;
 const MAX_BYTES = 5 * 1024 * 1024;
 const DEFAULT_MAX_LINES = 200;
 const HARD_MAX_LINES = 1000;
 
-export async function execute(_ctx: ToolContext, params: any) {
-	const file = resolveRepoPath(String(params?.filePath ?? ""));
-	if (!file) return { content: [{ type: "text", text: "路径无效:仅允许仓库内文件,禁止越界读取。" }] };
+export async function execute(ctx: ToolContext, params: any) {
+	const resolved = resolveToolPath(String(params?.filePath ?? ""), fileScopeFor(ctx, {
+		tenantScoped: config.filesTenantScoped,
+		tenantRootDir: config.filesTenantRootDir,
+		allowOutsideRepo: config.fileWriteAllowOutsideRepo,
+	}));
+	const file = resolved.path;
+	if (!file) return { content: [{ type: "text", text: `路径不合法:${resolved.error ?? "越界访问被拒绝"}` }] };
 	if (!ALLOWED.test(file)) return { content: [{ type: "text", text: "不支持的文件类型(仅 txt/md/csv/json/log/yaml/xml/html;其它类型请用 file_read)。" }] };
 	if (!existsSync(file)) return { content: [{ type: "text", text: `文件不存在:${file}` }] };
 	const stat = statSync(file);

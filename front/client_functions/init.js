@@ -29,4 +29,8 @@ $("headerJobsBtn").addEventListener("click", openJobsModal);
 $("jobsModal").addEventListener("click", (e) => { if (e.target === $("jobsModal")) closeJobsModal(); });
 // 启动加载
 syncRightCol();
-loadCapabilities(); loadThreads(); renderWelcome();
+// 开启登录(auth.enabled=true)时先校验令牌:未登录只弹登录框,不打业务接口(避免一屏 401)
+(async () => {
+  if (!(await hsEnsureLoggedIn())) return;
+  loadCapabilities(); loadThreads(); renderWelcome();
+})();

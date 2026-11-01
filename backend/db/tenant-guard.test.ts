@@ -5,6 +5,7 @@ import { inspectAndGuard, inspectTenantScope, resetTenantGuardWarnings, SYSTEM_S
 const TABLES = {
 	tenants: "tenants",
 	customers: "customers",
+	stores: "stores",
 	agent_threads: "agent_threads",
 	agent_thread_messages: "agent_thread_messages",
 };
@@ -47,6 +48,44 @@ describe("租户隔离检查", () => {
 		// 带系统标记的跨租户语句放行
 		const all = db.prepare(`${SYSTEM_SCOPE_MARK} SELECT COUNT(*) AS c FROM customers`).get() as { c: number };
 		expect(Number(all.c)).toBe(1);
+		db.close();
+	});
+	it("逐表判定:JOIN 只在一边带租户条件 → 违规", () => {
+		const bad = inspectTenantScope("SELECT c.name FROM customers c JOIN stores s ON c.store_id = s.id WHERE s.tenant_id = ?", TABLES);
+		expect(bad.uncovered).toEqual(["customers"]);
+		const good = inspectTenantScope("SELECT c.name FROM customers c JOIN stores s ON c.store_id = s.id WHERE c.tenant_id = ? AND s.tenant_id = ?", TABLES);
+		expect(good.uncovered).toEqual([]);
+	});
+
+	it("同租户 JOIN(a.tenant_id = b.tenant_id)不构成租户锚定", () => {
+		const scope = inspectTenantScope("SELECT c.name FROM customers c JOIN stores s ON c.tenant_id = s.tenant_id", TABLES);
+		expect(scope.uncovered).toEqual(["customers", "stores"]);
+	});
+
+	it("多表时无限定符的 tenant_id 只算半张表,不覆盖全部", () => {
+		const scope = inspectTenantScope("SELECT c.name FROM customers c JOIN stores s ON c.store_id = s.id WHERE tenant_id = ?", TABLES);
+		expect(scope.uncovered.length).toBeGreaterThan(0);
+	});
+
+	it("同源镜像表(FTS)上的租户条件等价于业务表", () => {
+		const mirror = { ...TABLES, knowledge_chunks: "knowledge_chunks" };
+		const scope = inspectTenantScope("SELECT kc.content FROM knowledge_chunks_fts f JOIN knowledge_chunks kc ON kc.id = f.chunk_id WHERE f.tenant_id = ?", mirror);
+		expect(scope.uncovered).toEqual([]);
+	});
+
+	it("INSERT 要求列清单或取值里带 tenant_id", () => {
+		expect(inspectTenantScope("INSERT INTO customers (id, tenant_id, name) VALUES (?,?,?)", TABLES).uncovered).toEqual([]);
+		expect(inspectTenantScope("INSERT INTO customers (id, name) VALUES (?,?)", TABLES).uncovered).toEqual(["customers"]);
+	});
+
+	it("exec 也被守卫覆盖:业务 DML 照查,事务与 DDL 放行", () => {
+		const db = withTenantGuard(new DatabaseSync(":memory:"), { tables: TABLES, mode: "enforce" });
+		db.exec("PRAGMA foreign_keys = ON");
+		db.exec("CREATE TABLE customers (id TEXT PRIMARY KEY, tenant_id TEXT, name TEXT)");
+		db.exec("BEGIN");
+		db.exec("COMMIT");
+		expect(() => db.exec("UPDATE customers SET name = 'x'")).toThrow(/租户隔离拦截/);
+		db.exec(`${SYSTEM_SCOPE_MARK} UPDATE customers SET name = 'x'`);
 		db.close();
 	});
 });

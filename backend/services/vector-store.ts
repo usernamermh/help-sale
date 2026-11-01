@@ -234,7 +234,7 @@ export function localCosineSearch(
 		? (db
 				.prepare(
 					`SELECT ke.chunk_id AS chunkId, ke.vector_json AS vectorJson
-					 FROM knowledge_embeddings ke JOIN knowledge_documents kd ON kd.id = ke.document_id
+					 FROM knowledge_embeddings ke JOIN knowledge_documents kd ON kd.id = ke.document_id AND kd.tenant_id = ke.tenant_id
 					 WHERE ke.tenant_id = ? AND kd.category LIKE ?`,
 				)
 				.all(tenantId, `%${options.category}%`) as Array<{ chunkId: string; vectorJson: string }>)
@@ -263,8 +263,8 @@ export async function reindexAll(db: DatabaseSync, tenantId: string, limit = 50)
 	const rows = db
 		.prepare(
 			`SELECT kc.document_id AS documentId, GROUP_CONCAT(kc.id) AS chunkIds, kd.category AS category
-			 FROM knowledge_chunks kc JOIN knowledge_documents kd ON kd.id = kc.document_id
-			 WHERE kc.tenant_id = ? AND kc.id NOT IN (SELECT chunk_id FROM knowledge_embeddings WHERE tenant_id = ?)
+			 FROM knowledge_chunks kc JOIN knowledge_documents kd ON kd.id = kc.document_id AND kd.tenant_id = kc.tenant_id
+			 WHERE kc.tenant_id = ? AND kc.id NOT IN (SELECT chunk_id FROM knowledge_embeddings WHERE knowledge_embeddings.tenant_id = ?)
 			 GROUP BY kc.document_id ORDER BY MIN(kd.created_at) LIMIT ?`,
 		)
 		.all(tenantId, tenantId, limit) as Array<{ documentId: string; chunkIds: string; category: string | null }>;

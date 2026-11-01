@@ -37,6 +37,10 @@ export interface AppConfig {
 	webSearchApiKey: string;
 	/** 文件写入工具是否允许写到仓库之外(tools.fileWrite.allowOutsideRepo) */
 	fileWriteAllowOutsideRepo: boolean;
+	/** 文件读写工具是否按租户分目录(tools.files.tenantScoped):开启后每个租户只能看到自己的目录 */
+	filesTenantScoped: boolean;
+	/** 租户文件根目录(tools.files.tenantRootDir),相对仓库根或绝对路径 */
+	filesTenantRootDir: string;
 	/** SQL 工具单次最多返回行数(tools.sql.maxRows) */
 	sqlMaxRows: number;
 	/** SQL 单条执行超时(tools.sql.timeoutMs) */
@@ -72,6 +76,8 @@ export interface AppConfig {
 	knowledgeSearchLimit: number;
 	mysqlEnabled: boolean;
 	mysqlSchemaRebuild: boolean;
+	/** 启动时是否允许自动做结构变更(建表/补列/补索引/升类型)。false=只做只读结构自检并告警,配合最小权限数据库账号 */
+	mysqlAutoMigrate: boolean;
 	mysqlConnectTimeout: number;
 	/** 查询连接池大小(mysql.connectionLimit):按"每租户不抢连接"的目标放宽 */
 	mysqlConnectionLimit: number;
@@ -91,6 +97,18 @@ export interface AppConfig {
 	chunkerSize: number;
 	chunkerOverlap: number;
 	notificationEnabled: boolean;
+	/** 登录与 RBAC 开关(auth.enabled):开启后业务接口必须带登录令牌 */
+	authEnabled: boolean;
+	/** 登录令牌有效期(小时,auth.tokenTtlHours) */
+	authTokenTtlHours: number;
+	/** 登录令牌签名密钥(auth.tokenSecret,放密钥文件) */
+	authTokenSecret: string;
+	/** 初始管理员所属租户(auth.bootstrap.tenantId) */
+	authBootstrapTenantId: string;
+	/** 初始管理员用户名(auth.bootstrap.username) */
+	authBootstrapUsername: string;
+	/** 初始管理员密码(auth.bootstrap.password,放密钥文件) */
+	authBootstrapPassword: string;
 	notificationWebhookUrl: string;
 	companyName: string;
 	teamName: string;
@@ -206,10 +224,10 @@ export type RetrievalConfig = Pick<AppConfig,
 	| "vectorSearchTopK" | "vectorScoreThreshold" | "vectorTimeoutMs" | "vectorEmbedBatch">;
 /** mysql + redis + notification + tools + mcp 段:中间件与外部工具接入。 */
 export type IntegrationsConfig = Pick<AppConfig,
-	| "mysqlEnabled" | "mysqlSchemaRebuild" | "mysqlConnectTimeout" | "mysqlHost" | "mysqlPort" | "mysqlUser" | "mysqlPassword" | "mysqlDatabase"
+	| "mysqlEnabled" | "mysqlSchemaRebuild" | "mysqlAutoMigrate" | "mysqlConnectTimeout" | "mysqlHost" | "mysqlPort" | "mysqlUser" | "mysqlPassword" | "mysqlDatabase"
 	| "redisEnabled" | "redisHost" | "redisPort" | "redisPassword" | "redisLeaderLeaseMs" | "mysqlConnectionLimit" | "mysqlQueryTimeoutMs"
-	| "notificationEnabled" | "notificationWebhookUrl"
-	| "webSearchApiKey" | "fileWriteAllowOutsideRepo" | "sqlMaxRows" | "sqlTimeoutMs" | "sqlExtraBlockedKeywords" | "riskDangerousTools" | "riskDangerousDefaultEnabled" | "mcpServers"
+	| "notificationEnabled" | "notificationWebhookUrl" | "authEnabled" | "authTokenTtlHours" | "authTokenSecret" | "authBootstrapTenantId" | "authBootstrapUsername" | "authBootstrapPassword"
+	| "webSearchApiKey" | "fileWriteAllowOutsideRepo" | "filesTenantScoped" | "filesTenantRootDir" | "sqlMaxRows" | "sqlTimeoutMs" | "sqlExtraBlockedKeywords" | "riskDangerousTools" | "riskDangerousDefaultEnabled" | "mcpServers"
 	| "toolsCatalogEnabled" | "toolsCatalogThreshold" | "toolsCatalogTopK" | "toolsCatalogMaxInspect" | "toolsCatalogSemanticFloorZh" | "toolsCatalogSemanticFloorEn"
 	| "toolsCatalogBilingualEnabled" | "toolsCatalogRewriteTimeoutMs" | "toolsCatalogPerLanguageTopK">;
 /** defaults + company + userkey 段:业务默认条数、公司与调用方标识。 */

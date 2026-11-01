@@ -50,11 +50,20 @@ function writeRaw(payload: Record<string, unknown>): void {
  * (实测:沉默客户唤醒报 Unknown column 'c.funnel_stage'、周报报 Data too long for 'digest_date')。
  * 这里按 schema.sql 逐表比对 information_schema:缺列 ADD COLUMN、VARCHAR 长度不够 MODIFY,不改不删。
  */
-async function ensureColumns(p: Pool, schemaSql: string): Promise<string[]> {
+async function ensureColumns(p: Pool, schemaSql: string, dryRun = false): Promise<string[]> {
 	const changes: string[] = [];
+	// 只读自检时先看表在不在:表都不存在的话,逐列比对会把"整张表"误报成一堆缺列
+	const [tableRows] = (await (p as unknown as { query: (o: unknown) => Promise<[Array<Record<string, unknown>>, unknown]> }).query({
+		sql: "SELECT TABLE_NAME AS name FROM information_schema.tables WHERE table_schema = DATABASE()",
+	})) as [Array<Record<string, unknown>>, unknown];
+	const existingTables = new Set(tableRows.map((r) => String(r.name ?? "").toLowerCase()));
 	const blocks = [...schemaSql.matchAll(/CREATE TABLE IF NOT EXISTS\s+`?([a-zA-Z_]+)`?\s*\(([\s\S]*?)\n\)\s*ENGINE/gi)];
 	for (const block of blocks) {
 		const table = block[1];
+		if (!existingTables.has(table.toLowerCase())) {
+			changes.push(`${table}(缺表)`);
+			continue;
+		}
 		const defs = new Map<string, string>();
 		for (const rawLine of block[2].split("\n")) {
 			const line = rawLine.trim().replace(/,$/, "");
@@ -77,13 +86,13 @@ async function ensureColumns(p: Pool, schemaSql: string): Promise<string[]> {
 			const have = existing.get(name.toLowerCase());
 			if (!have) {
 				const safe = /DEFAULT/i.test(ddl) ? ddl : ddl.replace(/\s+NOT NULL/i, "");
-				await (p as unknown as { query: (o: unknown) => Promise<unknown> }).query({ sql: `ALTER TABLE \`${table}\` ADD COLUMN ${safe}` });
-				changes.push(`${table}.${name}(新增)`);
+				if (!dryRun) await (p as unknown as { query: (o: unknown) => Promise<unknown> }).query({ sql: `ALTER TABLE \`${table}\` ADD COLUMN ${safe}` });
+				changes.push(`${table}.${name}(新增列)`);
 				continue;
 			}
 			const want = ddl.match(/varchar\((\d+)\)/i);
 			if (want && have.len > 0 && Number(want[1]) > have.len) {
-				await (p as unknown as { query: (o: unknown) => Promise<unknown> }).query({ sql: `ALTER TABLE \`${table}\` MODIFY COLUMN ${ddl}` });
+				if (!dryRun) await (p as unknown as { query: (o: unknown) => Promise<unknown> }).query({ sql: `ALTER TABLE \`${table}\` MODIFY COLUMN ${ddl}` });
 				changes.push(`${table}.${name}(列宽 ${have.len}→${want[1]})`);
 				continue;
 			}
@@ -96,11 +105,11 @@ async function ensureColumns(p: Pool, schemaSql: string): Promise<string[]> {
 			const haveRank = textRank[have.type] ?? 0;
 			const wantRank = wantText ? textRank[wantText[1].toLowerCase()] ?? 0 : 0;
 			if (wantRank > haveRank && haveRank > 0) {
-				await (p as unknown as { query: (o: unknown) => Promise<unknown> }).query({ sql: `ALTER TABLE \`${table}\` MODIFY COLUMN ${ddl}` });
+				if (!dryRun) await (p as unknown as { query: (o: unknown) => Promise<unknown> }).query({ sql: `ALTER TABLE \`${table}\` MODIFY COLUMN ${ddl}` });
 				changes.push(`${table}.${name}(类型 ${have.type}→${wantText![1].toLowerCase()})`);
 			}
 		}
-		changes.push(...(await ensureIndexes(p, table, block[2])));
+		changes.push(...(await ensureIndexes(p, table, block[2], dryRun)));
 		// 主键变更不自动执行:只告警并指向迁移脚本
 		const pkNotice = await primaryKeyNotice(p, table, block[2]);
 		if (pkNotice) changes.push(pkNotice);
@@ -128,10 +137,12 @@ async function primaryKeyNotice(p: Pool, table: string, body: string): Promise<s
 	})) as [Array<Record<string, unknown>>, unknown];
 	const haveCols = rows.map((r) => String(r.col).toLowerCase());
 	if (haveCols.join(",") === wantCols.join(",")) return null;
+	// 线上主键多带一列(如分区要求把 created_at 并进主键)也算达标:只要期望的列是前缀即可
+	if (wantCols.every((c, i) => haveCols[i] === c)) return null;
 	return `${table}(主键 ${haveCols.join("+") || "无"} → ${wantCols.join("+")},需按 scripts/mysql-pk-rebuild.sql 迁移)`;
 }
 
-async function ensureIndexes(p: Pool, table: string, body: string): Promise<string[]> {
+async function ensureIndexes(p: Pool, table: string, body: string, dryRun = false): Promise<string[]> {
 	const changes: string[] = [];
 	const wanted = new Map<string, { unique: boolean; cols: string[]; ddl: string }>();
 	for (const rawLine of body.split("\n")) {
@@ -171,8 +182,8 @@ async function ensureIndexes(p: Pool, table: string, body: string): Promise<stri
 	for (const [sig, def] of wanted) {
 		const wantSig = `${def.unique ? "u" : "n"}:${sig}`;
 		if (existingSig.has(wantSig)) continue;
-		await (p as unknown as { query: (o: unknown) => Promise<unknown> }).query({ sql: `ALTER TABLE \`${table}\` ADD ${def.ddl}` });
-		changes.push(`${table}.[${sig}](补索引)`);
+		if (!dryRun) await (p as unknown as { query: (o: unknown) => Promise<unknown> }).query({ sql: `ALTER TABLE \`${table}\` ADD ${def.ddl}` });
+		changes.push(`${table}.[${sig}](${def.unique ? "缺唯一索引" : "缺索引"})`);
 	}
 	return changes;
 }
@@ -198,20 +209,30 @@ parentPort!.on("message", async (msg: any) => {
 			// 查询池:multipleStatements=false —— 就算策略层漏了一条,驱动也不会把 `a; b` 当两条执行
 			pool = mysql.createPool({ ...baseOptions, multipleStatements: false });
 			await (pool as unknown as { query: (o: { sql: string }) => Promise<unknown> }).query({ sql: "SET sql_mode = CONCAT(@@sql_mode, ',PIPES_AS_CONCAT')" });
+			// autoMigrate=false:只做只读结构自检(GET 信息只读 information_schema),给最小权限账号用
+			const dryRun = msg.autoMigrate === false;
+			let structureChanges: string[] = [];
 			if (msg.schemaSql) {
-				// 建表池:允许一次执行整份 schema.sql(含多条 CREATE),用完即关
-				schemaPool = mysql.createPool({ ...baseOptions, multipleStatements: true });
-				if (msg.forceRebuild) {
-					const tableNames = [...msg.schemaSql.matchAll(/CREATE TABLE IF NOT EXISTS\s+([^\s(]+)/gi)].map((m: RegExpMatchArray) => m[1]);
-					const drops = tableNames.map((t: string) => `DROP TABLE IF EXISTS \`${t.replace(/`/g, "")}\``).join("; ");
-					await (schemaPool as unknown as { query: (o: { sql: string }) => Promise<unknown> }).query({ sql: drops });
+				if (dryRun) {
+					structureChanges = await ensureColumns(pool, String(msg.schemaSql), true);
+					if (structureChanges.length > 0) {
+						console.warn(`[mysql] 结构自检发现 ${structureChanges.length} 项与 schema 不一致(不会自动执行,需按 scripts/ 下的脚本处理): ${structureChanges.join(", ")}`);
+					}
+				} else {
+					// 建表池:允许一次执行整份 schema.sql(含多条 CREATE),用完即关
+					schemaPool = mysql.createPool({ ...baseOptions, multipleStatements: true });
+					if (msg.forceRebuild) {
+						const tableNames = [...msg.schemaSql.matchAll(/CREATE TABLE IF NOT EXISTS\s+([^\s(]+)/gi)].map((m: RegExpMatchArray) => m[1]);
+						const drops = tableNames.map((t: string) => `DROP TABLE IF EXISTS \`${t.replace(/`/g, "")}\``).join("; ");
+						await (schemaPool as unknown as { query: (o: { sql: string }) => Promise<unknown> }).query({ sql: drops });
+					}
+					await (schemaPool as unknown as { query: (o: { sql: string }) => Promise<unknown> }).query({ sql: msg.schemaSql });
+					structureChanges = await ensureColumns(schemaPool, String(msg.schemaSql), false);
+					if (structureChanges.length > 0) console.warn(`[mysql] 启动结构变更 ${structureChanges.length} 项: ${structureChanges.join(", ")}`);
 				}
-				await (schemaPool as unknown as { query: (o: { sql: string }) => Promise<unknown> }).query({ sql: msg.schemaSql });
 			}
-			const addedColumns = msg.schemaSql && schemaPool ? await ensureColumns(schemaPool, String(msg.schemaSql)) : [];
-			if (addedColumns.length > 0) console.warn(`[mysql] 启动补列 ${addedColumns.length} 个: ${addedColumns.join(", ")}`);
 			if (schemaPool) { await schemaPool.end().catch(() => undefined); schemaPool = null; }
-			writeResult("ok", { init: true, addedColumns });
+			writeResult("ok", { init: true, addedColumns: structureChanges, autoMigrate: !dryRun });
 			return;
 		}
 		if (msg.kind === "run") {

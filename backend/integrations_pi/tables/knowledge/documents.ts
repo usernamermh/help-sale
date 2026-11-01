@@ -153,7 +153,7 @@ export function searchKnowledge(db: DatabaseSync, tenantId: string, query: strin
 					        kc.content, snippet(knowledge_chunks_fts, 2, '【', '】', '…', 20) AS snippet
 					 FROM knowledge_chunks_fts f
 					 JOIN knowledge_chunks kc ON kc.id = f.chunk_id
-					 JOIN knowledge_documents kd ON kd.id = kc.document_id
+					 JOIN knowledge_documents kd ON kd.id = kc.document_id AND kd.tenant_id = kc.tenant_id
 					 WHERE f.tenant_id = ? AND knowledge_chunks_fts MATCH ?
 					 ORDER BY f.rank`,
 				)
@@ -165,7 +165,7 @@ export function searchKnowledge(db: DatabaseSync, tenantId: string, query: strin
 					`SELECT kc.id AS chunkId, kc.document_id AS documentId, kd.title, kc.chunk_index AS chunkIndex,
 					        kc.content, substr(kc.content, 1, 80) || '…' AS snippet
 					 FROM knowledge_chunks kc
-					 JOIN knowledge_documents kd ON kd.id = kc.document_id
+					 JOIN knowledge_documents kd ON kd.id = kc.document_id AND kd.tenant_id = kc.tenant_id
 					 WHERE kc.tenant_id = ? AND kc.content LIKE ?
 					 LIMIT ?`,
 				)
@@ -182,7 +182,7 @@ export function searchKnowledge(db: DatabaseSync, tenantId: string, query: strin
 			`SELECT kc.id AS chunkId, kc.document_id AS documentId, kd.title, kd.category AS category, kc.chunk_index AS chunkIndex,
 			        kc.content, substr(kc.content, 1, 80) || '…' AS snippet
 			 FROM knowledge_chunks kc
-			 JOIN knowledge_documents kd ON kd.id = kc.document_id
+			 JOIN knowledge_documents kd ON kd.id = kc.document_id AND kd.tenant_id = kc.tenant_id
 			 WHERE kc.tenant_id = ? AND kc.content LIKE ?
 			 LIMIT ?`,
 		)

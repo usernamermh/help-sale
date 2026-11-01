@@ -47,7 +47,7 @@ export function collectDigest(db: DatabaseSync, input: { tenantId: string; now?:
 		.prepare(
 			`SELECT t.id, t.action, t.due_at, t.status, c.key AS customer_key, c.name AS customer_name
 			 FROM next_step_tasks t
-			 LEFT JOIN customers c ON c.id = t.customer_id
+			 LEFT JOIN customers c ON c.id = t.customer_id AND c.tenant_id = t.tenant_id
 			 WHERE t.tenant_id = ? AND t.status = 'pending'
 			 ORDER BY (t.due_at IS NULL), t.due_at ASC`,
 		)

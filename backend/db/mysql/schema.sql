@@ -494,3 +494,4 @@ CREATE TABLE IF NOT EXISTS weixin_threads (
 	KEY idx_wxt_tenant (tenant_id, openid, last_active_at),
 	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ CREATE TABLE IF NOT EXISTS users ( 	id VARCHAR(64) NOT NULL, 	tenant_id VARCHAR(64) NOT NULL, 	username VARCHAR(64) NOT NULL, 	password_hash VARCHAR(255) NOT NULL, 	role VARCHAR(32) NOT NULL DEFAULT 'member', 	enabled TINYINT NOT NULL DEFAULT 1, 	created_at VARCHAR(40) NOT NULL DEFAULT '', 	updated_at VARCHAR(40) NOT NULL DEFAULT '', 	UNIQUE KEY uq_users_tenant_username (tenant_id, username), 	KEY idx_users_tenant_role (tenant_id, role), 	PRIMARY KEY (tenant_id, id) ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

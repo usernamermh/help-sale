@@ -9,7 +9,7 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { SYSTEM_SCOPE_MARK } from "./tenant-guard.js";
+import { inspectTenantScope, SYSTEM_SCOPE_MARK } from "./tenant-guard.js";
 
 export interface SqlFinding {
 	file: string;
@@ -62,15 +62,13 @@ export function auditSqlSource(source: string, options: AuditOptions): SqlFindin
 		const dynamic = literal.includes("${");
 		const systemScoped = literal.includes(SYSTEM_SCOPE_MARK);
 		const ddl = /^\s*(CREATE|ALTER|DROP|PRAGMA|TRIGGER)\b/i.test(literal);
-		// 表名只认"表位置":出现在字符串字面量里的表名(如 sqlite_master 探测)不算引用
-		const referenced = [...literal.matchAll(TABLE_REF)].map((m) => m[1].toLowerCase());
-		const businessTables = [...new Set(referenced.filter((name) => !known.has(name) ? false : !internal.has(name) && Object.keys(options.tables).some((key) => key.toLowerCase() === name || String(options.tables[key]).toLowerCase() === name)))];
-		const hasTenantPredicate = /\btenant_id\b/.test(literal);
-		if (!dynamic && !systemScoped && !ddl && businessTables.length > 0 && !hasTenantPredicate) {
+		// 逐表判定:与运行时守卫同一套规则(每张业务表都要有自己的租户谓词)
+		const scope = inspectTenantScope(literal, options.tables);
+		if (!dynamic && !systemScoped && !ddl && scope.uncovered.length > 0) {
 			findings.push({
 				file,
 				kind: "missing-tenant",
-				detail: `涉及业务表 ${businessTables.join("/")} 但没有 tenant_id 谓词`,
+				detail: `涉及业务表 ${scope.uncovered.join("/")} 但没有各自的租户谓词(tenant_id)`,
 				snippet,
 			});
 		}

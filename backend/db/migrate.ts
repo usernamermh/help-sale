@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 41;
+export const MIGRATION_VERSION = 42;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -264,6 +264,21 @@ export function migrate(db: DatabaseSync): void {
 		);`);
 		db.exec("CREATE INDEX IF NOT EXISTS idx_ke_tenant ON knowledge_embeddings (tenant_id, document_id);");
 		db.exec("CREATE INDEX IF NOT EXISTS idx_ke_tenant_chunk ON knowledge_embeddings (tenant_id, chunk_id);");
+	}
+	// v42:登录账号(users)—— 租户内唯一用户名 + 角色,密码只存 scrypt 摘要
+	if (current.user_version < 42) {
+		db.exec(`CREATE TABLE IF NOT EXISTS users (
+			id TEXT PRIMARY KEY,
+			tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+			username TEXT NOT NULL,
+			password_hash TEXT NOT NULL,
+			role TEXT NOT NULL DEFAULT 'member',
+			enabled INTEGER NOT NULL DEFAULT 1,
+			created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+			updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+			UNIQUE (tenant_id, username)
+		);`);
+		db.exec("CREATE INDEX IF NOT EXISTS idx_users_tenant_role ON users (tenant_id, role);");
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }

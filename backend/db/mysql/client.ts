@@ -48,6 +48,8 @@ export class SyncMysqlDb {
 			/** 查询连接池大小(mysql.connectionLimit) */
 			connectionLimit?: number;
 			forceRebuild?: boolean;
+			/** 启动时是否允许自动做结构变更(mysql.autoMigrate):false 时只做只读结构自检 */
+			autoMigrate?: boolean;
 			timeoutMs?: number;
 			/** 单条查询超时(毫秒),来自配置 tools.sql.timeoutMs */
 			queryTimeoutMs?: number;
@@ -96,6 +98,7 @@ export class SyncMysqlDb {
 			schemaSql: opts.schemaSql,
 			connectionLimit: opts.connectionLimit,
 			forceRebuild: opts.forceRebuild === true,
+			autoMigrate: opts.autoMigrate !== false,
 		};
 		this.worker.postMessage(init);
 		this.ensureReady();
@@ -197,6 +200,9 @@ export class SyncMysqlDb {
  * 创建 MySQL 业务库实例:按 data.mode=mysql 读取 config.mysql.*,若表未建则执行 schema.sql 建表。
  */
 export function createSyncMysqlDb(): SyncMysqlDb {
+	if (config.mysqlSchemaRebuild && !config.mysqlAutoMigrate) {
+		throw new Error("mysql.schemaRebuild=true 需要 mysql.autoMigrate=true(重建表本身就是结构变更);否则请把 schemaRebuild 关掉");
+	}
 	const schemaSql = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql"), "utf8");
 	return new SyncMysqlDb({
 		host: config.mysqlHost,
@@ -207,6 +213,7 @@ export function createSyncMysqlDb(): SyncMysqlDb {
 		schemaSql,
 		connectionLimit: config.mysqlConnectionLimit,
 		forceRebuild: config.mysqlSchemaRebuild,
+		autoMigrate: config.mysqlAutoMigrate,
 		queryTimeoutMs: config.mysqlQueryTimeoutMs,
 	});
 }
