@@ -223,7 +223,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	// 外部 MCP 工具列表:启动就预热,之后在缓存过期前后台续期,别让用户消息等外部握手
 	const stopMcpWarmup = startMcpToolWarmup(config.mcpServers);
 	// 微信通道(iLink 机器人):扫码登录、长轮询收消息、agent 回复;未启用时只挂状态接口
-	const stopWeixin = registerWeixin(app, { db, dataDir, store, runtime: options.runtime, streamFn: options.streamFn, quota, isLeader: () => cluster.isLeader("weixin-poller") });
+	const stopWeixin = registerWeixin(app, { db, dataDir, store, runtime: options.runtime, streamFn: options.streamFn, quota, isLeader: (tenantId: string) => cluster.isLeader("weixin-poller:" + tenantId) });
 
 	app.addHook("onResponse", async (request, reply) => {
 		if (!request.url.startsWith("/api/")) return;

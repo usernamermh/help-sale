@@ -457,6 +457,20 @@ tools:
 - 外部工具元数据**含中文会打告警**:这类工具会被判为 `description_language=zh`,只参与中文那一路召回;
 - 长尾工具(MCP + 工作流)超过 `tools.catalog.threshold` 时按需取用:模型先用 `search_tools` 检索候选,再 `get_tool_details` 取参数,最后 `call_tool` 执行。
 
+## 按门店登录(一店一个机器人)
+
+账号凭据、同步游标、`context_token`、去重窗口全部按门店分槽(`data/weixin/tenants/<门店>/`),每个门店一个轮询循环;多实例下**按门店各自选主**(锁键 `weixin-poller:<门店>`),同一个游标不会被两个进程抢。
+
+| 谁 | 接口 | 作用 |
+| --- | --- | --- |
+| 门店 | `GET/POST /api/v1/weixin/login` + `GET /api/v1/weixin/login/:id` | 本店扫码登录(拿二维码 → 轮询状态) |
+| 门店 | `GET /api/v1/weixin/status` | 本店机器人的登录/轮询/最近错误 |
+| 门店 | `POST /api/v1/weixin/logout` | 退出本店登录(清掉本店凭据,需重新扫码) |
+| 门店 | `POST /api/v1/weixin/send`、`GET /api/v1/weixin/users|messages`、`POST /api/v1/weixin/bind` | 本店的发信、审计与联系人绑定(带 `tenant_id`) |
+| 总部 | `GET /api/v1/platform/weixin` | 各门店登录状态汇总(只有状态:谁登了、谁掉线,不看消息内容) |
+
+**一个门店同时只保留一个登录账号**:再登录就是换账号(覆盖旧凭据),这样消息来源唯一、回复一定从"联系人刚才说话的那个账号"发出。老部署的单账号状态(`data/weixin/account.json`)在首次启动时会自动迁移到 `weixin.tenantId` 那个门店的槽位。
+
 # 微信接入(iLink 机器人)
 
 `3party/weixin` 把微信接到同一条 agent 链路上:扫码登录一个 iLink 机器人账号,长轮询收微信消息,跑一轮 agent,再把回答发回微信。收发都走 `ilink/bot/*` 协议,不依赖公众号后台配置。

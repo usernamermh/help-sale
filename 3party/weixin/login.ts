@@ -22,6 +22,8 @@ export interface LoginTicket {
 
 export interface LoginManagerOptions {
 	dataDir: string;
+	/** 门店租户:登录成功后账号凭据落到该门店的状态槽 */
+	tenantId?: string;
 	baseUrl: string;
 	botType: string;
 	/** 单个 HTTP 请求超时 */
@@ -122,7 +124,7 @@ export function createLoginManager(options: LoginManagerOptions): LoginManager {
 					userId: String(response.ilink_user_id ?? "").trim(),
 					savedAt: new Date(now()).toISOString(),
 				};
-				writeAccount(options.dataDir, account);
+				writeAccount(options.dataDir, account, options.tenantId);
 				ticket.status = "confirmed";
 				ticket.accountId = accountId;
 				ticket.baseUrl = account.baseUrl;
