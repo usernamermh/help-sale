@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS tenants (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS customers (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	`key` VARCHAR(255) NOT NULL,
 	name VARCHAR(255),
@@ -23,33 +23,36 @@ CREATE TABLE IF NOT EXISTS customers (
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	updated_at VARCHAR(40) NOT NULL DEFAULT '',
 	UNIQUE KEY uq_customers_tenant_key (tenant_id, `key`),
-	KEY idx_customers_tenant (tenant_id, updated_at)
+	KEY idx_customers_tenant (tenant_id, updated_at),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS knowledge_documents (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	title VARCHAR(500) NOT NULL,
 	source_type VARCHAR(32) NOT NULL DEFAULT 'text',
 	content MEDIUMTEXT NOT NULL,
 	category VARCHAR(128),
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
-	KEY idx_kd_category (tenant_id, category)
+	KEY idx_kd_category (tenant_id, category),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS knowledge_chunks (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	document_id VARCHAR(64) NOT NULL,
 	chunk_index INT NOT NULL,
 	content MEDIUMTEXT NOT NULL,
 	KEY idx_kc_doc (tenant_id, document_id),
-	FULLTEXT KEY ft_kc_content (content) WITH PARSER ngram
+	FULLTEXT KEY ft_kc_content (content) WITH PARSER ngram,
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
 CREATE TABLE IF NOT EXISTS next_step_tasks (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	customer_id VARCHAR(64) NOT NULL,
 	analysis_id VARCHAR(64),
@@ -60,11 +63,12 @@ CREATE TABLE IF NOT EXISTS next_step_tasks (
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	completed_at VARCHAR(40),
 	KEY idx_tasks_due (tenant_id, status, due_at),
-	KEY idx_tasks_customer (tenant_id, customer_id, created_at)
+	KEY idx_tasks_customer (tenant_id, customer_id, created_at),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS digests (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	digest_date VARCHAR(64) NOT NULL,
 	title VARCHAR(500) NOT NULL,
@@ -72,11 +76,12 @@ CREATE TABLE IF NOT EXISTS digests (
 	stats_json MEDIUMTEXT NOT NULL,
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	UNIQUE KEY uq_digests_date (tenant_id, digest_date),
-	KEY idx_digests_created (tenant_id, created_at)
+	KEY idx_digests_created (tenant_id, created_at),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS knowledge_candidates (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	analysis_id VARCHAR(64) NOT NULL,
 	intent VARCHAR(128) NOT NULL,
@@ -91,11 +96,12 @@ CREATE TABLE IF NOT EXISTS knowledge_candidates (
 	status VARCHAR(16) NOT NULL DEFAULT 'pending',
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	approved_at VARCHAR(40),
-	KEY idx_kc_status (tenant_id, status, created_at)
+	KEY idx_kc_status (tenant_id, status, created_at),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS agent_events (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	conversation_id VARCHAR(64) NOT NULL,
 	thread_id VARCHAR(64),
@@ -105,11 +111,12 @@ CREATE TABLE IF NOT EXISTS agent_events (
 	payload_json MEDIUMTEXT,
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	KEY idx_agent_events_conv (tenant_id, conversation_id, seq),
-	KEY idx_agent_events_created (tenant_id, created_at)
+	KEY idx_agent_events_created (tenant_id, created_at),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS customer_tags (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	customer_id VARCHAR(64) NOT NULL,
 	tag VARCHAR(128) NOT NULL,
@@ -119,22 +126,24 @@ CREATE TABLE IF NOT EXISTS customer_tags (
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	updated_at VARCHAR(40),
 	UNIQUE KEY uq_ct (tenant_id, customer_id, tag),
-	KEY idx_ct_customer (tenant_id, customer_id, weight)
+	KEY idx_ct_customer (tenant_id, customer_id, weight),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS notification_logs (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	channel VARCHAR(32) NOT NULL DEFAULT 'webhook',
 	title VARCHAR(500) NOT NULL,
 	content_json MEDIUMTEXT NOT NULL,
 	status VARCHAR(16) NOT NULL DEFAULT 'sent',
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
-	KEY idx_nl_tenant (tenant_id, created_at)
+	KEY idx_nl_tenant (tenant_id, created_at),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS conversations (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	customer_id VARCHAR(64),
 	sales_name VARCHAR(255) NOT NULL DEFAULT '默认销售',
@@ -146,27 +155,30 @@ CREATE TABLE IF NOT EXISTS conversations (
 	message_count INT NOT NULL DEFAULT 0,
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	updated_at VARCHAR(40) NOT NULL DEFAULT '',
-	KEY idx_conv_tenant (tenant_id, updated_at)
+	KEY idx_conv_tenant (tenant_id, updated_at),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS agent_threads (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	title VARCHAR(500) NOT NULL DEFAULT '',
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	updated_at VARCHAR(40) NOT NULL DEFAULT '',
-	KEY idx_at_tenant (tenant_id, updated_at)
+	KEY idx_at_tenant (tenant_id, updated_at),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS agent_thread_messages (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	thread_id VARCHAR(64) NOT NULL,
 	seq INT NOT NULL,
 	role VARCHAR(16) NOT NULL,
 	content_json MEDIUMTEXT NOT NULL,
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
-	KEY idx_atm_thread (tenant_id, thread_id, seq)
+	KEY idx_atm_thread (tenant_id, thread_id, seq),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS agent_capabilities (
@@ -178,7 +190,7 @@ CREATE TABLE IF NOT EXISTS agent_capabilities (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS workflows (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	name VARCHAR(255) NOT NULL,
 	description VARCHAR(500) NOT NULL DEFAULT '',
@@ -191,11 +203,12 @@ CREATE TABLE IF NOT EXISTS workflows (
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	updated_at VARCHAR(40) NOT NULL DEFAULT '',
 	KEY idx_wf_tenant (tenant_id, updated_at),
-	KEY idx_wf_sig (tenant_id, source_signature)
+	KEY idx_wf_sig (tenant_id, source_signature),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS workflow_runs (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	workflow_id VARCHAR(64) NOT NULL,
 	status VARCHAR(16) NOT NULL DEFAULT 'running',
@@ -204,11 +217,12 @@ CREATE TABLE IF NOT EXISTS workflow_runs (
 	error TEXT,
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	completed_at VARCHAR(40),
-	KEY idx_wfr_wf (tenant_id, workflow_id, created_at)
+	KEY idx_wfr_wf (tenant_id, workflow_id, created_at),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS knowledge_embeddings (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	document_id VARCHAR(64) NOT NULL,
 	chunk_id VARCHAR(64) NOT NULL,
@@ -218,31 +232,34 @@ CREATE TABLE IF NOT EXISTS knowledge_embeddings (
 	vector_json MEDIUMTEXT NOT NULL,
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	UNIQUE KEY uq_ke_tenant_chunk (tenant_id, chunk_id),
-	KEY idx_ke_tenant (tenant_id, document_id)
+	KEY idx_ke_tenant (tenant_id, document_id),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS stores (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	name VARCHAR(255) NOT NULL,
 	address VARCHAR(500),
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
-	KEY idx_stores_tenant (tenant_id, name)
+	KEY idx_stores_tenant (tenant_id, name),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS sales (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	store_id VARCHAR(64),
 	name VARCHAR(255) NOT NULL,
 	phone VARCHAR(32),
 	role VARCHAR(16) NOT NULL DEFAULT 'sales',
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
-	KEY idx_sales_tenant (tenant_id, store_id, role)
+	KEY idx_sales_tenant (tenant_id, store_id, role),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS conversation_messages (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	conversation_id VARCHAR(64) NOT NULL,
 	seq INT NOT NULL,
@@ -251,11 +268,12 @@ CREATE TABLE IF NOT EXISTS conversation_messages (
 	content TEXT NOT NULL,
 	spoken_at VARCHAR(40),
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
-	KEY idx_cm_conv (tenant_id, conversation_id, seq)
+	KEY idx_cm_conv (tenant_id, conversation_id, seq),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS deals (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	store_id VARCHAR(64),
 	sales_id VARCHAR(64),
@@ -266,11 +284,12 @@ CREATE TABLE IF NOT EXISTS deals (
 	status VARCHAR(16) NOT NULL DEFAULT 'closed',
 	dealed_at VARCHAR(40) NOT NULL DEFAULT '',
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
-	KEY idx_deals_tenant (tenant_id, store_id, dealed_at)
+	KEY idx_deals_tenant (tenant_id, store_id, dealed_at),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS tool_call_cache (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	tool_name VARCHAR(128) NOT NULL,
 	cache_key VARCHAR(128) NOT NULL,
@@ -279,12 +298,13 @@ CREATE TABLE IF NOT EXISTS tool_call_cache (
 	last_used_at VARCHAR(40),
 	UNIQUE KEY uq_tcc (tenant_id, tool_name, cache_key),
 	KEY idx_tcc_tenant (tenant_id, tool_name),
-	KEY idx_tcc_last_used (tenant_id, last_used_at)
+	KEY idx_tcc_last_used (tenant_id, last_used_at),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 由 SQLite schema 转换补建(看板/关键字/定时任务/反思/计划/摘要等)
 CREATE TABLE IF NOT EXISTS agent_plans (
-  id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	run_id VARCHAR(255) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	thread_id VARCHAR(255),
@@ -295,11 +315,12 @@ CREATE TABLE IF NOT EXISTS agent_plans (
 	verification_json MEDIUMTEXT,
 	created_at VARCHAR(255) NOT NULL DEFAULT '',
 	updated_at VARCHAR(255) NOT NULL DEFAULT '',
-  KEY idx_ap_run (tenant_id, run_id)
+  KEY idx_ap_run (tenant_id, run_id),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS automation_jobs (
-  id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	name VARCHAR(255) NOT NULL,
 	schedule_type VARCHAR(255) NOT NULL DEFAULT 'daily',
@@ -311,11 +332,12 @@ CREATE TABLE IF NOT EXISTS automation_jobs (
 	enabled INT NOT NULL DEFAULT 1,
 	created_at VARCHAR(255) NOT NULL DEFAULT '',
 	updated_at VARCHAR(255) NOT NULL DEFAULT '',
-  KEY idx_aj_tenant (tenant_id, enabled, schedule_type)
+  KEY idx_aj_tenant (tenant_id, enabled, schedule_type),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS automation_runs (
-  id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	job_type VARCHAR(255) NOT NULL,
 	run_date VARCHAR(255) NOT NULL,
@@ -323,20 +345,22 @@ CREATE TABLE IF NOT EXISTS automation_runs (
 	summary VARCHAR(255),
 	detail_json MEDIUMTEXT,
 	created_at VARCHAR(255) NOT NULL DEFAULT '',
-  KEY idx_ar_tenant (tenant_id, job_type, run_date DESC)
+  KEY idx_ar_tenant (tenant_id, job_type, run_date DESC),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS builtin_job_settings (
-  id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	job_key VARCHAR(255) NOT NULL,
 	enabled INT NOT NULL DEFAULT 1,
 	updated_at VARCHAR(255) NOT NULL DEFAULT '',
-	UNIQUE (tenant_id, job_key)
+	UNIQUE (tenant_id, job_key),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS kanban_cards (
-  id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	thread_id VARCHAR(255) NOT NULL,
 	title VARCHAR(255) NOT NULL,
@@ -352,11 +376,12 @@ CREATE TABLE IF NOT EXISTS kanban_cards (
 	attempts INT NOT NULL DEFAULT 0,
 	created_at VARCHAR(255) NOT NULL DEFAULT '',
 	updated_at VARCHAR(255) NOT NULL DEFAULT '',
-  KEY idx_kanban_thread (tenant_id, thread_id, status)
+  KEY idx_kanban_thread (tenant_id, thread_id, status),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS keyword_categories (
-  id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	parent_id VARCHAR(64),
 	name VARCHAR(255) NOT NULL,
@@ -364,11 +389,12 @@ CREATE TABLE IF NOT EXISTS keyword_categories (
 	created_at VARCHAR(255) NOT NULL DEFAULT '',
 	updated_at VARCHAR(255) NOT NULL DEFAULT '',
 	UNIQUE (tenant_id, parent_id, name),
-  KEY idx_kc_parent (tenant_id, parent_id)
+  KEY idx_kc_parent (tenant_id, parent_id),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS keyword_hits (
-  id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	keyword_id VARCHAR(64) NOT NULL,
 	conversation_id VARCHAR(255),
@@ -377,11 +403,12 @@ CREATE TABLE IF NOT EXISTS keyword_hits (
 	customer_name VARCHAR(255),
 	created_at VARCHAR(255) NOT NULL DEFAULT '',
 	UNIQUE KEY uq_kh_keyword_conv (tenant_id, keyword_id, conversation_id),
-  KEY idx_kh_keyword (tenant_id, keyword_id, created_at DESC)
+  KEY idx_kh_keyword (tenant_id, keyword_id, created_at DESC),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS keywords (
-  id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	keyword VARCHAR(255) NOT NULL,
 	category VARCHAR(255),
@@ -393,33 +420,36 @@ CREATE TABLE IF NOT EXISTS keywords (
 	created_at VARCHAR(255) NOT NULL DEFAULT '',
 	updated_at VARCHAR(255) NOT NULL DEFAULT '',
 	UNIQUE (tenant_id, keyword),
-  KEY idx_keywords_tenant (tenant_id, keyword)
+  KEY idx_keywords_tenant (tenant_id, keyword),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS reflection_cases (
-  id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	case_type VARCHAR(255) NOT NULL,
 	ref_id VARCHAR(255),
 	detail_json MEDIUMTEXT,
 	created_at VARCHAR(255) NOT NULL DEFAULT '',
   KEY idx_rc_tenant (tenant_id, case_type, created_at DESC),
-  KEY idx_rc_created (tenant_id, created_at)
+  KEY idx_rc_created (tenant_id, created_at),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS thread_summaries (
-  id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	thread_id VARCHAR(255) NOT NULL,
 	summary MEDIUMTEXT NOT NULL,
 	message_seq_until INT NOT NULL DEFAULT 0,
 	created_at VARCHAR(255) NOT NULL DEFAULT '',
 	updated_at VARCHAR(255) NOT NULL DEFAULT '',
-	UNIQUE (tenant_id, thread_id)
+	UNIQUE (tenant_id, thread_id),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS weixin_users (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	openid VARCHAR(128) NOT NULL,
 	nickname VARCHAR(255),
@@ -430,11 +460,12 @@ CREATE TABLE IF NOT EXISTS weixin_users (
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	UNIQUE KEY uq_wxu_tenant_openid (tenant_id, openid),
 	KEY idx_wxu_tenant (tenant_id, last_active_at),
-	KEY idx_wxu_thread (tenant_id, thread_id)
+	KEY idx_wxu_thread (tenant_id, thread_id),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS weixin_messages (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	openid VARCHAR(128) NOT NULL,
 	direction VARCHAR(16) NOT NULL,
@@ -447,11 +478,12 @@ CREATE TABLE IF NOT EXISTS weixin_messages (
 	error TEXT,
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	KEY idx_wxm_tenant (tenant_id, created_at),
-	KEY idx_wxm_msgid (tenant_id, direction, message_id)
+	KEY idx_wxm_msgid (tenant_id, direction, message_id),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS weixin_threads (
-	id VARCHAR(64) PRIMARY KEY,
+	id VARCHAR(64) NOT NULL,
 	tenant_id VARCHAR(64) NOT NULL,
 	openid VARCHAR(128) NOT NULL,
 	thread_id VARCHAR(64) NOT NULL,
@@ -459,5 +491,6 @@ CREATE TABLE IF NOT EXISTS weixin_threads (
 	last_active_at VARCHAR(40),
 	created_at VARCHAR(40) NOT NULL DEFAULT '',
 	UNIQUE KEY uq_wxt_owner (tenant_id, openid, thread_id),
-	KEY idx_wxt_tenant (tenant_id, openid, last_active_at)
+	KEY idx_wxt_tenant (tenant_id, openid, last_active_at),
+	PRIMARY KEY (tenant_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

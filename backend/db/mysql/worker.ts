@@ -101,6 +101,9 @@ async function ensureColumns(p: Pool, schemaSql: string): Promise<string[]> {
 			}
 		}
 		changes.push(...(await ensureIndexes(p, table, block[2])));
+		// 主键变更不自动执行:只告警并指向迁移脚本
+		const pkNotice = await primaryKeyNotice(p, table, block[2]);
+		if (pkNotice) changes.push(pkNotice);
 	}
 	return changes;
 }
@@ -110,6 +113,24 @@ async function ensureColumns(p: Pool, schemaSql: string): Promise<string[]> {
  * **按列组合**判断是否已存在(不依赖索引名,兼容 MySQL 自动命名的 UNIQUE(col1,col2))。
  * ADD INDEX 在 MySQL 8 是 online 操作,且幂等,所以放进启动自愈是安全的。
  */
+/**
+ * 主键体检:多列主键(如 (tenant_id, id))不自动改 —— 重建表代价大,
+ * 只返回告警文本,由运维按 scripts/mysql-pk-rebuild.sql 在维护窗口执行。
+ */
+async function primaryKeyNotice(p: Pool, table: string, body: string): Promise<string | null> {
+	const want = /PRIMARY KEY\s*\(([^)]*)\)/i.exec(body);
+	if (!want) return null;
+	const wantCols = want[1].split(",").map((c) => c.trim().replace(/`/g, "").toLowerCase()).filter(Boolean);
+	if (wantCols.length < 2) return null;
+	const [rows] = (await (p as unknown as { query: (o: unknown) => Promise<[Array<Record<string, unknown>>, unknown]> }).query({
+		sql: "SELECT COLUMN_NAME AS col FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = 'PRIMARY' ORDER BY SEQ_IN_INDEX",
+		values: [table],
+	})) as [Array<Record<string, unknown>>, unknown];
+	const haveCols = rows.map((r) => String(r.col).toLowerCase());
+	if (haveCols.join(",") === wantCols.join(",")) return null;
+	return `${table}(主键 ${haveCols.join("+") || "无"} → ${wantCols.join("+")},需按 scripts/mysql-pk-rebuild.sql 迁移)`;
+}
+
 async function ensureIndexes(p: Pool, table: string, body: string): Promise<string[]> {
 	const changes: string[] = [];
 	const wanted = new Map<string, { unique: boolean; cols: string[]; ddl: string }>();

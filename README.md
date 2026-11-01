@@ -493,8 +493,8 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 | --- | --- | --- |
 | 分片键 | 34 张业务表全部有 `tenant_id`;业务访问(补完 20 处漏写后)一律是"租户 + 主键"定位 | ✅ **分片前提已满足** —— 任意一条查询都能定位单个分片,不需要跨分片路由 |
 | 跨租户 JOIN | 现有的 JOIN(`customers`/`sales`/`stores`/`conversations`)都在同一租户内;跨租户操作集中在"枚举租户"的循环里 | ✅ 可分片 |
-| 主键 | 34 张表是 `id VARCHAR(64) PRIMARY KEY`,只有 `agent_capabilities` 是 `(tenant_id, name)` 复合主键 | ⚠️ 同租户数据不聚簇:按租户归档要逐行删,随机 UUID 主键还有写放大 |
-| 唯一约束 | 2 处不是租户内唯一(`knowledge_embeddings.chunk_id`、`keyword_hits(keyword_id, conversation_id)`) | ⚠️ 分片后跨分片唯一性无法保证 |
+| 主键 | 33 张租户表与 `agent_capabilities` 都是复合主键(前者 `(tenant_id, id)`,后者 `(tenant_id, capability_name)`),只有全局表 `tenants` 是单列 `id` | ✅ 同租户数据物理聚簇:按租户归档、批量导出、范围删除都能按主键区间做 |
+| 唯一约束 | 2 处原本不是租户内唯一(`knowledge_embeddings.chunk_id`、`keyword_hits(keyword_id, conversation_id)`) | ✅ 本次已改成租户内唯一(见下) |
 | 时间轴索引 | 18 张带 `created_at` 的表缺 `(tenant_id, created_at)` 索引(工作流挖掘、清理、列表都要用) | ⚠️ 本次补了最关键的 4 张 |
 | 长文本列 | 5 个列在 MySQL 侧是 `VARCHAR(255)` 却要存长文本 | ❌ **真实缺陷**:写长内容直接报 `Data too long`(SQLite 侧是 TEXT,所以一直没暴露) |
 
@@ -505,13 +505,21 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 3. **补时间轴索引**:`agent_events`、`digests`、`reflection_cases`、`tool_call_cache`;
 4. **结构自愈升级**:MySQL 启动自愈从"补列/放宽列宽"扩展到**补索引**(按列组合+唯一性比对,幂等)与**类型升级**(VARCHAR → TEXT/MEDIUMTEXT,只升不降);
 5. **索引清理脚本**:`scripts/mysql-index-cleanup.sql`(启动自愈不删索引,要删的走脚本)。
+6. **主键复合化**:33 张租户表主键改 `PRIMARY KEY (tenant_id, id)`,同租户数据物理聚簇(迁移脚本 `scripts/mysql-pk-rebuild.sql`,大表用 gh-ost/pt-osc 跑);
 
 ## 下一步(要真正分片才需要)
 
-1. **主键复合化**:大表(`agent_events`、`weixin_messages`、`conversation_messages`、`knowledge_chunks`)改成 `PRIMARY KEY (tenant_id, id)`,换取同租户聚簇、按租户范围归档、减少写放大 —— 需要重建表,配在线 DDL(gh-ost/pt-osc);
-2. **租户 → 数据源路由**:`config.mysql.*` 现在全局一份;要支持"大租户独立库/实例",需要 `tenantId → 数据源` 路由与每数据源独立连接池(因为每行都有 `tenant_id`,"按租户导出 → 导入专属库"是现成迁移路径);
-3. **类型收敛**:`VARCHAR(255)` 存 `status`/`created_at` 这类短值偏浪费,可在重建时收敛到 32/40;
-4. **分区表**:`agent_events`/`weixin_messages` 按 `created_at` RANGE 分区,历史分区可归档。
+1. **租户 → 数据源路由**:`config.mysql.*` 现在全局一份;要支持"大租户独立库/实例",需要 `tenantId → 数据源` 路由与每数据源独立连接池(因为每行都有 `tenant_id`,"按租户导出 → 导入专属库"是现成迁移路径);
+2. **类型收敛**:`VARCHAR(255)` 存 `status`/`created_at` 这类短值偏浪费,可在重建时收敛到 32/40;
+3. **分区表**:`agent_events`/`weixin_messages` 按 `created_at` RANGE 分区,历史分区可归档。
+
+## 主键与两侧 schema 的差异
+
+- **MySQL 侧**:33 张租户表都是 `PRIMARY KEY (tenant_id, id)` —— 同一租户的数据物理相邻,按租户归档、批量导出、范围删除都走主键区间;`tenants` 是唯一的全局表,保持单列主键;
+- **SQLite 侧**:保持单列 `id` 主键。SQLite 有真实外键(`REFERENCES customers(id)` 等 30+ 处),复合主键会让外键失去唯一目标、建表直接失败;分片只发生在 MySQL,两侧有意不同;
+- **自愈的边界**:启动时自动补列、补索引、放宽列宽、升类型(VARCHAR → TEXT/MEDIUMTEXT),但**不自动重建主键** —— 重建代价太大,改为启动体检 + 日志告警(形如 `表(主键 a → b,需按 scripts/mysql-pk-rebuild.sql 迁移)`),由运维在维护窗口执行;
+- **迁移脚本**:`scripts/mysql-pk-rebuild.sql` 是 33 条 `DROP PRIMARY KEY, ADD PRIMARY KEY (tenant_id, id)`;小库直接跑,大表用 gh-ost / pt-osc 做在线 DDL;
+- **应用侧约束**:主键带上租户后,按 id 定位的语句必须同时给 `tenant_id`,否则主键前缀缺失会退化成扫描 —— 由租户守卫与 SQL 静态检查兜底。
 
 
 # 数据存储
