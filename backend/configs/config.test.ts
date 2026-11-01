@@ -63,7 +63,7 @@ describe("配置:各段取值落到对应字段", () => {
 			raw.mysql.port = 3399;
 			raw.redis.port = 6399;
 			raw.notification = { enabled: true, webhookUrl: "https://cmp.example/hook" };
-			raw.auth = { enabled: true, tokenTtlHours: 3, tokenSecret: "cmp-secret", bootstrap: { tenantId: "cmp-tenant", username: "cmp-admin", password: "cmp-password" } };
+			raw.auth = { enabled: true, tokenTtlHours: 3, tokenSecret: "cmp-secret", platformUsername: "cmp-hq", platformPassword: "cmp-hq-password", bootstrap: { tenantId: "cmp-tenant", username: "cmp-admin", password: "cmp-password" } };
 			raw.company = { name: "对照公司", team: "对照团队" };
 			raw.userkey = "cmp-userkey";
 			raw.defaults.customersLimit = 11;
@@ -124,6 +124,7 @@ describe("配置:各段取值落到对应字段", () => {
 		expect(cfg.authTokenTtlHours).toBe(3);
 		expect(cfg.authTokenSecret).toBe("cmp-secret");
 		expect(cfg.authBootstrapUsername).toBe("cmp-admin");
+		expect(cfg.authPlatformUsername).toBe("cmp-hq");
 		// defaults / company / userkey
 		expect(cfg.companyName).toBe("对照公司");
 		expect(cfg.teamName).toBe("对照团队");
@@ -147,7 +148,7 @@ describe("配置:各段取值落到对应字段", () => {
 		const cfg = loadConfig();
 		const undefinedKeys = Object.entries(cfg).filter(([, v]) => v === undefined).map(([k]) => k);
 		expect(undefinedKeys).toEqual([]);
-		expect(Object.keys(cfg)).toHaveLength(154);
+		expect(Object.keys(cfg)).toHaveLength(156);
 	});
 });
 
@@ -215,6 +216,6 @@ describe("配置:代码内不提供任何默认值", () => {
 		process.env.CONFIG_PATH = path.join(repoRoot, "help-sale.config.example.yaml");
 		process.env.SECRETS_PATH = path.join(repoRoot, "help-sale.secrets.example.yaml");
 		const cfg = await reload();
-		expect(Object.keys(cfg)).toHaveLength(154);
+		expect(Object.keys(cfg)).toHaveLength(156);
 	});
 });

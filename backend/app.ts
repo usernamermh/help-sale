@@ -18,6 +18,7 @@ import { registerWeixin } from "../3party/weixin/index.js";
 import { resolveTenant } from "./services/tenant-context.js";
 import { resolveIdentity } from "./services/auth.js";
 import { countAdmins, createUser } from "./integrations_pi/tables/agents/users.js";
+import { countPlatformAdmins, createPlatformAdmin } from "./integrations_pi/tables/agents/platform-admins.js";
 import { withTenantGuard } from "./db/tenant-guard.js";
 import { assertTableMappingComplete } from "./db/schema-audit.js";
 import { createTenantQuota } from "./services/tenant-quota.js";
@@ -53,6 +54,7 @@ export interface AppOptions {
 export function isAuthExemptPath(url: string): boolean {
 	const path = String(url ?? "").split("?")[0];
 	if (path === "/api/v1/auth/login") return true;
+	if (path === "/api/v1/platform/login") return true;
 	if (path === "/api/v1/health" || path === "/api/v1/ready") return true;
 	if (path === "/" || path === "/console") return true;
 	if (path.startsWith("/vendor/")) return true;
@@ -95,6 +97,11 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 
 	if (options.ensureTenant !== false) requireTenant(db, config.tenantId, "示例租户");
 	if (options.ensureTenant !== false && config.authEnabled) {
+		// 平台(总部)管理员:密钥文件里的初始账号,幂等创建
+		if (countPlatformAdmins(db) === 0) {
+			createPlatformAdmin(db, { username: config.authPlatformUsername, password: config.authPlatformPassword });
+			console.log(`[auth] 已创建平台管理员:${config.authPlatformUsername}(密码取自密钥文件,登录后请立即修改)`);
+		}
 		requireTenant(db, config.authBootstrapTenantId, "初始管理员租户");
 		if (countAdmins(db, config.authBootstrapTenantId) === 0) {
 			createUser(db, { tenantId: config.authBootstrapTenantId, username: config.authBootstrapUsername, password: config.authBootstrapPassword, role: "admin" });
@@ -105,6 +112,8 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 	app.decorateRequest("tenantId", "");
 	app.decorateRequest("tenantRole", undefined);
 	app.decorateRequest("tenantUserId", undefined);
+	app.decorateRequest("platformAdmin", undefined);
+	app.decorateRequest("platformAdminId", undefined);
 	// 租户不再由调用方随意声明:凭证(API Key)优先,请求头只在配置允许时才认,且要落在受信清单内
 	app.addHook("preHandler", async (request, reply) => {
 		const headers = request.headers as Record<string, string | string[] | undefined>;
@@ -112,16 +121,29 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		const authExempt = isAuthExemptPath(request.url);
 		const identity = config.authEnabled ? resolveIdentity(db, headers, { enabled: true, tokenTtlHours: config.authTokenTtlHours, tokenSecret: config.authTokenSecret }) : { hasToken: false as const };
 		if (identity.identity) {
-			request.tenantId = identity.identity.tenantId;
-			request.tenantRole = identity.identity.role;
-			request.tenantUserId = identity.identity.userId;
+			if (identity.identity.scope === "platform") {
+				// 平台令牌不带租户:只放行平台层接口,其它一律 403(避免"总部身份顺手读某个门店")
+				if (!request.url.startsWith("/api/v1/platform/")) {
+					return reply.code(403).send({ error: "forbidden", message: "平台令牌只能访问 /api/v1/platform/* 接口。" });
+				}
+				request.tenantId = "";
+				request.platformAdmin = true;
+				request.platformAdminId = identity.identity.userId;
+			} else {
+				request.tenantId = identity.identity.tenantId;
+				request.tenantRole = identity.identity.role;
+				request.tenantUserId = identity.identity.userId;
+			}
 		} else {
 			if (identity.error) {
 				appendRuntimeLog(logDir, { level: "error", type: "tenant_rejected", message: `${request.method} ${request.url} 令牌校验失败: ${identity.error}` }, { fileName: config.logRuntimeFile, level: config.logLevel, maxBytes: config.logMaxBytes });
 				return reply.code(401).send({ error: "unauthenticated", message: identity.error });
 			}
 			if (authExempt) {
-				request.tenantId = resolveTenant({ headers, apiKeys: config.tenantApiKeys, headerAllowed: config.tenantHeaderAllowed, trustedTenantIds: config.tenantTrustedIds, defaultTenantId: config.tenantId }).tenantId ?? config.tenantId;
+				// 登录/健康检查:门店是平台动态开的,不受 tenant.trustedTenantIds 这份静态清单限制(业务接口一律按令牌里的租户走);这里只取请求头声明的门店,没写就用默认租户
+				const rawHeader = headers["x-tenant-id"];
+				const fromHeader = String(Array.isArray(rawHeader) ? rawHeader[0] ?? "" : rawHeader ?? "").trim();
+				request.tenantId = fromHeader || config.tenantId;
 			} else {
 				const resolved = resolveTenant({ headers, apiKeys: config.tenantApiKeys, headerAllowed: config.tenantHeaderAllowed, trustedTenantIds: config.tenantTrustedIds, defaultTenantId: config.tenantId });
 				if (resolved.error) {
@@ -137,7 +159,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 			}
 		}
 		// 每租户请求限流:超出的请求立刻拒绝,不占用共享资源(单租户刷量不影响其他租户)
-		const gate = await quota.tryAcquireRequest(request.tenantId);
+		const gate = await quota.tryAcquireRequest(request.tenantId || "platform");
 		if (!gate.allowed) {
 			appendRuntimeLog(logDir, {
 				level: "error",

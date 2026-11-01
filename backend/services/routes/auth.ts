@@ -25,12 +25,16 @@ export function registerAuthRoutes(app: FastifyInstance, deps: RouteDeps): void 
 		const username = String(request.body?.username ?? "").trim();
 		const password = String(request.body?.password ?? "");
 		if (!username || !password) return reply.code(400).send({ error: "invalid_request", message: "username 与 password 都是必填的。" });
+		// 门店标识写错时给清楚的提示,而不是当成密码错(门店是平台动态开的)
+		const tenantTableName = config.tables.tenants ?? "tenants";
+		const tenantRow = deps.db.prepare("/* system */ SELECT id FROM " + tenantTableName + " WHERE id = ?").get(request.tenantId);
+		if (!tenantRow) return reply.code(404).send({ error: "tenant_not_found", message: "门店不存在:" + request.tenantId });
 		const user = getUserByUsername(deps.db, request.tenantId, username);
 		// 账号不存在与密码错误返回同一个提示,避免暴露账号是否存在
 		if (!user || !user.enabled) return reply.code(401).send({ error: "auth_failed", message: "用户名或密码不正确。" });
 		if (!verifyPassword(password, user.passwordHash)) return reply.code(401).send({ error: "auth_failed", message: "用户名或密码不正确。" });
 		const token = signToken(
-			{ tenantId: user.tenantId, userId: user.id, username: user.username, role: user.role },
+			{ scope: "tenant", tenantId: user.tenantId, userId: user.id, username: user.username, role: user.role },
 			{ tokenTtlHours: config.authTokenTtlHours, tokenSecret: config.authTokenSecret },
 		);
 		return {

@@ -33,6 +33,8 @@ export function loadIntegrationsConfig(file: FileConfig): IntegrationsConfig {
 		authBootstrapTenantId: str(file.auth?.bootstrap?.tenantId, "auth.bootstrap.tenantId"),
 		authBootstrapUsername: str(file.auth?.bootstrap?.username, "auth.bootstrap.username"),
 		authBootstrapPassword: str(file.auth?.bootstrap?.password, "auth.bootstrap.password"),
+		authPlatformUsername: str(file.auth?.platformUsername, "auth.platformUsername"),
+		authPlatformPassword: str(file.auth?.platformPassword, "auth.platformPassword"),
 		webSearchApiKey: str(file.tools?.webSearch?.apiKey, "tools.webSearch.apiKey"),
 		fileWriteAllowOutsideRepo: bool(file.tools?.fileWrite?.allowOutsideRepo, "tools.fileWrite.allowOutsideRepo"),
 		filesTenantScoped: bool(file.tools?.files?.tenantScoped, "tools.files.tenantScoped"),

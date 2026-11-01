@@ -42,6 +42,7 @@ data:
     weixin_threads: weixin_threads
     users: users
     tenant_secrets: tenant_secrets
+    platform_admins: platform_admins
   dataDir: backend/data
   memoryFile: backend/data/memory.md
   businessDbPath: backend/data/business.db
@@ -126,6 +127,9 @@ auth:
   # 令牌签名密钥(放密钥文件)
   tokenSecret: ${SECRETS:auth.tokenSecret}
   # 初始管理员:启动时该租户若没有启用的管理员,就按这里创建一个(幂等,登录后请改密码)
+  # 总部平台管理员:管所有门店(开门店/停用/清数据/跨店汇总),密码放密钥文件
+  platformUsername: hq-admin
+  platformPassword: ${SECRETS:auth.platformPassword}
   bootstrap:
     tenantId: t_demo
     username: admin

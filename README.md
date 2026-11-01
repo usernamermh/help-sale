@@ -158,6 +158,43 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 | `automation` | 定时任务:晨报、周报、沉默客户唤醒的时间与开关 |
 | `company` / `userkey` / `client` | 公司名(写入提示词)、调用方标识、前端注入参数 |
 
+# 门店即租户(产品形态)
+
+部署形态是**总部一套服务、门店各自用**:一个门店 = 一个租户,门店的账号、凭证、知识库、话术、工作流、业务数据全部以租户为边界隔离。总部管平台,门店在自己这摊里管人和管配置。
+
+## 两层身份,互不越界
+
+| 层 | 账号在哪 | 能做什么 | 令牌 |
+| --- | --- | --- | --- |
+| **平台层**(总部) | `platform_admins`(全局表,不属于任何门店) | 开门店、改名、重置门店管理员密码、清门店数据、跨门店只读汇总、管平台管理员 | `POST /api/v1/platform/login` 换平台令牌;**只能访问 `/api/v1/platform/*`**,碰门店接口一律 403 |
+| **门店层**(门店自己) | `users`(带 `tenant_id`) | 本店账号与角色、本店凭证(`tenant_secrets`)、本店知识库/话术/工作流、本店业务数据、本店微信登录 | `POST /api/v1/auth/login` + `x-tenant-id: <门店>`;**只能在自己租户里活动**,碰别的门店 403 |
+
+平台令牌不带租户(它不是任何门店的人);门店令牌里的租户是权威的,请求头覆盖不了。门店号写错在登录时就报 `404 tenant_not_found`,不会悄悄建一个空门店。
+
+## 门店生命周期(平台层)
+
+| 接口 | 作用 |
+| --- | --- |
+| `GET /api/v1/platform/tenants` | 门店列表 + 每店数据量/门店数/账号数 |
+| `POST /api/v1/platform/tenants` | 开一家门店:建租户 + 建 `stores` 记录(店名/地址) + 建门店管理员,一次成店 |
+| `PATCH /api/v1/platform/tenants/:id` | 改店名/地址 |
+| `POST /api/v1/platform/tenants/:id/admin` | 重置门店管理员密码 / 停用账号(门店自己改不了时总部兜底) |
+| `DELETE /api/v1/platform/tenants/:id?confirm=<id>` | 清门店:先清向量,再按 `tenant_id` 删各表,最后删租户行;默认门店拒绝清除 |
+| `GET /api/v1/platform/overview` | 跨门店只读汇总(只给量,不给门店业务明细) |
+
+## 门店自助(门店层)
+
+| 接口 | 作用 |
+| --- | --- |
+| `GET /api/v1/tenants` | 本店信息(店名、门店记录) |
+| `GET/PUT/DELETE /api/v1/tenants/:id/secrets*` | 本店凭证(模型端点/密钥、`web_search` key、MCP 列表),`:id` 必须是本店 |
+| `GET /api/v1/tenants/:id/export` | 本店数据导出(迁库/备份) |
+| `GET/POST/PATCH/DELETE /api/v1/auth/users*` | 本店账号与角色(仅门店管理员) |
+
+## 与门店的关系
+
+门店内部仍保留 `stores` 表与销售的 `store_id`:一家店可以有多个展厅/销售组,店长只看本店的销售与成交(`resolveManagerScope`);但**隔离边界始终是租户**——换门店就是换租户,不是换一个 `store_id`。
+
 # 多租户隔离契约
 
 贯穿身份、数据、缓存、队列、后台任务与可观测性的一条契约。这里写清本项目当前的做法、强制点和仍依赖人工的部分。

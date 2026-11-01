@@ -71,6 +71,9 @@ export interface FileConfig {
 		tokenTtlHours?: number;
 		tokenSecret?: string;
 		bootstrap?: { tenantId?: string; username?: string; password?: string };
+		/** 总部平台管理员:启动时幂等创建(平台层账号,不属于任何门店) */
+		platformUsername?: string;
+		platformPassword?: string;
 	};
 	company?: { name?: string; team?: string };
 	client?: { workflowMineTimeoutMs?: number };

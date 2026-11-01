@@ -31,6 +31,9 @@ export interface TenantGuardOptions {
 /** 系统级语句的显式标记。 */
 export const SYSTEM_SCOPE_MARK = "/* system */";
 
+/** 全局表:不属于任何租户,不参与"必须有租户谓词"的判定。 */
+export const GLOBAL_TABLES = ["tenants", "platform_admins"] as const;
+
 /** 与业务表同源的镜像表后缀(如 SQLite FTS 索引 knowledge_chunks_fts):租户条件写在镜像表上等价于写在业务表上。 */
 const MIRROR_SUFFIX = "_fts";
 
@@ -146,7 +149,7 @@ export function inspectTenantScope(sql: string, tables: Record<string, string>):
 	const resolve = (name: string): string | undefined => {
 		const key = name.toLowerCase();
 		for (const [logical, physical] of Object.entries(tables)) {
-			if (logical === "tenants") continue;
+			if ((GLOBAL_TABLES as readonly string[]).includes(logical)) continue;
 			const value = String(physical).toLowerCase();
 			if (value === "") continue;
 			if (key === logical.toLowerCase() || key === value) return value;

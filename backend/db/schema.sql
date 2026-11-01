@@ -552,3 +552,12 @@ CREATE TABLE IF NOT EXISTS tenant_secrets (
 	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	PRIMARY KEY (tenant_id, name)
 );
+
+CREATE TABLE IF NOT EXISTS platform_admins (
+	id TEXT PRIMARY KEY,
+	username TEXT NOT NULL UNIQUE,
+	password_hash TEXT NOT NULL,
+	enabled INTEGER NOT NULL DEFAULT 1,
+	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);

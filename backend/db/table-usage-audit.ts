@@ -20,7 +20,7 @@ export interface SqlFinding {
 
 /** 不参与业务表判定的内部对象(引擎自带 / 虚拟表 / 元数据表)。 */
 /** 全局表:本身不是租户数据(guard 里同样是例外),不参与"必须带 tenant_id"的判定。 */
-export const GLOBAL_TABLES = ["tenants"];
+export const GLOBAL_TABLES = ["tenants", "platform_admins"];
 
 export const INTERNAL_TABLES = [
 	"sqlite_master", // SQLite 元数据表

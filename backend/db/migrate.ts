@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 42;
+export const MIGRATION_VERSION = 43;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -286,6 +286,17 @@ export function migrate(db: DatabaseSync): void {
 			value TEXT NOT NULL,
 			updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 			PRIMARY KEY (tenant_id, name)
+		);`);
+	}
+	// v43:平台管理员(总部)账号 —— 全局表,不属于任何门店租户
+	if (current.user_version < 43) {
+		db.exec(`CREATE TABLE IF NOT EXISTS platform_admins (
+			id TEXT PRIMARY KEY,
+			username TEXT NOT NULL UNIQUE,
+			password_hash TEXT NOT NULL,
+			enabled INTEGER NOT NULL DEFAULT 1,
+			created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+			updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 		);`);
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);

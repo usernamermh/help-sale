@@ -10,6 +10,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { getUserById, type UserRole } from "../integrations_pi/tables/agents/users.js";
+import { getPlatformAdminById } from "../integrations_pi/tables/agents/platform-admins.js";
 
 export const TOKEN_PREFIX = "hsu1";
 
@@ -19,7 +20,11 @@ export interface AuthSettings {
 	tokenSecret: string;
 }
 
+/** 令牌作用域:tenant=门店账号;platform=总部平台管理员(不带租户,只能访问平台接口) */
+export type AuthScope = "tenant" | "platform";
+
 export interface AuthIdentity {
+	scope: AuthScope;
 	tenantId: string;
 	userId: string;
 	username: string;
@@ -67,11 +72,15 @@ export function verifyToken(
 		return { error: "令牌内容无法解析" };
 	}
 	const value = parsed as Partial<AuthIdentity>;
-	if (!value?.tenantId || !value?.userId || !value?.exp) return { error: "令牌缺少必要字段" };
+	const scope: AuthScope = value?.scope === "platform" ? "platform" : "tenant";
+	if (!value?.userId || !value?.exp) return { error: "令牌缺少必要字段" };
+	// 门店令牌必须带租户;平台令牌不带租户(它不是任何门店的人)
+	if (scope === "tenant" && !value?.tenantId) return { error: "令牌缺少租户" };
 	if (Number(value.exp) <= nowMs) return { error: "登录已过期,请重新登录" };
 	return {
 		identity: {
-			tenantId: String(value.tenantId),
+			scope,
+			tenantId: String(value.tenantId ?? ""),
 			userId: String(value.userId),
 			username: String(value.username ?? ""),
 			role: value.role === "admin" ? "admin" : "member",
@@ -108,6 +117,11 @@ export function resolveIdentity(
 	if (!token) return { hasToken: false };
 	const verified = verifyToken(token, settings, nowMs);
 	if (!verified.identity) return { error: verified.error, hasToken: true };
+	if (verified.identity.scope === "platform") {
+		const admin = getPlatformAdminById(db, verified.identity.userId);
+		if (!admin || !admin.enabled) return { error: "平台账号不存在或已停用", hasToken: true };
+		return { identity: { ...verified.identity, username: admin.username, role: "admin" }, hasToken: true };
+	}
 	const user = getUserById(db, verified.identity.tenantId, verified.identity.userId);
 	if (!user || !user.enabled) return { error: "账号不存在或已停用", hasToken: true };
 	return { identity: { ...verified.identity, username: user.username, role: user.role }, hasToken: true };

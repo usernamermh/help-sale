@@ -109,6 +109,10 @@ export interface AppConfig {
 	authBootstrapUsername: string;
 	/** 初始管理员密码(auth.bootstrap.password,放密钥文件) */
 	authBootstrapPassword: string;
+	/** 总部平台管理员用户名(auth.platformUsername) */
+	authPlatformUsername: string;
+	/** 总部平台管理员密码(auth.platformPassword,放密钥文件) */
+	authPlatformPassword: string;
 	notificationWebhookUrl: string;
 	companyName: string;
 	teamName: string;
@@ -226,7 +230,7 @@ export type RetrievalConfig = Pick<AppConfig,
 export type IntegrationsConfig = Pick<AppConfig,
 	| "mysqlEnabled" | "mysqlSchemaRebuild" | "mysqlAutoMigrate" | "mysqlConnectTimeout" | "mysqlHost" | "mysqlPort" | "mysqlUser" | "mysqlPassword" | "mysqlDatabase"
 	| "redisEnabled" | "redisHost" | "redisPort" | "redisPassword" | "redisLeaderLeaseMs" | "mysqlConnectionLimit" | "mysqlQueryTimeoutMs"
-	| "notificationEnabled" | "notificationWebhookUrl" | "authEnabled" | "authTokenTtlHours" | "authTokenSecret" | "authBootstrapTenantId" | "authBootstrapUsername" | "authBootstrapPassword"
+	| "notificationEnabled" | "notificationWebhookUrl" | "authEnabled" | "authTokenTtlHours" | "authTokenSecret" | "authBootstrapTenantId" | "authBootstrapUsername" | "authBootstrapPassword" | "authPlatformUsername" | "authPlatformPassword"
 	| "webSearchApiKey" | "fileWriteAllowOutsideRepo" | "filesTenantScoped" | "filesTenantRootDir" | "sqlMaxRows" | "sqlTimeoutMs" | "sqlExtraBlockedKeywords" | "riskDangerousTools" | "riskDangerousDefaultEnabled" | "mcpServers"
 	| "toolsCatalogEnabled" | "toolsCatalogThreshold" | "toolsCatalogTopK" | "toolsCatalogMaxInspect" | "toolsCatalogSemanticFloorZh" | "toolsCatalogSemanticFloorEn"
 	| "toolsCatalogBilingualEnabled" | "toolsCatalogRewriteTimeoutMs" | "toolsCatalogPerLanguageTopK">;

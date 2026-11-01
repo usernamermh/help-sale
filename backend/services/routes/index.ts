@@ -10,6 +10,7 @@ import { registerKeywordRoutes } from "./keywords.js";
 import { registerHealthRoutes } from "./health.js";
 import { registerTaskRoutes } from "./tasks.js";
 import { registerTenantRoutes } from "./tenants.js";
+import { registerPlatformRoutes } from "./platform.js";
 import { registerThreadRoutes } from "./threads.js";
 import { registerKnowledgeRoutes } from "./knowledge.js";
 import { registerNotificationRoutes } from "./notifications.js";
@@ -25,6 +26,10 @@ export type { RouteDeps } from "./helpers.js";
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	// 每个请求先确保租户行存在(业务表都以 tenant_id 外键关联 tenants)
 	app.addHook("preHandler", async (request) => {
+		// 平台令牌不带租户,不建也不校验租户行
+		if (!request.tenantId) return;
+		// 登录入口不自动建租户:门店号写错要明确报 404,而不是悄悄建一个空门店
+		if (request.url.split("?")[0] === "/api/v1/auth/login") return;
 		requireTenant(deps.db, request.tenantId, "API 租户");
 	});
 
@@ -44,5 +49,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 	registerThreadRoutes(app, deps);
 	registerTaskRoutes(app, deps);
 	registerHealthRoutes(app, deps);
+	// 门店层:租户自助接口(门店管理员);平台层:总部接口(平台令牌)
 	registerTenantRoutes(app, deps);
+	registerPlatformRoutes(app, deps);
 }

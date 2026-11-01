@@ -25,6 +25,10 @@ declare module "fastify" {
 		tenantRole?: "admin" | "member";
 		/** 登录账号 id(令牌登录时才有) */
 		tenantUserId?: string;
+		/** 平台(总部)令牌登录时为 true;这类请求不带租户,只能访问 /api/v1/platform/* */
+		platformAdmin?: boolean;
+		/** 平台管理员 id(平台令牌登录时才有) */
+		platformAdminId?: string;
 	}
 }
 
@@ -32,7 +36,12 @@ declare module "fastify" {
  * 管理员专属操作的守卫:开启登录(auth.enabled=true)后,只有 admin 角色能过。
  * 未开启登录时沿用旧行为(不拦),返回 true。
  */
+/** 门店管理员守卫:平台令牌不能进城门店接口(它没有租户),门店 admin 也不能碰平台层。 */
 export function requireAdmin(request: FastifyRequest, reply: FastifyReply): boolean {
+	if (request.platformAdmin) {
+		reply.code(403).send({ error: "forbidden", message: "平台令牌不能调用门店接口(请用门店管理员账号登录)。" });
+		return false;
+	}
 	if (!config.authEnabled) return true;
 	if (request.tenantRole === "admin") return true;
 	reply.code(403).send({ error: "forbidden", message: "该操作需要管理员权限(auth.enabled=true)。" });
