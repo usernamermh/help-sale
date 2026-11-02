@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
-export const MIGRATION_VERSION = 43;
+export const MIGRATION_VERSION = 44;
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
 
@@ -298,6 +298,19 @@ export function migrate(db: DatabaseSync): void {
 			created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 			updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 		);`);
+	}
+	// v44:门店级"非密钥配置"(限额等)从 tenant_secrets 独立成 tenant_config
+	if (current.user_version < 44) {
+		db.exec(`CREATE TABLE IF NOT EXISTS tenant_config (
+			tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+			name TEXT NOT NULL,
+			value TEXT NOT NULL,
+			updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+			PRIMARY KEY (tenant_id, name)
+		);`);
+		// 老数据:limit 类配置从密钥表搬过来(密钥表只留密钥)
+		db.exec("/* system */ INSERT OR IGNORE INTO tenant_config (tenant_id, name, value, updated_at) SELECT tenant_id, name, value, updated_at FROM tenant_secrets WHERE name LIKE 'quota.%'");
+		db.exec("/* system */ DELETE FROM tenant_secrets WHERE name LIKE 'quota.%'");
 	}
 	db.exec(`PRAGMA user_version = ${MIGRATION_VERSION}`);
 }

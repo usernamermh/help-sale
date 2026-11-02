@@ -42,6 +42,7 @@ data:
     weixin_threads: weixin_threads
     users: users
     tenant_secrets: tenant_secrets
+    tenant_config: tenant_config
     platform_admins: platform_admins
   dataDir: backend/data
   memoryFile: backend/data/memory.md

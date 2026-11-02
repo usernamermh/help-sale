@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { deleteTenantSecret, listTenantSecrets, readTenantSecret, writeTenantSecret } from "../integrations_pi/tables/agents/tenant-secrets.js";
+import { writeTenantConfig } from "../integrations_pi/tables/agents/tenant-config.js";
 import { modelRuntimeFor, resetModelRuntimeCache, tenantMcpServers, tenantModelConfig, tenantWebSearchKey } from "./tenant-credentials.js";
 import { config } from "../env.js";
 
@@ -16,6 +17,11 @@ function memoryDb(): DatabaseSync {
 			tenant_id TEXT NOT NULL, name TEXT NOT NULL, value TEXT NOT NULL,
 			updated_at TEXT NOT NULL DEFAULT '',
 			PRIMARY KEY (tenant_id, name))`,
+	);
+	db.exec(
+		`CREATE TABLE tenant_config (
+			tenant_id TEXT NOT NULL, name TEXT NOT NULL, value TEXT NOT NULL,
+			updated_at TEXT NOT NULL DEFAULT '', PRIMARY KEY (tenant_id, name))`,
 	);
 	return db;
 }
@@ -43,7 +49,7 @@ describe("凭证解析:租户覆盖优先,缺项回退全局", () => {
 		expect(before.modelId).toBe(config.modelId);
 		expect(before.apiKey).toBe(config.modelApiKey);
 		writeTenantSecret(db, "t1", "model.apiKey", "tenant-key");
-		writeTenantSecret(db, "t1", "model.baseUrl", "https://tenant.example/v1");
+		writeTenantConfig(db, "t1", "model.baseUrl", "https://tenant.example/v1");
 		const after = tenantModelConfig(db, "t1");
 		expect(after.apiKey).toBe("tenant-key");
 		expect(after.baseUrl).toBe("https://tenant.example/v1");

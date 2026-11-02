@@ -7,6 +7,7 @@ import type { FastifyInstance } from "fastify";
 import { config } from "../../env.js";
 import { requireAdmin, type RouteDeps } from "./helpers.js";
 import { deleteTenantSecret, listTenantSecrets, TENANT_SECRET_NAMES, writeTenantSecret } from "../../integrations_pi/tables/agents/tenant-secrets.js";
+import { listTenantConfig, readTenantConfig, TENANT_CONFIG_NAMES } from "../../integrations_pi/tables/agents/tenant-config.js";
 import { tenantMcpServers, tenantModelConfig, tenantWebSearchKey } from "../tenant-credentials.js";
 import { listStores } from "../../integrations_pi/tables/sales/stores.js";
 
@@ -49,7 +50,7 @@ export function registerTenantRoutes(app: FastifyInstance, deps: RouteDeps): voi
 		if (!requireAdmin(request, reply)) return;
 		if (!selfOnly(request.params.id, request.tenantId)) return reply.code(403).send({ error: "forbidden", message: "只能管理本店凭证。" });
 		const tenantId = request.tenantId;
-		const rows = listTenantSecrets(deps.db, tenantId);
+		const rows = [...listTenantSecrets(deps.db, tenantId), ...listTenantConfig(deps.db, tenantId)];
 		const overridden = new Set(rows.map((row) => row.name));
 		return {
 			tenantId,

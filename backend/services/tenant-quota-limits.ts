@@ -4,7 +4,7 @@
  * 读不到(没配)= undefined,限流器回退全局配置;这样"某家门店愿意买更高额度"不用改全局配置。
  */
 import type { DatabaseSync } from "node:sqlite";
-import { readTenantSecret } from "../integrations_pi/tables/agents/tenant-secrets.js";
+import { readTenantConfig } from "../integrations_pi/tables/agents/tenant-config.js";
 
 export interface TenantLimitOverride {
 	requestPerMinute?: number;
@@ -36,9 +36,9 @@ export function createQuotaLimitResolver(db: DatabaseSync, cacheTtlMs = 5000): Q
 		if (hit && now - hit.at < cacheTtlMs) return hit.value;
 		let value: TenantLimitOverride | undefined;
 		try {
-			const requestPerMinute = positiveInt(readTenantSecret(db, key, "quota.requestPerMinute"));
-			const requestBurst = positiveInt(readTenantSecret(db, key, "quota.requestBurst"));
-			const agentConcurrency = positiveInt(readTenantSecret(db, key, "quota.agentConcurrency"));
+			const requestPerMinute = positiveInt(readTenantConfig(db, key, "quota.requestPerMinute"));
+			const requestBurst = positiveInt(readTenantConfig(db, key, "quota.requestBurst"));
+			const agentConcurrency = positiveInt(readTenantConfig(db, key, "quota.agentConcurrency"));
 			value = requestPerMinute === undefined && requestBurst === undefined && agentConcurrency === undefined
 				? undefined
 				: { requestPerMinute, requestBurst, agentConcurrency };

@@ -561,3 +561,11 @@ CREATE TABLE IF NOT EXISTS platform_admins (
 	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
 	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+
+CREATE TABLE IF NOT EXISTS tenant_config (
+	tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+	name TEXT NOT NULL,
+	value TEXT NOT NULL,
+	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+	PRIMARY KEY (tenant_id, name)
+);

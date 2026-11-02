@@ -195,6 +195,38 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
 
 门店内部仍保留 `stores` 表与销售的 `store_id`:一家店可以有多个展厅/销售组,店长只看本店的销售与成交(`resolveManagerScope`);但**隔离边界始终是租户**——换门店就是换租户,不是换一个 `store_id`。
 
+# 配置与凭证:四个桶
+
+配置按「谁负责、什么时候变」分成四个桶,不是四份随手糊的文件:
+
+| 桶 | 谁写 | 什么时候变 | 存在哪 | 生效方式 |
+| --- | --- | --- | --- | --- |
+| ① 平台配置(总部) | 总部 | 部署时一次 | `platform.config.yaml` | 改完重启 |
+| ② 平台密钥 | 总部 | 部署时一次 | `platform.secrets.yaml`(值可写成 `${ENV:变量名}` 由部署环境注入) | 改完重启 |
+| ③ 门店配置(非密钥) | 门店自己 / 平台兜底 | 运行期随时 | 表 `tenant_config` | 立即(额度这类带 5 秒缓存) |
+| ④ 门店密钥 | 门店自己 / 平台兜底 | 运行期随时 | 表 `tenant_secrets` | 立即(模型运行时按配置指纹换新实例) |
+
+平台那两桶只在总部部署时定,而且密钥不该进库(库被读走等于全暴露);门店是平台动态开的,不可能为每家店改 yaml 再重启,所以门店那两桶落库。`store.defaults.yaml` / `store.defaults.secrets.yaml` 是门店默认模板:新门店继承它,门店在库里改的值覆盖它,缺项回退模板,再缺项直接报错(代码里不写默认值)。
+
+| 文件 | 装什么 |
+| --- | --- |
+| `platform.config.yaml` | server / data / logging / mysql / redis / vector / milvus / notification / auth / platform(默认门店、请求头开关、隔离模式、限流默认值)/ userkey / client |
+| `platform.secrets.yaml` | mysql 账号、redis 密码、`auth.tokenSecret`、平台管理员密码、`platform.apiKeys` |
+| `store.defaults.yaml` | 门店默认模板:model / context / knowledge / chunker / tools / mcp / weixin / workflows / subagents / defaults / automation / company |
+| `store.defaults.secrets.yaml` | 门店默认密钥:model.apiKey、web_search key、MCP PAT、微信 token、默认门店管理员密码 |
+
+门店级可覆盖的名字(⑧③④ 都在同一处维护,按名字自动落到对应的表):
+
+| 名字 | 桶 | 谁能改 |
+| --- | --- | --- |
+| `model.modelId` / `model.baseUrl` / `model.proxy` | ③ 配置 | 平台 |
+| `quota.requestPerMinute` / `quota.requestBurst` / `quota.agentConcurrency` | ③ 配置 | 平台 |
+| `model.apiKey` / `tools.webSearch.apiKey` / `mcp.servers` | ④ 密钥 | 门店自己,平台兜底 |
+
+接口:门店层 `GET/PUT/DELETE /api/v1/tenants/:id/secrets*`(`:id` 必须是本店,只能动 ④),平台层 `GET/PUT/DELETE /api/v1/platform/tenants/:id/secrets*`(③④ 都能动,值脱敏展示)。
+
+受信门店不写在配置里:门店是平台动态开的,受信就是库里 `tenants` 表已有的门店 -- 请求头声明的门店必须真实存在,否则 403。
+
 # 多租户隔离契约
 
 贯穿身份、数据、缓存、队列、后台任务与可观测性的一条契约。这里写清本项目当前的做法、强制点和仍依赖人工的部分。

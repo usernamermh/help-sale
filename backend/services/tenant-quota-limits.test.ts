@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { createQuotaLimitResolver } from "./tenant-quota-limits.js";
 import { createTenantQuota } from "./tenant-quota.js";
 import { writeTenantSecret } from "../integrations_pi/tables/agents/tenant-secrets.js";
+import { writeTenantConfig } from "../integrations_pi/tables/agents/tenant-config.js";
 
 /** 门店级额度:平台写 quota.* 覆盖全局,缺项回退,配完很快生效。 */
 
@@ -10,6 +11,11 @@ function memoryDb(): DatabaseSync {
 	const db = new DatabaseSync(":memory:");
 	db.exec(
 		`CREATE TABLE tenant_secrets (
+			tenant_id TEXT NOT NULL, name TEXT NOT NULL, value TEXT NOT NULL,
+			updated_at TEXT NOT NULL DEFAULT '', PRIMARY KEY (tenant_id, name))`,
+	);
+	db.exec(
+		`CREATE TABLE tenant_config (
 			tenant_id TEXT NOT NULL, name TEXT NOT NULL, value TEXT NOT NULL,
 			updated_at TEXT NOT NULL DEFAULT '', PRIMARY KEY (tenant_id, name))`,
 	);
@@ -26,7 +32,7 @@ describe("门店级额度解析", () => {
 
 	it("配了就只覆盖配的那几项", () => {
 		const db = memoryDb();
-		writeTenantSecret(db, "t1", "quota.requestPerMinute", "120");
+		writeTenantConfig(db, "t1", "quota.requestPerMinute", "120");
 		const resolve = createQuotaLimitResolver(db, 0);
 		expect(resolve("t1")).toEqual({ requestPerMinute: 120, requestBurst: undefined, agentConcurrency: undefined });
 		expect(resolve("t2")).toBeUndefined();
@@ -35,8 +41,8 @@ describe("门店级额度解析", () => {
 
 	it("非法值当没配(不把限额配成 0 或负数)", () => {
 		const db = memoryDb();
-		writeTenantSecret(db, "t1", "quota.requestPerMinute", "abc");
-		writeTenantSecret(db, "t1", "quota.agentConcurrency", "-3");
+		writeTenantConfig(db, "t1", "quota.requestPerMinute", "abc");
+		writeTenantConfig(db, "t1", "quota.agentConcurrency", "-3");
 		const resolve = createQuotaLimitResolver(db, 0);
 		expect(resolve("t1")).toBeUndefined();
 		db.close();
@@ -46,7 +52,7 @@ describe("门店级额度解析", () => {
 		const db = memoryDb();
 		const resolve = createQuotaLimitResolver(db, 60_000);
 		expect(resolve("t1")).toBeUndefined();
-		writeTenantSecret(db, "t1", "quota.requestPerMinute", "30");
+		writeTenantConfig(db, "t1", "quota.requestPerMinute", "30");
 		expect(resolve("t1")).toBeUndefined(); // 缓存内还是老值
 		resolve.clear();
 		expect(resolve("t1")?.requestPerMinute).toBe(30);
@@ -57,8 +63,8 @@ describe("门店级额度解析", () => {
 describe("限流器真的按门店额度走", () => {
 	it("被覆盖的门店按自己的额度拦,其他门店不受影响", async () => {
 		const db = memoryDb();
-		writeTenantSecret(db, "small", "quota.requestPerMinute", "1");
-		writeTenantSecret(db, "small", "quota.requestBurst", "1");
+		writeTenantConfig(db, "small", "quota.requestPerMinute", "1");
+		writeTenantConfig(db, "small", "quota.requestBurst", "1");
 		const quota = createTenantQuota({
 			enabled: true,
 			requestPerMinute: 600,

@@ -526,3 +526,11 @@ CREATE TABLE IF NOT EXISTS platform_admins (
 	UNIQUE KEY uq_platform_admin_username (username),
 	PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS tenant_config (
+	tenant_id VARCHAR(64) NOT NULL,
+	name VARCHAR(128) NOT NULL,
+	value MEDIUMTEXT NOT NULL,
+	updated_at VARCHAR(40) NOT NULL DEFAULT '',
+	PRIMARY KEY (tenant_id, name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

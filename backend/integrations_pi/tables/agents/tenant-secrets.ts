@@ -14,11 +14,7 @@ import type { DatabaseSync } from "node:sqlite";
 export const TENANT_SECRET_NAMES = ["model.modelId", "model.baseUrl", "model.apiKey", "model.proxy", "tools.webSearch.apiKey", "mcp.servers"] as const;
 export type TenantSecretName = (typeof TENANT_SECRET_NAMES)[number];
 
-/** 只有平台层能写的凭证:门店自己的用量限额(门店不能给自己加额度)。 */
-export const QUOTA_SECRET_NAMES = ["quota.requestPerMinute", "quota.requestBurst", "quota.agentConcurrency"] as const;
-
-/** 平台层可写的全部凭证名。 */
-export const PLATFORM_SECRET_NAMES = [...TENANT_SECRET_NAMES, ...QUOTA_SECRET_NAMES] as const;
+/** 额度这类"非密钥配置"不放这里,在 tenant_config(见 services/tenant-settings.ts)。 */
 
 export interface TenantSecretRow {
 	name: string;

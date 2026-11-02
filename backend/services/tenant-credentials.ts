@@ -9,6 +9,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { config } from "../env.js";
 import { readTenantSecret } from "../integrations_pi/tables/agents/tenant-secrets.js";
+import { readTenantConfig } from "../integrations_pi/tables/agents/tenant-config.js";
 import { createModelRegistry, type ModelRuntime } from "../integrations_pi/models.js";
 import type { McpServerConfig } from "../mcp/client.js";
 
@@ -22,10 +23,10 @@ export interface ModelOverrides {
 /** 模型配置:租户覆盖优先,缺项回退全局。 */
 export function tenantModelConfig(db: DatabaseSync, tenantId: string): ModelOverrides {
 	return {
-		modelId: readTenantSecret(db, tenantId, "model.modelId") ?? config.modelId,
-		baseUrl: readTenantSecret(db, tenantId, "model.baseUrl") ?? config.modelBaseUrl,
+		modelId: readTenantConfig(db, tenantId, "model.modelId") ?? config.modelId,
+		baseUrl: readTenantConfig(db, tenantId, "model.baseUrl") ?? config.modelBaseUrl,
 		apiKey: readTenantSecret(db, tenantId, "model.apiKey") ?? config.modelApiKey,
-		proxy: readTenantSecret(db, tenantId, "model.proxy") ?? config.modelProxy,
+		proxy: readTenantConfig(db, tenantId, "model.proxy") ?? config.modelProxy,
 	};
 }
 
