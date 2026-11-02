@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>总部平台 · 助销 agent</title>
+<style>
+  :root { --line:#e2e8f0; --muted:#64748b; --brand:#2563eb; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif; color:#0f172a; background:#f8fafc; }
+  header { background:#0f172a; color:#fff; padding:14px 20px; display:flex; align-items:center; gap:12px; }
+  header h1 { font-size:16px; margin:0; font-weight:600; }
+  header .who { margin-left:auto; color:#94a3b8; font-size:13px; }
+  main { max-width:1100px; margin:20px auto; padding:0 16px; }
+  section { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:16px; }
+  section h2 { font-size:14px; margin:0 0 12px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:500; }
+  input, button, select { font:inherit; padding:7px 10px; border:1px solid var(--line); border-radius:8px; }
+  button { background:var(--brand); color:#fff; border:0; cursor:pointer; }
+  button.ghost { background:#fff; color:#334155; border:1px solid var(--line); }
+  button.danger { background:#dc2626; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .muted { color:var(--muted); font-size:12px; }
+  .tag { display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; background:#eff6ff; color:#1d4ed8; }
+  .tag.bad { background:#fef2f2; color:#b91c1c; }
+  #tip { min-height:20px; color:#b91c1c; font-size:13px; margin-top:8px; }
+  #login { max-width:360px; margin:80px auto; }
+  #app { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>总部平台</h1>
+  <span class="muted" style="color:#94a3b8">门店即租户 · 一个门店一套账号/凭证/知识库/数据</span>
+  <span class="who" id="who"></span>
+</header>
+
+<section id="login">
+  <h2>平台管理员登录</h2>
+  <div class="row"><input id="u" placeholder="用户名" style="flex:1" /></div>
+  <div class="row" style="margin-top:8px"><input id="p" type="password" placeholder="密码" style="flex:1" /></div>
+  <div class="row" style="margin-top:12px"><button id="doLogin" style="width:100%">登录</button></div>
+  <div id="tip"></div>
+  <p class="muted">初始账号见密钥文件的 <code>auth.platformUsername</code> / <code>auth.platformPassword</code>,登录后请在企业内部修改。</p>
+</section>
+
+<div id="app">
+  <main>
+    <section>
+      <h2>门店列表</h2>
+      <table>
+        <thead><tr><th>门店</th><th>标识</th><th>数据量</th><th>门店记录</th><th>账号</th><th>操作</th></tr></thead>
+        <tbody id="stores"></tbody>
+      </table>
+      <p class="muted" id="storeHint"></p>
+    </section>
+
+    <section>
+      <h2>新开门店</h2>
+      <div class="row">
+        <input id="nId" placeholder="门店标识(如 store_sh01)" style="width:200px" />
+        <input id="nName" placeholder="门店名(如 上海虹桥店)" style="width:200px" />
+        <input id="nAddr" placeholder="地址(可选)" style="flex:1;min-width:160px" />
+        <input id="nPwd" placeholder="门店管理员初始密码(≥8 位)" style="width:220px" />
+        <button id="doCreate">开店</button>
+      </div>
+      <p class="muted">开店会同时建:门店租户 + 门店记录 + 门店管理员(用户名 admin)。门店管理员登录后自己管账号、凭证、知识库和数据。</p>
+      <div id="tip2" class="muted"></div>
+    </section>
+
+    <section>
+      <h2>门店微信登录状态</h2>
+      <table>
+        <thead><tr><th>门店</th><th>登录</th><th>账号</th><th>轮询</th><th>最近错误</th></tr></thead>
+        <tbody id="wx"></tbody>
+      </table>
+      <p class="muted">门店各自在自己的控制台扫码登录自己的机器人;总部这里只看状态,不看消息内容。</p>
+    </section>
+
+    <section>
+      <h2>跨门店汇总</h2>
+      <div id="overview" class="muted">加载中…</div>
+      <div class="row" style="margin-top:12px"><button class="ghost" id="doLogout">退出平台登录</button></div>
+    </section>
+  </main>
+</div>
+
+<script>
+const TOKEN_KEY = "hs_platform_token";
+const $ = (id) => document.getElementById(id);
+const token = () => { try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; } };
+const setToken = (v) => { try { v ? localStorage.setItem(TOKEN_KEY, v) : localStorage.removeItem(TOKEN_KEY); } catch (e) {} };
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+async function call(path, options) {
+  const opt = options || {};
+  const headers = Object.assign({}, opt.body ? { "Content-Type": "application/json" } : {}, token() ? { Authorization: "Bearer " + token() } : {});
+  const res = await fetch(path, Object.assign({}, opt, { headers: Object.assign(headers, opt.headers || {}) }));
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401 || res.status === 403) { setToken(""); renderLogin("请重新登录"); throw new Error(data.message || "需要平台登录"); }
+  if (!res.ok) throw new Error(data.message || ("HTTP " + res.status));
+  return data;
+}
+
+function renderLogin(message) {
+  $("login").style.display = "";
+  $("app").style.display = "none";
+  $("who").textContent = "";
+  $("tip").textContent = message || "";
+}
+
+async function renderApp() {
+  $("login").style.display = "none";
+  $("app").style.display = "";
+  $("who").textContent = "平台管理员";
+  await Promise.all([loadStores(), loadWeixin(), loadOverview()]);
+}
+
+async function loadStores() {
+  const data = await call("/api/v1/platform/tenants");
+  $("storeHint").textContent = "共 " + data.tenants.length + " 家门店;默认门店:" + data.defaultTenantId + "(不允许清除)";
+  $("stores").innerHTML = data.tenants.map((t) => (
+    '<tr><td>' + esc(t.name) + (t.isDefault ? ' <span class="tag">默认</span>' : "") + '</td>'
+    + '<td class="muted">' + esc(t.id) + '</td><td>' + t.dataRows + '</td><td>' + t.stores + '</td><td>' + t.users + '</td>'
+    + '<td class="row"><button class="ghost" data-reset="' + esc(t.id) + '">重置管理员密码</button>'
+    + (t.isDefault ? "" : '<button class="danger" data-del="' + esc(t.id) + '">清门店</button>') + '</td></tr>'
+  )).join("") || '<tr><td colspan="6" class="muted">还没有门店</td></tr>';
+}
+
+async function loadWeixin() {
+  const data = await call("/api/v1/platform/weixin");
+  const rows = (data.accounts || []).map((a) => (
+    '<tr><td>' + esc(a.tenantId) + '</td><td>' + (a.loggedIn ? '<span class="tag">已登录</span>' : '<span class="tag bad">未登录</span>') + '</td>'
+    + '<td class="muted">' + esc(a.accountId || "-") + '</td><td>' + (a.polling ? "是" : "否") + '</td>'
+    + '<td class="muted">' + esc(a.lastError || "-") + '</td></tr>'
+  )).join("");
+  $("wx").innerHTML = rows || '<tr><td colspan="5" class="muted">还没有门店登录微信(门店各自到自己的控制台扫码)</td></tr>';
+}
+
+async function loadOverview() {
+  const data = await call("/api/v1/platform/overview");
+  $("overview").textContent = "门店 " + data.stores + " 家 · 数据行 " + data.dataRows + " · 账号 " + data.accounts + " 个";
+}
+
+$("doLogin").addEventListener("click", async () => {
+  $("tip").textContent = "";
+  try {
+    const res = await fetch("/api/v1/platform/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: $("u").value.trim(), password: $("p").value }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.token) throw new Error(data.message || "登录失败");
+    setToken(data.token);
+    await renderApp();
+  } catch (e) { $("tip").textContent = e.message || "登录失败"; }
+});
+
+$("doCreate").addEventListener("click", async () => {
+  $("tip2").textContent = "";
+  try {
+    const created = await call("/api/v1/platform/tenants", { method: "POST", body: JSON.stringify({ id: $("nId").value.trim(), name: $("nName").value.trim(), address: $("nAddr").value.trim(), adminUsername: "admin", adminPassword: $("nPwd").value }) });
+    $("tip2").textContent = "已开店:" + created.name + "(门店标识 " + created.id + "),门店管理员 admin 可用初始密码登录。";
+    $("nId").value = $("nName").value = $("nAddr").value = $("nPwd").value = "";
+    await renderApp();
+  } catch (e) { $("tip2").textContent = e.message || "开店失败"; }
+});
+
+$("stores").addEventListener("click", async (event) => {
+  const reset = event.target.getAttribute && event.target.getAttribute("data-reset");
+  const del = event.target.getAttribute && event.target.getAttribute("data-del");
+  try {
+    if (reset) {
+      const pwd = prompt("给门店 " + reset + " 的管理员设置新密码(至少 8 位):");
+      if (!pwd) return;
+      await call("/api/v1/platform/tenants/" + encodeURIComponent(reset) + "/admin", { method: "POST", body: JSON.stringify({ username: "admin", password: pwd }) });
+      alert("已重置,请把新密码线下告知门店。");
+    }
+    if (del) {
+      if (prompt("清除门店 " + del + " 的全部数据不可恢复。请输入门店标识确认:") !== del) return;
+      await call("/api/v1/platform/tenants/" + encodeURIComponent(del) + "?confirm=" + encodeURIComponent(del), { method: "DELETE" });
+      await renderApp();
+    }
+  } catch (e) { alert(e.message || "操作失败"); }
+});
+
+$("doLogout").addEventListener("click", () => { setToken(""); renderLogin("已退出"); });
+
+(async () => {
+  if (!token()) return renderLogin();
+  try { await renderApp(); } catch (e) { /* call() 里已经处理 401/403 */ }
+})();
+</script>
+</body>
+</html>

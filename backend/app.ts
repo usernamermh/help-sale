@@ -56,7 +56,7 @@ export function isAuthExemptPath(url: string): boolean {
 	if (path === "/api/v1/auth/login") return true;
 	if (path === "/api/v1/platform/login") return true;
 	if (path === "/api/v1/health" || path === "/api/v1/ready") return true;
-	if (path === "/" || path === "/console") return true;
+	if (path === "/" || path === "/console" || path === "/platform") return true;
 	if (path.startsWith("/vendor/")) return true;
 	return false;
 }
@@ -255,6 +255,10 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 
 	app.get("/", async (_request, reply) => {
 		reply.header("Cache-Control", "no-store").type("text/html; charset=utf-8").send(renderClient());
+	});
+	// 总部平台页:开门店、看各店登录状态、重置门店管理员、清门店(登录用平台账号)
+	app.get("/platform", async (_request, reply) => {
+		reply.header("Cache-Control", "no-store").type("text/html; charset=utf-8").send(readFileSync(path.join(frontDir, "platform.html"), "utf8"));
 	});
 	app.get("/console", async (_request, reply) => {
 		reply.header("Cache-Control", "no-store").type("text/html; charset=utf-8").send(injectClientConfig(injectTenant(readFileSync(path.join(frontDir, "console.html"), "utf8"))));
