@@ -19,6 +19,8 @@ export function loadIntegrationsConfig(file: FileConfig): IntegrationsConfig {
 		mysqlPort: num(file.mysql?.port, "mysql.port"),
 		mysqlUser: str(file.mysql?.user, "mysql.user"),
 		mysqlPassword: str(file.mysql?.password, "mysql.password"),
+		mysqlReadOnlyUser: str(file.mysql?.readOnlyUser, "mysql.readOnlyUser"),
+		mysqlReadOnlyPassword: str(file.mysql?.readOnlyPassword, "mysql.readOnlyPassword"),
 		mysqlDatabase: str(file.mysql?.database, "mysql.database"),
 		redisEnabled: bool(file.redis?.enabled, "redis.enabled"),
 		redisHost: str(file.redis?.host, "redis.host"),

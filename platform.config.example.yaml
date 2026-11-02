@@ -231,6 +231,9 @@ mysql:
   host: your-mysql-host
   port: 3306
   user: ${SECRETS:mysql.user}
+  # SQL 工具的只读账号:读路径走它(只有 SELECT);留空则读仍走上面的主账号
+  readOnlyUser: ${SECRETS:mysql.readOnlyUser}
+  readOnlyPassword: ${SECRETS:mysql.readOnlyPassword}
   password: ${SECRETS:mysql.password}
   database: help_sale
 redis:

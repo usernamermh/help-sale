@@ -87,6 +87,10 @@ export interface AppConfig {
 	mysqlPort: number;
 	mysqlUser: string;
 	mysqlPassword: string;
+	/** SQL 工具的只读账号(mysql.readOnlyUser):留空表示不启用,读仍走主账号 */
+	mysqlReadOnlyUser: string;
+	/** 只读账号口令(mysql.readOnlyPassword,放密钥文件) */
+	mysqlReadOnlyPassword: string;
 	mysqlDatabase: string;
 	redisEnabled: boolean;
 	redisHost: string;
@@ -226,7 +230,7 @@ export type RetrievalConfig = Pick<AppConfig,
 	| "vectorSearchTopK" | "vectorScoreThreshold" | "vectorTimeoutMs" | "vectorEmbedBatch">;
 /** mysql + redis + notification + tools + mcp 段:中间件与外部工具接入。 */
 export type IntegrationsConfig = Pick<AppConfig,
-	| "mysqlEnabled" | "mysqlSchemaRebuild" | "mysqlAutoMigrate" | "mysqlConnectTimeout" | "mysqlHost" | "mysqlPort" | "mysqlUser" | "mysqlPassword" | "mysqlDatabase"
+	| "mysqlEnabled" | "mysqlSchemaRebuild" | "mysqlAutoMigrate" | "mysqlConnectTimeout" | "mysqlHost" | "mysqlPort" | "mysqlUser" | "mysqlPassword" | "mysqlReadOnlyUser" | "mysqlReadOnlyPassword" | "mysqlDatabase"
 	| "redisEnabled" | "redisHost" | "redisPort" | "redisPassword" | "redisLeaderLeaseMs" | "mysqlConnectionLimit" | "mysqlQueryTimeoutMs"
 	| "notificationEnabled" | "notificationWebhookUrl" | "authEnabled" | "authTokenTtlHours" | "authTokenSecret" | "authBootstrapTenantId" | "authBootstrapUsername" | "authBootstrapPassword" | "authPlatformUsername" | "authPlatformPassword"
 	| "webSearchApiKey" | "fileWriteAllowOutsideRepo" | "filesTenantScoped" | "filesTenantRootDir" | "sqlMaxRows" | "sqlTimeoutMs" | "sqlExtraBlockedKeywords" | "riskDangerousTools" | "riskDangerousDefaultEnabled" | "mcpServers"

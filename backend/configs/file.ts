@@ -62,7 +62,7 @@ export interface FileConfig {
 	};
 	knowledge?: { searchLimit?: number };
 	logging?: { enabled?: boolean; dir?: string; maxBytes?: number; level?: "debug" | "info" | "error"; runtimeFile?: string };
-	mysql?: { enabled?: boolean; schemaRebuild?: boolean; autoMigrate?: boolean; connectTimeout?: number; host?: string; port?: number; user?: string; password?: string; database?: string; connectionLimit?: number; queryTimeoutMs?: number };
+	mysql?: { enabled?: boolean; schemaRebuild?: boolean; autoMigrate?: boolean; connectTimeout?: number; host?: string; port?: number; user?: string; password?: string; readOnlyUser?: string; readOnlyPassword?: string; database?: string; connectionLimit?: number; queryTimeoutMs?: number };
 	redis?: { enabled?: boolean; host?: string; port?: number; password?: string; leaderLeaseMs?: number };
 	notification?: { enabled?: boolean; webhookUrl?: string };
 	/** 登录与 RBAC:开关、令牌有效期、令牌密钥与初始管理员 */

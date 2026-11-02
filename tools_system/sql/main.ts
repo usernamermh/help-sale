@@ -18,6 +18,13 @@ const resolveDbPath = (p: string) => (path.isAbsolute(p) ? p : path.join(repoRoo
 const AUDIT_DIR = path.join(repoRoot, "data");
 const TEXT_LIMIT = 8000;
 
+/** MySQL 服务端超时:客户端超时之外再加一层优化器提示(只对 SELECT 生效) */
+const withHint = (text: string): string => {
+	const m = /^(\s*select\s+)/i.exec(text);
+	if (!m) return text;
+	return m[1] + "/*+ MAX_EXECUTION_TIME(" + Math.max(1000, Math.trunc(config.sqlTimeoutMs)) + ") */ " + text.slice(m[0].length);
+};
+
 /** 需要租户隔离的业务表(除去 tenants 本身) */
 function tenantTables(): string[] {
 	return Object.entries(config.tables)
@@ -30,15 +37,18 @@ function reply(text: string, details?: Record<string, unknown>) {
 }
 
 async function runMysql(guard: SqlGuardResult): Promise<{ rows?: unknown[]; changes?: number }> {
+	// 读语句优先走只读账号(只有 SELECT 权限):策略层之外的第二道边界
+	if (guard.mode === "read" || guard.mode === "blocked") {
+		const { readOnlySqlBridge } = await import("../../backend/db/mysql/read-only.js");
+		const ro = readOnlySqlBridge();
+		if (ro) {
+			const roStmt = ro.prepare(guard.mode === "read" && /^\s*select\b/i.test(guard.sql) ? withHint(guard.sql) : guard.sql);
+			return { rows: roStmt.all(...guard.values) };
+		}
+	}
 	const { createSyncMysqlDb } = await import("../../backend/db/mysql/client.js");
 	const db = createSyncMysqlDb();
 	try {
-		// MySQL 服务端超时:客户端超时之外,再加一层优化器提示(只对 SELECT 生效)
-		const withHint = (text: string): string => {
-			const m = /^(\s*select\s+)/i.exec(text);
-			if (!m) return text;
-			return m[1] + "/*+ MAX_EXECUTION_TIME(" + Math.max(1000, Math.trunc(config.sqlTimeoutMs)) + ") */ " + text.slice(m[0].length);
-		};
 		const stmt = db.prepare(guard.mode === "read" && /^\s*select\b/i.test(guard.sql) ? withHint(guard.sql) : guard.sql);
 		if (guard.mode === "write") return { changes: stmt.run(...guard.values).changes };
 		return { rows: stmt.all(...guard.values) };
