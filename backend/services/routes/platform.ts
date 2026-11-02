@@ -11,6 +11,7 @@ import type { RouteDeps } from "./helpers.js";
 import { requireTenant } from "../../integrations_pi/tables/crm/customers.js";
 import { createUser, countAdmins, getUserByUsername, updateUser } from "../../integrations_pi/tables/agents/users.js";
 import { createPlatformAdmin, countPlatformAdmins, deletePlatformAdmin, getPlatformAdminByUsername, listPlatformAdmins, updatePlatformAdmin, verifyPassword as verifyPlatformPassword, type PlatformAdmin } from "../../integrations_pi/tables/agents/platform-admins.js";
+import { deleteTenantSecret, listTenantSecrets, PLATFORM_SECRET_NAMES, writeTenantSecret } from "../../integrations_pi/tables/agents/tenant-secrets.js";
 import { upsertStore, listStores } from "../../integrations_pi/tables/sales/stores.js";
 
 /** 平台层接口只认平台令牌。 */
@@ -176,6 +177,39 @@ export function registerPlatformRoutes(app: FastifyInstance, deps: RouteDeps): v
 		if (countPlatformAdmins(deps.db) === 0) {
 			return reply.code(400).send({ error: "invalid_request", message: "至少保留一个可用的平台管理员。" });
 		}
+		return { ok: true };
+	});
+
+	// ── 门店凭证与额度(平台可写;门店自己只能改 non-quota 那几项) ──
+	app.get<{ Params: { id: string } }>("/api/v1/platform/tenants/:id/secrets", async (request, reply) => {
+		if (!requirePlatform(request, reply)) return;
+		const tenantId = request.params.id;
+		const exists = deps.db.prepare(`/* system */ SELECT id FROM ${tenantTable()} WHERE id = ?`).get(tenantId);
+		if (!exists) return reply.code(404).send({ error: "not_found", message: "门店不存在。" });
+		const rows = listTenantSecrets(deps.db, tenantId);
+		return { tenantId, supported: PLATFORM_SECRET_NAMES, overridden: rows.map((r) => r.name), updatedAt: Object.fromEntries(rows.map((r) => [r.name, r.updatedAt])) };
+	});
+
+	app.put<{ Params: { id: string; name: string }; Body: { value?: string } }>("/api/v1/platform/tenants/:id/secrets/:name", async (request, reply) => {
+		if (!requirePlatform(request, reply)) return;
+		const name = String(request.params.name ?? "");
+		if (!PLATFORM_SECRET_NAMES.includes(name as (typeof PLATFORM_SECRET_NAMES)[number])) {
+			return reply.code(400).send({ error: "invalid_request", message: `不支持的凭证名:${name}`, supported: PLATFORM_SECRET_NAMES });
+		}
+		if (typeof request.body?.value !== "string" || request.body.value.trim() === "") {
+			return reply.code(400).send({ error: "invalid_request", message: "value 必填(要清除请用 DELETE)。" });
+		}
+		const tenantId = request.params.id;
+		const exists = deps.db.prepare(`/* system */ SELECT id FROM ${tenantTable()} WHERE id = ?`).get(tenantId);
+		if (!exists) return reply.code(404).send({ error: "not_found", message: "门店不存在。" });
+		writeTenantSecret(deps.db, tenantId, name, request.body.value);
+		return { ok: true, tenantId, name };
+	});
+
+	app.delete<{ Params: { id: string; name: string } }>("/api/v1/platform/tenants/:id/secrets/:name", async (request, reply) => {
+		if (!requirePlatform(request, reply)) return;
+		const removed = deleteTenantSecret(deps.db, request.params.id, String(request.params.name ?? ""));
+		if (!removed) return reply.code(404).send({ error: "not_found", message: "该门店没有覆盖这一项。" });
 		return { ok: true };
 	});
 

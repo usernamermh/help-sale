@@ -22,6 +22,7 @@ import { countPlatformAdmins, createPlatformAdmin } from "./integrations_pi/tabl
 import { withTenantGuard } from "./db/tenant-guard.js";
 import { assertTableMappingComplete } from "./db/schema-audit.js";
 import { createTenantQuota } from "./services/tenant-quota.js";
+import { createQuotaLimitResolver } from "./services/tenant-quota-limits.js";
 import { createSyncMysqlDb } from "./db/mysql/client.js";
 import { createReminderQueue, type ReminderQueue } from "./integrations_db/reminder-queue.js";
 import { closeStopSignal, initStopSignal } from "./services/stop-signal.js";
@@ -193,6 +194,8 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		agentConcurrency: config.tenantAgentConcurrency,
 		retryAfterSeconds: config.tenantRetryAfterSeconds,
 		redis: { enabled: config.redisEnabled, host: config.redisHost, port: config.redisPort, password: config.redisPassword },
+		// 门店级额度:平台写进 tenant_secrets 的 quota.* 覆盖全局(5 秒缓存,配完很快生效)
+		resolveLimits: createQuotaLimitResolver(db),
 	});
 	const deps: RouteDeps = { db, store, dataDir, logDir, runtime: options.runtime, streamFn: options.streamFn, reminders, quota };
 

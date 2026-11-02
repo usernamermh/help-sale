@@ -24,6 +24,11 @@ export interface TenantQuotaConfig {
 	agentConcurrency: number;
 	/** 被限流时建议客户端等待的秒数 */
 	retryAfterSeconds: number;
+	/**
+	 * 门店级限额覆盖(平台在 tenant_secrets 里配了就用它的):
+	 * 只给"这一项要覆盖的值",没给的项回退全局配置。
+	 */
+	resolveLimits?: (tenantId: string) => { requestPerMinute?: number; requestBurst?: number; agentConcurrency?: number } | undefined;
 	redis?: { enabled: boolean; host: string; port: number; password?: string };
 	now?: () => number;
 }
@@ -99,6 +104,15 @@ interface BucketState {
 }
 
 export function createTenantQuota(config: TenantQuotaConfig): TenantQuota {
+	/** 该租户的实际限额:门店级覆盖优先,缺项回退全局。 */
+	const limitsFor = (tenantId: string): { requestPerMinute: number; requestBurst: number; agentConcurrency: number } => {
+		const override = config.resolveLimits?.(tenantId);
+		return {
+			requestPerMinute: override?.requestPerMinute ?? config.requestPerMinute,
+			requestBurst: override?.requestBurst ?? config.requestBurst,
+			agentConcurrency: override?.agentConcurrency ?? config.agentConcurrency,
+		};
+	};
 	const now = config.now ?? Date.now;
 	const retryAfterMs = Math.max(1000, config.retryAfterSeconds * 1000);
 
@@ -129,10 +143,10 @@ export function createTenantQuota(config: TenantQuotaConfig): TenantQuota {
 
 	const memoryAcquire = (tenantId: string): QuotaDecision => {
 		const stamp = now();
-		const ratePerMs = config.requestPerMinute / 60000;
-		const state = buckets.get(tenantId) ?? { tokens: config.requestBurst, updatedAt: stamp };
+		const ratePerMs = limitsFor(tenantId).requestPerMinute / 60000;
+		const state = buckets.get(tenantId) ?? { tokens: limitsFor(tenantId).requestBurst, updatedAt: stamp };
 		const elapsed = Math.max(0, stamp - state.updatedAt);
-		state.tokens = Math.min(config.requestBurst, state.tokens + elapsed * ratePerMs);
+		state.tokens = Math.min(limitsFor(tenantId).requestBurst, state.tokens + elapsed * ratePerMs);
 		state.updatedAt = stamp;
 		if (state.tokens >= 1) {
 			state.tokens -= 1;
@@ -151,11 +165,11 @@ export function createTenantQuota(config: TenantQuotaConfig): TenantQuota {
 		},
 		async tryAcquireAgentRun(tenantId) {
 			const current = slots.get(tenantId) ?? 0;
-			if (current >= config.agentConcurrency) {
+			if (current >= limitsFor(tenantId).agentConcurrency) {
 				return { allowed: false, retryAfterMs, remaining: 0 };
 			}
 			slots.set(tenantId, current + 1);
-			return { allowed: true, retryAfterMs: 0, remaining: config.agentConcurrency - current - 1 };
+			return { allowed: true, retryAfterMs: 0, remaining: limitsFor(tenantId).agentConcurrency - current - 1 };
 		},
 		async releaseAgentRun(tenantId) {
 			const current = slots.get(tenantId) ?? 0;
@@ -204,8 +218,8 @@ export function createTenantQuota(config: TenantQuotaConfig): TenantQuota {
 					TOKEN_BUCKET_SCRIPT,
 					1,
 					`${REQ_PREFIX}${tenantId}`,
-					String(config.requestBurst),
-					String(config.requestPerMinute / 60000),
+					String(limitsFor(tenantId).requestBurst),
+					String(limitsFor(tenantId).requestPerMinute / 60000),
 					String(now()),
 					String(SLOT_TTL_MS),
 				)) as [number, number];
@@ -222,7 +236,7 @@ export function createTenantQuota(config: TenantQuotaConfig): TenantQuota {
 					ACQUIRE_SLOT_SCRIPT,
 					1,
 					`${AGENT_PREFIX}${tenantId}`,
-					String(config.agentConcurrency),
+					String(limitsFor(tenantId).agentConcurrency),
 					String(SLOT_TTL_MS),
 				)) as [number, number];
 				const allowed = Number(result?.[0] ?? 0) === 1;
