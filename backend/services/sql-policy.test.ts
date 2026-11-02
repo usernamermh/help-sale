@@ -175,7 +175,7 @@ describe("SQL 加固:绕过样例都拦得住", () => {
 	it("INSERT 的 tenant_id 必须是 :tenantId,不能写字面量", () => {
 		expect(blocked("INSERT INTO customers (id, tenant_id, name) VALUES ('c1', 't_demo', 'x')")).not.toBe("");
 		expect(blocked("INSERT INTO customers (id, tenant_id, name) VALUES (?, ?, ?)")).toContain(":tenantId");
-		expect(blocked("INSERT INTO customers (id, tenant_id, name) VALUES (?, :tenantId, ?)")).toBe("");
+		expect(guardSql("INSERT INTO customers (id, tenant_id, name) VALUES (?, :tenantId, ?)", ["c1", "x"], opts()).allowed).toBe(true);
 	});
 
 	it("账号/密钥/平台数据不在业务查询范围", () => {
@@ -183,5 +183,61 @@ describe("SQL 加固:绕过样例都拦得住", () => {
 			expect(blocked(`SELECT * FROM ${table}`)).toContain(table);
 		}
 		expect(blocked("SELECT password_hash FROM customers")).not.toBe("");
+	});
+});
+describe("SQL 加固第二批:评审给出的绕过样例全部拦住", () => {
+	const o = () => ({
+		readOnly: false,
+		confirmWrite: true,
+		maxRows: 200,
+		tenantId: "t_current",
+		tenantTables: ["customers", "conversations", "tenant_secrets", "users", "platform_admins"],
+		dialect: "mysql" as const,
+	});
+	const denied = (sql: string, values: unknown[] = [], extra: Record<string, unknown> = {}): boolean => {
+		const res = guardSql(sql, values, { ...o(), ...extra } as any);
+		return res.allowed === false;
+	};
+
+	it("P0-1 字符串/注释里的 ? 不吃参数:数量对不上直接拒", () => {
+		expect(denied("SELECT * FROM customers WHERE name <> '?' AND tenant_id = :tenantId", ["t_other"], { readOnly: true })).toBe(true);
+		expect(denied("INSERT INTO customers (name, tenant_id) VALUES ('?', :tenantId)", ["x"])).toBe(true);
+	});
+
+	it("P0-1 正常语句不受影响:值按顺序绑定,租户占位符注入当前租户", () => {
+		const res = guardSql("SELECT * FROM customers WHERE tenant_id = :tenantId AND name = ?", ["张三"], { ...o(), readOnly: true } as any);
+		expect(res.allowed).toBe(true);
+		expect(res.values).toEqual(["t_current", "张三"]);
+	});
+
+	it("P0-2 写路径同样过敏感表/恒真/逐表覆盖", () => {
+		expect(denied("UPDATE tenant_secrets SET value='x' WHERE tenant_id = :tenantId")).toBe(true);
+		expect(denied("UPDATE customers SET name='x' WHERE tenant_id = :tenantId OR 2=2")).toBe(true);
+	});
+
+	it("P0-3 读语句的 OR 扩范围一律拒", () => {
+		expect(denied("SELECT * FROM customers WHERE tenant_id = :tenantId OR 2=2", [], { readOnly: true })).toBe(true);
+		expect(denied("SELECT * FROM customers WHERE tenant_id = :tenantId OR (1=1)", [], { readOnly: true })).toBe(true);
+	});
+
+	it("P0-4 UNION 与子查询一律拒", () => {
+		expect(denied("SELECT * FROM customers WHERE tenant_id = :tenantId UNION SELECT * FROM customers", [], { readOnly: true })).toBe(true);
+		expect(denied("SELECT * FROM customers WHERE tenant_id = :tenantId AND id IN (SELECT id FROM customers)", [], { readOnly: true })).toBe(true);
+	});
+
+	it("P0-5 注释不能骗过主语句判定:该走写分支", () => {
+		const res = guardSql("WITH c AS (SELECT 1) /* select */ DELETE FROM customers WHERE tenant_id = :tenantId", [], { ...o() } as any);
+		expect(res.mode).toBe("write");
+		const readonly = guardSql("WITH c AS (SELECT 1) /* select */ DELETE FROM customers WHERE tenant_id = :tenantId", [], { ...o(), readOnly: true } as any);
+		expect(readonly.allowed).toBe(false);
+	});
+
+	it("P0-6 SHOW 一律拒", () => {
+		expect(denied("SHOW PROCESSLIST", [], { readOnly: true })).toBe(true);
+		expect(denied("SHOW TABLES", [], { readOnly: true })).toBe(true);
+	});
+
+	it("P1 tenants 表不给 SQL 工具枚举", () => {
+		expect(denied("SELECT * FROM tenants", [], { readOnly: true })).toBe(true);
 	});
 });

@@ -34,7 +34,7 @@ async function runMysql(guard: SqlGuardResult): Promise<{ rows?: unknown[]; chan
 	const db = createSyncMysqlDb();
 	try {
 		const stmt = db.prepare(guard.sql);
-		if (guard.mode === "run") return { changes: stmt.run(...guard.values).changes };
+		if (guard.mode === "write") return { changes: stmt.run(...guard.values).changes };
 		return { rows: stmt.all(...guard.values) };
 	} finally {
 		db.close();
@@ -46,7 +46,7 @@ async function runLocal(guard: SqlGuardResult): Promise<{ rows?: unknown[]; chan
 		dbPath: resolveDbPath(config.businessDbPath),
 		sql: guard.sql,
 		values: guard.values,
-		stmtKind: guard.mode === "run" ? "run" : "all",
+		stmtKind: guard.mode === "write" ? "run" : "all",
 		timeoutMs: config.sqlTimeoutMs,
 	});
 }

@@ -99,7 +99,7 @@ function stripLiterals(sql: string): string {
  * 只扫描括号深度 0 的词,CTE 内部的 SELECT 不算。
  */
 export function mainKeywordOf(sql: string): string {
-	const text = stripLiterals(sql).toLowerCase();
+	const text = stripLiterals(maskSql(sql)).toLowerCase();
 	const first = text.match(/^[a-z]+/)?.[0] ?? "";
 	if (first !== "with") return first;
 	let depth = 0;
@@ -223,17 +223,18 @@ export function guardSql(sql: string, values: unknown[], opts: SqlGuardOptions):
 		return { allowed: true, mode: "read", sql: trimmed, values: [...values], maxRows: opts.maxRows };
 	}
 
+	// 加固检查:注释/字符串绕过、敏感表列、恒真与 OR 扩范围、UNION/子查询、逐表覆盖、INSERT 取值(读写都过)
+	const maskedSql = maskSql(trimmed);
+	const safety = sqlSafetyViolation(maskedSql, trimmed, opts);
+	if (safety) return blocked(safety);
+
 	const readOnly = opts.readOnly !== false;
 	if (READ_KEYWORDS.has(main)) {
 		// 业务表必须带租户占位符
 		const tenantIssue = tenantViolation(cleaned, opts);
 		if (tenantIssue) return blocked(tenantIssue);
-	// 加固检查:注释/字符串绕过、敏感表列、读语句恒真、逐表覆盖、INSERT 取值
-	const maskedSql = maskSql(trimmed);
-	const safety = sqlSafetyViolation(maskedSql, trimmed, opts);
-	if (safety) return blocked(safety);
-
-		const bound = bindTenant(trimmed, values, opts.tenantId);
+				const bound = bindTenantSafe(trimmed, values, opts.tenantId);
+		if ("error" in bound) return blocked(bound.error);
 		// 读语句补 LIMIT(仅 SELECT;SHOW/EXPLAIN/DESCRIBE 不合法)
 		let finalSql = bound.sql.replace(/;\s*$/, "");
 		if (main === "select" && !/\blimit\b/i.test(cleaned) && !/\bfor\s+update\b/i.test(cleaned) && !/\binto\b/i.test(cleaned)) {
@@ -246,17 +247,18 @@ export function guardSql(sql: string, values: unknown[], opts: SqlGuardOptions):
 		if (readOnly) return blocked("只读模式:写操作需显式传入 readOnly=false");
 		if (opts.confirmWrite !== true) return blocked("危险写操作需显式 confirmWrite=true 确认后执行");
 		const body = stripCte(trimmed);
-		if ((main === "update" || main === "delete") && !/\bwhere\b/i.test(stripLiterals(body))) {
+		if ((main === "update" || main === "delete") && !/\bwhere\b/i.test(maskSql(stripLiterals(body)))) {
 			return blocked(`${main.toUpperCase()} 必须带 WHERE 条件,防止全表操作`);
 		}
 		if (main === "update" || main === "delete") {
 			for (const [pattern, label] of TAUTOLOGY_PATTERNS) {
-				if (pattern.test(stripLiterals(body).toLowerCase())) return blocked(`拒绝恒真条件:${label}`);
+				if (pattern.test(maskSql(stripLiterals(body)).toLowerCase())) return blocked(`拒绝恒真条件:${label}`);
 			}
 		}
 		const tenantIssue = tenantViolation(cleaned, opts);
 		if (tenantIssue) return blocked(tenantIssue);
-		const bound = bindTenant(trimmed, values, opts.tenantId);
+				const bound = bindTenantSafe(trimmed, values, opts.tenantId);
+		if ("error" in bound) return blocked(bound.error);
 		return { allowed: true, mode: "write", sql: bound.sql, values: bound.values, maxRows: opts.maxRows };
 	}
 
@@ -302,7 +304,7 @@ export function appendSqlAudit(dir: string, entry: Omit<SqlAuditEntry, "ts">): v
 import { inspectTenantScope } from "../db/tenant-guard.js";
 
 /** 永远不许被 SQL 工具读到的表(账号、密钥、平台管理员)。 */
-const DENY_TABLES = ["tenant_secrets", "tenant_config", "users", "platform_admins"];
+const DENY_TABLES = ["tenant_secrets", "tenant_config", "users", "platform_admins", "tenants"];
 /** 永远不许出现的列(口令摘要)。 */
 const DENY_COLUMNS = ["password_hash"];
 
@@ -402,6 +404,18 @@ export function sqlSafetyViolation(masked: string, raw: string, opts: SqlGuardOp
 	const mapping: Record<string, string> = {};
 	for (const table of opts.tenantTables) mapping[table] = table;
 	const scope = inspectTenantScope(masked, mapping);
+	// 3a) SHOW 一律拒绝:会暴露库结构、连接与其它租户正在执行的语句
+	if (/^\s*show\b/i.test(masked.trim())) {
+		return "SQL 工具不允许 SHOW(需要表结构请查 information_schema 白名单)";
+	}
+
+	// 3b) 结构收窄:涉及业务表时禁止 OR 扩范围 / UNION / 子查询 —— 正则在布尔表达式上判不完整,直接收窄形态
+	if (scope.tables.length > 0) {
+		if (/\bor\b/.test(lower)) return "涉及业务表时不允许 OR:租户条件必须写成与其它条件并列的 AND";
+		if (/\b(union|intersect|except)\b/.test(lower)) return "涉及业务表时不允许 UNION/INTERSECT/EXCEPT";
+		if (/\bfrom\s*\(/.test(lower) || /\bin\s*\(\s*select\b/.test(lower)) return "涉及业务表时不允许子查询(FROM (SELECT …) / IN (SELECT …))";
+	}
+
 	if (scope.uncovered.length > 0) {
 		return "语句涉及业务表(" + scope.uncovered.join(", ") + "),每张表都要有自己的租户过滤(别名.tenant_id = :tenantId,或用 a.tenant_id = b.tenant_id 连到已过滤的表)";
 	}
@@ -411,4 +425,31 @@ export function sqlSafetyViolation(masked: string, raw: string, opts: SqlGuardOp
 		return "INSERT 的 tenant_id 必须写成 :tenantId 占位符(由工具注入当前租户)";
 	}
 	return undefined;
+}
+
+/**
+ * 绑定占位符(P0-1 修复):只在**真正的**占位符上替换 —— 字符串/注释里的 ? 和 :tenantId 不参与,
+ * 并且要求 values 数量与真正的 ? 数量一致,避免参数与占位符错位导致"租户值绑到别的列"。
+ */
+export function bindTenantSafe(sql: string, values: unknown[], tenantId: string): { sql: string; values: unknown[] } | { error: string } {
+	const text = String(sql ?? "");
+	const masked = maskSql(text);
+	const tokens: Array<{ index: number; len: number; kind: "tenant" | "q" }> = [];
+	for (let i = 0; i < masked.length; i++) {
+		if (masked.startsWith(":tenantId", i)) { tokens.push({ index: i, len: 9, kind: "tenant" }); i += 8; continue; }
+		if (masked[i] === "?") tokens.push({ index: i, len: 1, kind: "q" });
+	}
+	const realQuestions = tokens.filter((t) => t.kind === "q").length;
+	const bound = Array.isArray(values) ? [...values] : [];
+	if (realQuestions !== bound.length) {
+		return { error: `参数个数与占位符不匹配:SQL 里真正有 ${realQuestions} 个 ?,传了 ${bound.length} 个值(字符串/注释里的 ? 不算占位符)` };
+	}
+	if (tokens.some((t) => t.kind === "tenant") && !tenantId) return { error: "缺少当前租户,无法注入 :tenantId" };
+	const queue = [...bound];
+	const ordered = tokens.map((t) => ({ ...t, value: t.kind === "q" ? queue.shift() : tenantId }));
+	let out = text;
+	for (const t of [...ordered].sort((a, b) => b.index - a.index)) {
+		out = out.slice(0, t.index) + "?" + out.slice(t.index + t.len);
+	}
+	return { sql: out, values: ordered.map((t) => t.value) };
 }
