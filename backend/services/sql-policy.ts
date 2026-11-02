@@ -228,6 +228,11 @@ export function guardSql(sql: string, values: unknown[], opts: SqlGuardOptions):
 		// 业务表必须带租户占位符
 		const tenantIssue = tenantViolation(cleaned, opts);
 		if (tenantIssue) return blocked(tenantIssue);
+	// 加固检查:注释/字符串绕过、敏感表列、读语句恒真、逐表覆盖、INSERT 取值
+	const maskedSql = maskSql(trimmed);
+	const safety = sqlSafetyViolation(maskedSql, trimmed, opts);
+	if (safety) return blocked(safety);
+
 		const bound = bindTenant(trimmed, values, opts.tenantId);
 		// 读语句补 LIMIT(仅 SELECT;SHOW/EXPLAIN/DESCRIBE 不合法)
 		let finalSql = bound.sql.replace(/;\s*$/, "");
@@ -291,4 +296,119 @@ export function appendSqlAudit(dir: string, entry: Omit<SqlAuditEntry, "ts">): v
 	} catch {
 		// 审计失败不影响执行
 	}
+}
+/* ===== 加固:注释/字符串绕过、读语句恒真、逐表覆盖、敏感表列、INSERT 取值 ===== */
+
+import { inspectTenantScope } from "../db/tenant-guard.js";
+
+/** 永远不许被 SQL 工具读到的表(账号、密钥、平台管理员)。 */
+const DENY_TABLES = ["tenant_secrets", "tenant_config", "users", "platform_admins"];
+/** 永远不许出现的列(口令摘要)。 */
+const DENY_COLUMNS = ["password_hash"];
+
+/** 恒真/越权比较:读语句同样要拦(OR 1=1 / OR true / OR tenant_id <> :tenantId)。 */
+const READ_TAUTOLOGY_PATTERNS: Array<[RegExp, string]> = [
+	[/\bor\s+(1\s*=\s*1|0\s*=\s*0|\btrue\b)/i, "OR 1=1 / OR true 这类恒真条件"],
+	[/\bor\s+(?:[a-z_][a-z0-9_]*\.)?tenant_id\s*(<>|!=)/i, "OR tenant_id <> :tenantId 这类跨租户条件"],
+	[/\bwhere\s+(1\s*=\s*1|0\s*=\s*0|\btrue\b)\s*(or|;|$)/i, "WHERE 1=1 / true 这类恒真条件"],
+];
+
+/**
+ * 把注释与字符串字面量的内容替换成空格(反引号标识符保留),**长度不变**,便于按位置对齐。
+ * 这样"藏在注释/字符串里的 tenant_id 或 WHERE"不会被当成真的租户过滤。
+ */
+export function maskSql(sql: string): string {
+	const text = String(sql ?? "");
+	const out = text.split("");
+	const blank = (from: number, to: number): void => {
+		for (let i = from; i < to; i++) if (out[i] !== "\n") out[i] = " ";
+	};
+	let i = 0;
+	while (i < text.length) {
+		const ch = text[i];
+		const next = text[i + 1];
+		if (ch === "/" && next === "*") {
+			const end = text.indexOf("*/", i + 2);
+			const stop = end < 0 ? text.length : end + 2;
+			blank(i, stop);
+			i = stop;
+			continue;
+		}
+		if ((ch === "-" && next === "-") || ch === "#") {
+			const end = text.indexOf("\n", i + (ch === "#" ? 1 : 2));
+			const stop = end < 0 ? text.length : end;
+			blank(i, stop);
+			i = stop;
+			continue;
+		}
+		if (ch === "'" || ch === '"') {
+			const quote = ch;
+			let j = i + 1;
+			while (j < text.length) {
+				if (text[j] === "\\") { j += 2; continue; }
+				if (text[j] === quote) {
+					if (text[j + 1] === quote) { j += 2; continue; }
+					break;
+				}
+				j++;
+			}
+			blank(i, Math.min(j + 1, text.length));
+			i = j + 1;
+			continue;
+		}
+		i++;
+	}
+	return out.join("");
+}
+
+/** 统计记号出现次数:用于"注释/字符串里的占位符不作数"。 */
+function countOf(text: string, token: string): number {
+	return text.split(token).length - 1;
+}
+
+/**
+ * 加固后的统一检查。raw 是原句,masked 是把注释/字符串抹掉后的等长句子。
+ * 返回非空 = 拒绝执行(附原因)。
+ */
+export function sqlSafetyViolation(masked: string, raw: string, opts: SqlGuardOptions): string | undefined {
+	const lower = masked.toLowerCase();
+
+	// 1) 租户条件不许藏在注释或字符串里
+	if (countOf(String(raw).toLowerCase(), "tenant_id") !== countOf(lower, "tenant_id")) {
+		return "tenant_id 不允许出现在注释或字符串里(那不算租户过滤)";
+	}
+	if (countOf(String(raw), ":tenantId") !== countOf(masked, ":tenantId")) {
+		return ":tenantId 占位符不允许写在注释或字符串里";
+	}
+
+	// 2) 敏感表 / 敏感列一律拒绝
+	for (const table of DENY_TABLES) {
+		if (new RegExp("(^|[^a-z0-9_])" + table + "([^a-z0-9_]|$)").test(lower)) {
+			return "SQL 工具不允许访问 " + table + "(账号/密钥/平台数据不在业务查询范围)";
+		}
+	}
+	for (const column of DENY_COLUMNS) {
+		if (new RegExp("(^|[^a-z0-9_])" + column + "([^a-z0-9_]|$)").test(lower)) {
+			return "SQL 工具不允许访问 " + column + " 列";
+		}
+	}
+
+	// 3) 恒真/越权比较:读语句同样拦
+	for (const [pattern, label] of READ_TAUTOLOGY_PATTERNS) {
+		if (pattern.test(lower)) return "拒绝执行:" + label;
+	}
+
+	// 4) 逐表覆盖:每张业务表都要有自己的 :tenantId(或经同租户等值 JOIN 挂到已锚定的表)
+	const mapping: Record<string, string> = {};
+	for (const table of opts.tenantTables) mapping[table] = table;
+	const scope = inspectTenantScope(masked, mapping);
+	if (scope.uncovered.length > 0) {
+		return "语句涉及业务表(" + scope.uncovered.join(", ") + "),每张表都要有自己的租户过滤(别名.tenant_id = :tenantId,或用 a.tenant_id = b.tenant_id 连到已过滤的表)";
+	}
+
+	// 5) INSERT:tenant_id 的取值必须是 :tenantId
+	if (/^\s*insert\b/i.test(lower) && /\btenant_id\b/.test(lower) && !/values\s*\([^)]*:tenantid/i.test(lower)) {
+		return "INSERT 的 tenant_id 必须写成 :tenantId 占位符(由工具注入当前租户)";
+	}
+	return undefined;
 }

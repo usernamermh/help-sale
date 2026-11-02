@@ -33,7 +33,7 @@ tools:
     extraBlockedKeywords: []
     # 高危工具:能执行命令 / 控制机器 / 写任意路径,默认不挂载,需在控制台按租户显式开启
   risk:
-    dangerousTools: ["terminal", "computer", "file_write"]
+    dangerousTools: ["terminal", "computer", "file_write", "sql"]
     # false = 高危工具默认关闭(推荐);true = 沿用"没关就是开"的旧行为
     dangerousDefaultEnabled: false
   catalog:

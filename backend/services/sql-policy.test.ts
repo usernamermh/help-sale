@@ -136,3 +136,52 @@ describe("SQL 守卫:恒真条件", () => {
 		expect(guard("SELECT count(*) FROM customers WHERE tenant_id = :tenantId AND 1=1").allowed).toBe(true);
 	});
 });
+describe("SQL 加固:绕过样例都拦得住", () => {
+	const opts = (): any => ({
+		readOnly: false,
+		confirmWrite: true,
+		maxRows: 50,
+		tenantId: "t_demo",
+		tenantTables: ["customers", "conversations", "next_step_tasks"],
+		dialect: "mysql",
+	});
+	const blocked = (sql: string): string => {
+		const res = guardSql(sql, [], opts());
+		return res.allowed ? "" : String(res.reason ?? "");
+	};
+
+	it("注释里的租户过滤不算数", () => {
+		expect(blocked("SELECT * FROM customers /* WHERE tenant_id = :tenantId */")).toContain("注释");
+	});
+
+	it("占位符写在字符串里不算数", () => {
+		expect(blocked("SELECT * FROM customers WHERE name = ':tenantId'")).not.toBe("");
+	});
+
+	it("读语句的恒真条件同样拦", () => {
+		expect(blocked("SELECT * FROM customers WHERE tenant_id = :tenantId OR 1=1")).toContain("恒真");
+		expect(blocked("SELECT * FROM customers WHERE tenant_id = :tenantId OR true")).toContain("恒真");
+	});
+
+	it("OR tenant_id <> :tenantId 这类跨租户条件拦下", () => {
+		expect(blocked("SELECT * FROM customers WHERE tenant_id = :tenantId OR tenant_id <> :tenantId")).toContain("跨租户");
+	});
+
+	it("JOIN 只在一边写租户条件:拦下;两边都写:放行", () => {
+		expect(blocked("SELECT c.name FROM customers c JOIN conversations v ON v.customer_id = c.id WHERE c.tenant_id = :tenantId")).toContain("conversations");
+		expect(blocked("SELECT c.name FROM customers c JOIN conversations v ON v.customer_id = c.id WHERE c.tenant_id = :tenantId AND v.tenant_id = :tenantId")).toBe("");
+	});
+
+	it("INSERT 的 tenant_id 必须是 :tenantId,不能写字面量", () => {
+		expect(blocked("INSERT INTO customers (id, tenant_id, name) VALUES ('c1', 't_demo', 'x')")).not.toBe("");
+		expect(blocked("INSERT INTO customers (id, tenant_id, name) VALUES (?, ?, ?)")).toContain(":tenantId");
+		expect(blocked("INSERT INTO customers (id, tenant_id, name) VALUES (?, :tenantId, ?)")).toBe("");
+	});
+
+	it("账号/密钥/平台数据不在业务查询范围", () => {
+		for (const table of ["users", "tenant_secrets", "tenant_config", "platform_admins"]) {
+			expect(blocked(`SELECT * FROM ${table}`)).toContain(table);
+		}
+		expect(blocked("SELECT password_hash FROM customers")).not.toBe("");
+	});
+});
