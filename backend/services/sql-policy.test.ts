@@ -241,3 +241,45 @@ describe("SQL 加固第二批:评审给出的绕过样例全部拦住", () => {
 		expect(denied("SELECT * FROM tenants", [], { readOnly: true })).toBe(true);
 	});
 });
+import { sanitizeRows } from "./sql-policy.js";
+
+describe("结果层:跨租户行丢弃 + 敏感列不出", () => {
+	it("同租户的行保留,跨租户的行被丢弃并计数", () => {
+		const out = sanitizeRows(
+			[
+				{ id: "c1", tenant_id: "t_current", name: "张三" },
+				{ id: "c2", tenant_id: "t_other", name: "李四" },
+				{ id: "c3", tenantId: "t_current", name: "王五" },
+			],
+			"t_current",
+		);
+		expect(out.crossTenant).toBe(1);
+		expect(out.rows.map((r: any) => r.id)).toEqual(["c1", "c3"]);
+	});
+
+	it("密钥类列一律剔除(大小写不敏感),并回报剔除了哪些列", () => {
+		const out = sanitizeRows([{ id: "u1", tenant_id: "t_current", password_hash: "x", API_KEY: "k", name: "张三" }], "t_current");
+		expect(out.strippedColumns.sort()).toEqual(["API_KEY", "password_hash"]);
+		expect(out.rows[0]).toEqual({ id: "u1", tenant_id: "t_current", name: "张三" });
+	});
+
+	it("没有 tenant_id 列的聚合结果照常返回", () => {
+		const out = sanitizeRows([{ n: 3 }], "t_current");
+		expect(out.crossTenant).toBe(0);
+		expect(out.rows).toEqual([{ n: 3 }]);
+	});
+});
+
+describe("SQLite 方言:双引号标识符被拒", () => {
+	it("SQLite 下用双引号包表名直接拒(否则表名检查会漏)", () => {
+		const res = guardSql('SELECT * FROM "customers" WHERE name <> \'\'', [], {
+			readOnly: true,
+			maxRows: 200,
+			tenantId: "t_current",
+			tenantTables: ["customers"],
+			dialect: "sqlite",
+		});
+		expect(res.allowed).toBe(false);
+		expect(String(res.reason)).toContain("双引号");
+	});
+});

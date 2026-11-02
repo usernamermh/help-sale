@@ -409,6 +409,10 @@ export function sqlSafetyViolation(masked: string, raw: string, opts: SqlGuardOp
 		return "SQL 工具不允许 SHOW(需要表结构请查 information_schema 白名单)";
 	}
 
+	// 3a2) SQLite 下双引号是标识符,被 maskSql 当字符串抹掉会漏掉表名检查:直接拒绝这种写法
+	if (opts.dialect === "sqlite" && /"[A-Za-z_][A-Za-z0-9_]*"/.test(String(raw))) {
+		return "SQLite 下请不要用双引号包表名/列名(会绕过表名检查),用裸名字或反引号";
+	}
 	// 3b) 结构收窄:涉及业务表时禁止 OR 扩范围 / UNION / 子查询 —— 正则在布尔表达式上判不完整,直接收窄形态
 	if (scope.tables.length > 0) {
 		if (/\bor\b/.test(lower)) return "涉及业务表时不允许 OR:租户条件必须写成与其它条件并列的 AND";
@@ -452,4 +456,37 @@ export function bindTenantSafe(sql: string, values: unknown[], tenantId: string)
 		out = out.slice(0, t.index) + "?" + out.slice(t.index + t.len);
 	}
 	return { sql: out, values: ordered.map((t) => t.value) };
+}
+
+/**
+ * 结果层第二道防线:逐行核对 tenant_id,跨租户的行直接丢弃;密钥类列一律不出。
+ * (策略层管"能不能执行",这里管"返回了什么")
+ */
+const SENSITIVE_COLUMN_NAMES = new Set(["password_hash", "password", "api_key", "apikey", "secret", "token", "pat", "value"]);
+
+export interface SanitizeResult {
+	rows: unknown[];
+	/** 被丢掉的跨租户行数(>0 说明有异常,调用方应告警) */
+	crossTenant: number;
+	/** 被剔除的敏感列名 */
+	strippedColumns: string[];
+}
+
+export function sanitizeRows(rows: unknown[], tenantId: string): SanitizeResult {
+	const stripped = new Set<string>();
+	let crossTenant = 0;
+	const kept: unknown[] = [];
+	for (const row of rows) {
+		if (!row || typeof row !== "object") { kept.push(row); continue; }
+		const record = row as Record<string, unknown>;
+		const rowTenant = record.tenant_id ?? record.tenantId;
+		if (rowTenant !== undefined && String(rowTenant) !== tenantId) { crossTenant += 1; continue; }
+		const out: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(record)) {
+			if (SENSITIVE_COLUMN_NAMES.has(key.toLowerCase())) { stripped.add(key); continue; }
+			out[key] = value;
+		}
+		kept.push(out);
+	}
+	return { rows: kept, crossTenant, strippedColumns: [...stripped] };
 }
