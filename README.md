@@ -255,7 +255,7 @@ powershell -ExecutionPolicy Bypass -File scripts\restart-service.ps1
    - 调用方凭证优先:请求带 `Authorization: Bearer <apiKey>` 或 `x-api-key`,服务端用 `tenant.apiKeys`(密钥文件)映射出租户 —— 这是权威来源;
    - 同时带了 `x-tenant-id` 但与凭证归属不一致 → **403**(防止拿 A 的钥匙开 B 的门);
    - 没有凭证时,是否允许用请求头声明租户由 `tenant.headerTenantAllowed` 决定(开发可开,生产建议关);
-   - 请求头声明的租户必须落在 `tenant.trustedTenantIds` 清单内,否则 403;
+   - 请求头声明的租户必须是库里已有的门店(门店由平台动态开,没有静态清单;查不到就 403);
    - 每次拒绝都会写 `runtime.log`(`type: tenant_rejected`),便于排查与告警。
 2. **数据层强制**(`backend/db/tenant-guard.ts`)
    - 所有数据库访问都经过统一的 `prepare` 与 `exec` 两个入口(`exec` 只放行事务控制与 DDL);

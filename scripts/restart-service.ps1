@@ -7,7 +7,7 @@
   ... -ConfigPath <path>      # 用指定配置文件(等价于设置 CONFIG_PATH)
   ... -NoWait                 # 只启动,不等待健康检查
 
-端口/主机/日志目录都从 help-sale.config.yaml 读(CONFIG_PATH 可覆盖配置路径),
+端口/主机/日志目录都从 platform.config.yaml 读(CONFIG_PATH 可覆盖配置路径),
 脚本不硬编码任何运行参数。
 #>
 param(
@@ -34,7 +34,7 @@ function Read-Config([string]$path) {
 	return $cfg
 }
 
-$configFile = if ($ConfigPath) { $ConfigPath } elseif ($env:CONFIG_PATH) { $env:CONFIG_PATH } else { Join-Path $repoRoot 'help-sale.config.yaml' }
+$configFile = if ($ConfigPath) { $ConfigPath } elseif ($env:CONFIG_PATH) { $env:CONFIG_PATH } else { Join-Path $repoRoot 'platform.config.yaml' }
 if (-not (Test-Path $configFile)) { throw "找不到配置文件:$configFile" }
 if ($ConfigPath) { $env:CONFIG_PATH = $ConfigPath }
 

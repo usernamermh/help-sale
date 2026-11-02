@@ -47,12 +47,10 @@ data:
   memoryFile: backend/data/memory.md
   businessDbPath: backend/data/business.db
   sessionDbPath: backend/data/pi-sessions.db
-tenant:
+platform:
   defaultTenantId: t_demo
   # 是否允许用请求头声明租户(开发/内网方便,生产建议 false:只认 API Key 或登录令牌)
   headerTenantAllowed: true
-  # 受信租户清单:非空时,请求头声明的租户必须在这里面,否则 403
-  trustedTenantIds: ["t_demo"]
   # 数据隔离模式:off=不检查 / warn=只告警 / enforce=缺 tenant_id 谓词直接拦下
   dataIsolationMode: "enforce"
   # 集成方 API Key → 租户 ID 的映射,值放密钥文件(tenant.apiKeys),这里留空
@@ -68,57 +66,6 @@ tenant:
     agentConcurrency: 3
     # 被限流时返回的 Retry-After(秒)
     retryAfterSeconds: 5
-model:
-  modelId: your-model-id
-  baseUrl: http://your-llm-gateway/v1
-  apiKey: ${SECRETS:model.apiKey}
-  proxy: ""
-  contextWindow: 80000
-  maxTokens: 8192
-  extraBody: {}
-context:
-  compression:
-    enabled: true
-    thresholdRatio: 0.7
-    keepHead: 2
-    keepTail: 20
-    minMessages: 10
-    maxSummaryChars: 1200
-chunker:
-  size: 600
-  overlap: 80
-tools:
-  webSearch:
-    apiKey: ${SECRETS:tools.webSearch.apiKey}
-  fileWrite:
-    # 文件写入工具是否允许写到仓库之外(按租户分目录时,这里保持 false 最安全)
-    allowOutsideRepo: false
-  files:
-    # 文件读写工具按租户分目录:每个租户只能访问 <tenantRootDir>/<tenantId>/ 里的文件
-    tenantScoped: true
-    tenantRootDir: data/tenant_files
-  sql:
-    maxRows: 200
-    timeoutMs: 15000
-    extraBlockedKeywords: []
-    # 高危工具:能执行命令 / 控制机器 / 写任意路径,默认不挂载,需在控制台按租户显式开启
-  risk:
-    dangerousTools: ["terminal", "computer", "file_write"]
-    # false = 高危工具默认关闭(推荐);true = 沿用"没关就是开"的旧行为
-    dangerousDefaultEnabled: false
-  catalog:
-    enabled: true
-    threshold: 20
-    topK: 8
-    maxInspect: 3
-    semanticFloorZh: 0.45
-    semanticFloorEn: 0.6
-    bilingual:
-      enabled: true
-      rewriteTimeoutMs: 20000
-      perLanguageTopK: 8
-mcp:
-  servers: []
 auth:
   # 登录与 RBAC:开启后业务接口必须带登录令牌(Authorization: Bearer <token>),集成方仍可用 API Key
   enabled: true
@@ -130,12 +77,10 @@ auth:
   # 总部平台管理员:管所有门店(开门店/停用/清数据/跨店汇总),密码放密钥文件
   platformUsername: hq-admin
   platformPassword: ${SECRETS:auth.platformPassword}
-  bootstrap:
+  defaultStoreAdmin:
     tenantId: t_demo
     username: admin
-    password: ${SECRETS:auth.bootstrap.password}
-knowledge:
-  searchLimit: 5
+    password: ${SECRETS:auth.defaultStoreAdmin.password}
 vector:
   enabled: false
   provider: milvus
@@ -265,46 +210,12 @@ milvus_docker_compose:
         timeout: 20s
         retries: 10
         start_period: 90s
-workflows:
-  mine:
-    days: 14
-    minWindow: 2
-    maxWindow: 4
-    minCount: 2
-    topChains: 8
-    refineTop: 3
-    dedupe: true
 logging:
   enabled: true
   dir: log
   level: info
   runtimeFile: runtime.log
   maxBytes: 8388608
-subagents:
-  maxConcurrency: 2
-  # 有任务在跑时的扫描间隔(毫秒);空闲时不轮询
-  pollIntervalMs: 2000
-  # 空闲兜底扫描间隔(毫秒):0 = 完全事件驱动(新建卡片会立即唤醒消费者)
-  idleSweepIntervalMs: 0
-  # 单张子任务卡最多重试几次(领取者崩溃后由别的实例接管重跑)
-  maxAttempts: 3
-  timeoutMs: 600000
-  defaultTools:
-    - knowledge_search
-    - customer_query
-defaults:
-  insightsDays: 7
-  improvementsDays: 30
-  conversationsLimit: 30
-  dealsLimit: 100
-  storeOverviewDays: 30
-  customersLimit: 50
-  knowledgeCandidatesLimit: 50
-  agentThreadsLimit: 30
-  transcriptLimit: 50
-  agentListLimit: 20
-  notificationScanLimit: 50
-  remindersTakeLimit: 100
 mysql:
   enabled: true
   schemaRebuild: false
@@ -331,38 +242,6 @@ redis:
 notification:
   enabled: true
   webhookUrl: ""
-automation:
-  enabled: true
-  morningDigestTime: 08:00
-  weeklyReportWeekday: 1
-  weeklyReportTime: 09:00
-  silentCustomerDays: 7
-  silentWakeupEnabled: true
-  wakeupTaskTime: 08:30
-company:
-  name: 你的公司
-  team: 销售团队
 userkey: test
 client:
   workflowMineTimeoutMs: 120000
-weixin:
-  enabled: false
-  baseUrl: https://ilinkai.weixin.qq.com
-  accountId: ""
-  token: ""
-  tenantId: t_demo
-  botType: "3"
-  maxMessageLength: 2000
-  sendRetries: 2
-  sendRetryDelayMs: 1500
-  pollTimeoutMs: 35000
-  dedupTtlSeconds: 300
-  agentTimeoutMs: 180000
-  autoReply: true
-  ackText: 收到，正在处理，请稍等。
-  unsupportedText: 目前只支持文字消息，图片和语音请稍后再试。
-  # 该租户 agent 并发已满时的回复(单租户排队不影响别人,但仍要告知本人)
-  busyText: 当前同时处理的会话较多，请稍后再发一次。
-  commandsEnabled: true
-  sessionsLimit: 10
-  allowFrom: []

@@ -3,7 +3,7 @@
  *
  * 配置分三层,职责不同:
  *   1) help-sale.config.yaml      —— 部署/云端管理员负责(端口、存储、模型端点、开关…)
- *   2) help-sale.secrets.yaml     —— 账户名/密码/密钥一类(数据库账号、模型 key、PAT、渠道令牌);
+ *   2) platform.secrets.yaml     —— 账户名/密码/密钥一类(数据库账号、模型 key、PAT、渠道令牌);
  *                                    可改用环境变量注入,值里写 ${ENV:变量名}
  *   3) 运行时落盘                  —— 扫码登录等产生的东西(如 data/weixin/account.json)
  *
@@ -30,10 +30,10 @@ export const SENSITIVE_KEYS = [
 	"weixin.accountId",
 	"weixin.token",
 	"mcp.servers[].pat",
-	"tenant.apiKeys",
+	"platform.apiKeys",
 ] as const;
 
-/** 密钥文件位置:SECRETS_PATH 优先,否则取主配置同目录下的 help-sale.secrets.yaml。 */
+/** 密钥文件位置:SECRETS_PATH 优先,否则取主配置同目录下的 platform.secrets.yaml。 */
 export function locateSecretsFile(mainConfigPath: string | undefined): string | undefined {
 	const override = process.env.SECRETS_PATH;
 	if (override) {
@@ -41,7 +41,7 @@ export function locateSecretsFile(mainConfigPath: string | undefined): string | 
 		return override;
 	}
 	if (!mainConfigPath) return undefined;
-	const candidate = path.join(path.dirname(mainConfigPath), "help-sale.secrets.yaml");
+	const candidate = path.join(path.dirname(mainConfigPath), "platform.secrets.yaml");
 	return existsSync(candidate) ? candidate : undefined;
 }
 
@@ -55,7 +55,19 @@ export function loadSecretsDocument(mainConfigPath: string | undefined): Secrets
 	} catch (error) {
 		throw new Error(`无法读取密钥文件 ${file}: ${(error as Error).message}`);
 	}
-	const parsed = parse(text);
+	let parsed = parse(text);
+	// 门店默认密钥(模型/工具/MCP/微信的默认凭证)与平台密钥分文件:平台项优先合并
+	const storeSecrets = path.join(path.dirname(file), "store.defaults.secrets.yaml");
+	if (existsSync(storeSecrets)) {
+		try {
+			const storeParsed = parse(readFileSync(storeSecrets, "utf8"));
+			if (storeParsed && typeof storeParsed === "object" && !Array.isArray(storeParsed) && parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+				parsed = mergeDeepLocal(storeParsed as Record<string, unknown>, parsed as Record<string, unknown>);
+			}
+		} catch (error) {
+			throw new Error(`门店默认密钥文件 ${storeSecrets} 不是合法 YAML: ${(error as Error).message}`);
+		}
+	}
 	if (parsed === null || parsed === undefined) return { raw: {}, source: file };
 	if (typeof parsed !== "object" || Array.isArray(parsed)) {
 		throw new Error(`密钥文件 ${file} 顶层必须是键值映射`);
@@ -109,7 +121,7 @@ export function resolvePlaceholders(
 		}
 		const fromSecrets = readPath(secrets.raw, name);
 		if (fromSecrets === undefined) {
-			throw new Error(`配置项 ${keyPath} 写的是 \${SECRETS:${name}},但密钥文件里没有 ${name}(见 help-sale.secrets.yaml)`);
+			throw new Error(`配置项 ${keyPath} 写的是 \${SECRETS:${name}},但密钥文件里没有 ${name}(见 platform.secrets.yaml)`);
 		}
 		return fromSecrets;
 	}
@@ -150,16 +162,16 @@ export function mergeSecrets(
 	};
 
 	for (const key of SENSITIVE_KEYS) {
-		if (key === "mcp.servers[].pat" || key === "tenant.apiKeys") continue;
+		if (key === "mcp.servers[].pat" || key === "platform.apiKeys") continue;
 		take(key);
 	}
 
 	// 集成用的租户 API Key 映射(键=Key,值=租户 ID):由密钥文件提供,主配置留空
-	const apiKeys = readPath(secrets.raw, "tenant.apiKeys");
+	const apiKeys = readPath(secrets.raw, "platform.apiKeys");
 	if (apiKeys && typeof apiKeys === "object" && Object.keys(apiKeys as Record<string, unknown>).length > 0) {
 		const current = readPath(raw, "tenant.apiKeys");
 		if (current === undefined || current === null || (typeof current === "object" && !Array.isArray(current) && Object.keys(current as Record<string, unknown>).length === 0)) {
-			writePath(raw, "tenant.apiKeys", apiKeys);
+			writePath(raw, "platform.apiKeys", apiKeys);
 		} else {
 			plaintextKeys.push("tenant.apiKeys");
 		}
@@ -178,4 +190,18 @@ export function mergeSecrets(
 		}
 	}
 	return { plaintextKeys };
+}
+
+/** 深合并:override 覆盖 base(两边的键不重叠时就是拼起来)。 */
+function mergeDeepLocal(base: Record<string, unknown>, override: Record<string, unknown>): Record<string, unknown> {
+	const out: Record<string, unknown> = { ...base };
+	for (const [key, value] of Object.entries(override)) {
+		const prev = out[key];
+		if (prev && value && typeof prev === "object" && typeof value === "object" && !Array.isArray(prev) && !Array.isArray(value)) {
+			out[key] = mergeDeepLocal(prev as Record<string, unknown>, value as Record<string, unknown>);
+		} else {
+			out[key] = value;
+		}
+	}
+	return out;
 }

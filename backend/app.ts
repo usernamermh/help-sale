@@ -16,6 +16,7 @@ import { startMcpToolWarmup } from "./mcp/warmup.js";
 import { warmupAgentTools } from "./integrations_pi/agent-tools.js";
 import { registerWeixin } from "../3party/weixin/index.js";
 import { resolveTenant } from "./services/tenant-context.js";
+import { tenantExists } from "./integrations_pi/tables/crm/customers.js";
 import { resolveIdentity } from "./services/auth.js";
 import { countAdmins, createUser } from "./integrations_pi/tables/agents/users.js";
 import { countPlatformAdmins, createPlatformAdmin } from "./integrations_pi/tables/agents/platform-admins.js";
@@ -146,7 +147,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 				const fromHeader = String(Array.isArray(rawHeader) ? rawHeader[0] ?? "" : rawHeader ?? "").trim();
 				request.tenantId = fromHeader || config.tenantId;
 			} else {
-				const resolved = resolveTenant({ headers, apiKeys: config.tenantApiKeys, headerAllowed: config.tenantHeaderAllowed, trustedTenantIds: config.tenantTrustedIds, defaultTenantId: config.tenantId });
+				const resolved = resolveTenant({ headers, apiKeys: config.tenantApiKeys, headerAllowed: config.tenantHeaderAllowed, defaultTenantId: config.tenantId });
 				if (resolved.error) {
 					appendRuntimeLog(logDir, { level: "error", type: "tenant_rejected", message: `${request.method} ${request.url} 租户校验失败: ${resolved.error.message}`, meta: { tenantHeader: (request.headers["x-tenant-id"] as string | undefined) ?? null } }, { fileName: config.logRuntimeFile, level: config.logLevel, maxBytes: config.logMaxBytes });
 					return reply.code(resolved.error.status).send({ error: "tenant_not_allowed", message: resolved.error.message });
@@ -154,6 +155,11 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 				// 开启登录后:只有集成方 API Key 能免登录,请求头/默认租户不足以进入业务接口
 				if (config.authEnabled && resolved.source !== "api-key") {
 					return reply.code(401).send({ error: "unauthenticated", message: "请先登录(Authorization: Bearer <token>),或使用集成方 API Key(x-api-key)。" });
+				}
+				// 受信 = 库里已有的门店:请求头声明的门店必须真实存在(门店由平台动态开,没有静态清单)
+				if (resolved.source === "header" && resolved.tenantId && !tenantExists(db, resolved.tenantId)) {
+					appendRuntimeLog(logDir, { level: "error", type: "tenant_rejected", message: request.method + " " + request.url + " 门店不存在: " + resolved.tenantId }, { fileName: config.logRuntimeFile, level: config.logLevel, maxBytes: config.logMaxBytes });
+					return reply.code(403).send({ error: "tenant_not_allowed", message: "门店不存在:" + resolved.tenantId });
 				}
 				request.tenantId = resolved.tenantId ?? config.tenantId;
 				request.tenantRole = resolved.source === "api-key" ? "member" : undefined;

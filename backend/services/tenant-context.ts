@@ -7,14 +7,13 @@
  *      若同时带了 x-tenant-id 且与映射不一致 → 直接拒绝(防止"拿着 A 的钥匙开 B 的门");
  *   2) 未带凭证时:是否允许用请求头声明租户由 tenant.headerTenantAllowed 决定
  *      (开发/内网可以开,生产应关掉,只认凭证);
- *   3) 请求头声明的租户必须落在 tenant.trustedTenantIds 清单里(清单为空表示不限制);
+ *   3) 请求头声明的租户必须真实存在(门店由平台开到库里),由调用方查库校验;
  *   4) 都没有时落到配置里的默认租户。
  */
 export interface TenantResolutionInput {
 	headers: Record<string, string | string[] | undefined>;
 	apiKeys: Record<string, string>;
 	headerAllowed: boolean;
-	trustedTenantIds: string[];
 	defaultTenantId: string;
 }
 
@@ -55,9 +54,6 @@ export function resolveTenant(input: TenantResolutionInput): TenantResolution {
 	if (headerTenant) {
 		if (!input.headerAllowed) {
 			return { source: "header", error: { status: 401, message: "未提供调用凭证(该部署不允许用请求头声明租户)" } };
-		}
-		if (input.trustedTenantIds.length > 0 && !input.trustedTenantIds.includes(headerTenant)) {
-			return { source: "header", error: { status: 403, message: `租户 ${headerTenant} 不在受信清单内` } };
 		}
 		return { tenantId: headerTenant, source: "header" };
 	}

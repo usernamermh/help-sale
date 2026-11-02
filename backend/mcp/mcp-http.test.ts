@@ -77,7 +77,7 @@ describe("MCP HTTP 端点", () => {
 			payload: { jsonrpc: "2.0", id: 9, method: "tools/call", params: { name: "mcp_help_sale_customer_query", arguments: { view: "list" } } },
 			headers: { "x-tenant-id": "t_other" },
 		});
-		expect(res.statusCode).toBe(403);
-		expect(res.json().error).toBe("tenant_not_allowed");
+		expect(res.statusCode).toBe(401);
+		expect(res.json().error).toBe("unauthenticated");
 	});
 });

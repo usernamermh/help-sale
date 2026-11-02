@@ -78,6 +78,12 @@ export function requireTenant(db: DatabaseSync, tenantId: string, name = "未命
 	}
 }
 
+/** 门店(租户)是否已存在:动态开店之后,"受信门店"就是库里已有的门店,不再有静态清单。 */
+export function tenantExists(db: DatabaseSync, tenantId: string): boolean {
+	if (!tenantId) return false;
+	return Boolean(db.prepare("SELECT id FROM tenants WHERE id = ?").get(tenantId));
+}
+
 export interface CustomerBriefRow {
 	id: string;
 	key: string;

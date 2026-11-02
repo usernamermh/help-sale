@@ -19,6 +19,10 @@ llm-agent-workflow-master
 
 # 本地敏感/内部文件(不入库)
 help-sale.config.yaml
+platform.config.yaml
+store.defaults.yaml
+platform.secrets.yaml
+store.defaults.secrets.yaml
 help-sale.secrets.yaml
 /docs/plans/
 /data/

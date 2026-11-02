@@ -15,7 +15,7 @@ afterEach(() => {
 function tempSecrets(content: string): string {
 	const dir = mkdtempSync(path.join(os.tmpdir(), "hs-secrets-"));
 	dirs.push(dir);
-	const file = path.join(dir, "help-sale.secrets.yaml");
+	const file = path.join(dir, "platform.secrets.yaml");
 	writeFileSync(file, content, "utf8");
 	return file;
 }
@@ -34,7 +34,7 @@ describe("占位解析", () => {
 	it("${SECRETS:a.b} 从密钥文档取值,缺项报错", () => {
 		const secrets = { raw: { mysql: { password: "p@ss" } } };
 		expect((resolvePlaceholders({ v: "${SECRETS:mysql.password}" }, secrets) as Record<string, string>).v).toBe("p@ss");
-		expect(() => resolvePlaceholders({ v: "${SECRETS:mysql.user}" }, secrets, "v")).toThrow(/help-sale.secrets.yaml/);
+		expect(() => resolvePlaceholders({ v: "${SECRETS:mysql.user}" }, secrets, "v")).toThrow(/platform.secrets.yaml/);
 	});
 });
 

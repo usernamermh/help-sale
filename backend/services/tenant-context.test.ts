@@ -4,7 +4,6 @@ import { extractApiKey, resolveTenant } from "./tenant-context.js";
 const base = {
 	apiKeys: { "key-a": "t_a", "key-b": "t_b" },
 	headerAllowed: true,
-	trustedTenantIds: [] as string[],
 	defaultTenantId: "t_default",
 };
 
@@ -26,11 +25,6 @@ describe("租户上下文解析", () => {
 		expect(resolveTenant({ ...base, headerAllowed: false, headers: { authorization: "Bearer key-a" } }).tenantId).toBe("t_a");
 	});
 
-	it("受信清单之外的租户被拒", () => {
-		const trusted = { ...base, trustedTenantIds: ["t_a"] };
-		expect(resolveTenant({ ...trusted, headers: { "x-tenant-id": "t_other" } }).error?.status).toBe(403);
-		expect(resolveTenant({ ...trusted, headers: { "x-tenant-id": "t_a" } }).tenantId).toBe("t_a");
-	});
 
 	it("都没有时落到默认租户", () => {
 		expect(resolveTenant({ ...base, headers: {} })).toEqual({ tenantId: "t_default", source: "default" });

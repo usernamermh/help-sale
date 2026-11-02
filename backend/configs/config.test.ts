@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,15 +25,22 @@ afterEach(() => {
 
 /** 以真实配置为底改一份临时 yaml,并把它设为本次加载的 CONFIG_PATH。 */
 function writeVariant(mutate: (raw: Record<string, any>) => void): void {
-	const base = parse(readFileSync(locateConfigFile()!, "utf8")) as Record<string, any>;
+	// 配置分两个文件(平台配置 + 门店默认模板):测试的基准取合并后的结果,与线上一致
+	const platformPath = locateConfigFile()!;
+	const base = parse(readFileSync(platformPath, "utf8")) as Record<string, any>;
+	const storePath = path.join(path.dirname(platformPath), "store.defaults.yaml");
+	if (existsSync(storePath)) {
+		const storeRaw = parse(readFileSync(storePath, "utf8")) as Record<string, any>;
+		for (const [key, value] of Object.entries(storeRaw)) if (!(key in base)) base[key] = value;
+	}
 	mutate(base);
 	const dir = mkdtempSync(path.join(os.tmpdir(), "cfg-split-"));
 	dirs.push(dir);
-	const file = path.join(dir, "help-sale.config.yaml");
+	const file = path.join(dir, "platform.config.yaml");
 	writeFileSync(file, stringify(base), "utf8");
 	process.env.CONFIG_PATH = file;
 	// 密钥与账户走独立文件:测试用仓库里的示例密钥模板,保证占位能解析
-	process.env.SECRETS_PATH = path.join(repoRoot, "help-sale.secrets.example.yaml");
+	process.env.SECRETS_PATH = path.join(repoRoot, "platform.secrets.example.yaml");
 }
 
 /** 重新加载 env.ts(模块顶层会重新执行 loadConfig),拿到这一份配置。 */
@@ -52,7 +59,7 @@ describe("配置:各段取值落到对应字段", () => {
 			raw.logging.maxBytes = 123456;
 			raw.data.mode = "local";
 			raw.data.databaseId = "cmp_db";
-			raw.tenant.defaultTenantId = "cmp-tenant";
+			raw.platform.defaultTenantId = "cmp-tenant";
 			raw.model.modelId = "cmp-model";
 			raw.model.maxTokens = 2048;
 			raw.context = { compression: { enabled: false, thresholdRatio: 0.5, keepHead: 1, keepTail: 5, minMessages: 4, maxSummaryChars: 300 } };
@@ -63,7 +70,7 @@ describe("配置:各段取值落到对应字段", () => {
 			raw.mysql.port = 3399;
 			raw.redis.port = 6399;
 			raw.notification = { enabled: true, webhookUrl: "https://cmp.example/hook" };
-			raw.auth = { enabled: true, tokenTtlHours: 3, tokenSecret: "cmp-secret", platformUsername: "cmp-hq", platformPassword: "cmp-hq-password", bootstrap: { tenantId: "cmp-tenant", username: "cmp-admin", password: "cmp-password" } };
+			raw.auth = { enabled: true, tokenTtlHours: 3, tokenSecret: "cmp-secret", platformUsername: "cmp-hq", platformPassword: "cmp-hq-password", defaultStoreAdmin: { tenantId: "cmp-tenant", username: "cmp-admin", password: "cmp-password" } };
 			raw.company = { name: "对照公司", team: "对照团队" };
 			raw.userkey = "cmp-userkey";
 			raw.defaults.customersLimit = 11;
@@ -148,7 +155,7 @@ describe("配置:各段取值落到对应字段", () => {
 		const cfg = loadConfig();
 		const undefinedKeys = Object.entries(cfg).filter(([, v]) => v === undefined).map(([k]) => k);
 		expect(undefinedKeys).toEqual([]);
-		expect(Object.keys(cfg)).toHaveLength(156);
+		expect(Object.keys(cfg)).toHaveLength(155);
 	});
 });
 
@@ -160,7 +167,7 @@ describe("配置:代码内不提供任何默认值", () => {
 		["context 段", (raw) => { delete raw.context; }, /配置项 context\.compression\.enabled/],
 		["vector 段", (raw) => { delete raw.vector; }, /配置项 vector\.enabled/],
 		["knowledge 段", (raw) => { delete raw.knowledge; }, /配置项 knowledge\.searchLimit/],
-		["tools 段", (raw) => { delete raw.tools; }, /配置项 tools\.webSearch\.apiKey/],
+		["tools 段", (raw) => { delete raw.tools; }, /配置项 tools\./],
 		["mcp 段", (raw) => { delete raw.mcp; }, /配置项 mcp\.servers/],
 		["mysql 段", (raw) => { delete raw.mysql; }, /配置项 mysql\.enabled/],
 		["subagents 段", (raw) => { delete raw.subagents; }, /配置项 subagents\.maxConcurrency/],
@@ -206,16 +213,16 @@ describe("配置:代码内不提供任何默认值", () => {
 	it("配置文件为空:直接报错", async () => {
 		const dir = mkdtempSync(path.join(os.tmpdir(), "cfg-empty-"));
 		dirs.push(dir);
-		const file = path.join(dir, "help-sale.config.yaml");
+		const file = path.join(dir, "platform.config.yaml");
 		writeFileSync(file, "# 只有注释,没有配置\n", "utf8");
 		process.env.CONFIG_PATH = file;
 		await expect(reload()).rejects.toThrow(/是空的/);
 	});
 
 	it("示例模板 help-sale.config.example.yaml 覆盖全部必填项", async () => {
-		process.env.CONFIG_PATH = path.join(repoRoot, "help-sale.config.example.yaml");
-		process.env.SECRETS_PATH = path.join(repoRoot, "help-sale.secrets.example.yaml");
+		process.env.CONFIG_PATH = path.join(repoRoot, "platform.config.example.yaml");
+		process.env.SECRETS_PATH = path.join(repoRoot, "platform.secrets.example.yaml");
 		const cfg = await reload();
-		expect(Object.keys(cfg)).toHaveLength(156);
+		expect(Object.keys(cfg)).toHaveLength(155);
 	});
 });

@@ -24,7 +24,7 @@ export interface FileConfig {
 		businessDbPath?: string;
 		sessionDbPath?: string;
 	};
-	tenant?: { defaultTenantId?: string; headerTenantAllowed?: boolean; trustedTenantIds?: string[]; dataIsolationMode?: string; apiKeys?: Record<string, string>; rateLimit?: { enabled?: boolean; requestPerMinute?: number; requestBurst?: number; agentConcurrency?: number; retryAfterSeconds?: number } };
+	platform?: { defaultTenantId?: string; headerTenantAllowed?: boolean; dataIsolationMode?: string; apiKeys?: Record<string, string>; rateLimit?: { enabled?: boolean; requestPerMinute?: number; requestBurst?: number; agentConcurrency?: number; retryAfterSeconds?: number } };
 	model?: {
 		modelId?: string;
 		baseUrl?: string;
@@ -70,7 +70,7 @@ export interface FileConfig {
 		enabled?: boolean;
 		tokenTtlHours?: number;
 		tokenSecret?: string;
-		bootstrap?: { tenantId?: string; username?: string; password?: string };
+		defaultStoreAdmin?: { tenantId?: string; username?: string; password?: string };
 		/** 总部平台管理员:启动时幂等创建(平台层账号,不属于任何门店) */
 		platformUsername?: string;
 		platformPassword?: string;
@@ -166,13 +166,25 @@ export interface FileConfig {
 	};
 }
 
-/** 定位配置文件:CONFIG_PATH 优先,否则取仓库顶层的 help-sale.config.yaml(不存在返回 undefined)。 */
+/**
+ * 配置分两个文件,谁负责谁改:
+ *   platform.config.yaml  平台(总部)配置:端口/日志/数据库/Redis/向量/登录与平台策略;
+ *   store.defaults.yaml   门店默认模板:模型、工具、MCP、微信与业务默认值(新门店继承,可被门店在库里覆盖)。
+ * 这里负责把两份合并成一份 FileConfig(平台项优先,两边的段不重叠)。
+ */
+/** 门店默认模板的位置:与平台配置同目录。 */
+export function locateStoreDefaultsFile(platformPath: string): string | undefined {
+	const candidate = path.join(path.dirname(platformPath), "store.defaults.yaml");
+	return existsSync(candidate) ? candidate : undefined;
+}
+
+/** 定位平台配置:CONFIG_PATH 优先,否则取仓库顶层的 platform.config.yaml(不存在返回 undefined)。 */
 export function locateConfigFile(): string | undefined {
 	const override = process.env.CONFIG_PATH;
 	if (override) return override;
 	// 本文件位于 backend/configs/file.ts,向上两级即仓库顶层
 	const here = path.dirname(fileURLToPath(import.meta.url));
-	const candidate = path.resolve(here, "..", "..", "help-sale.config.yaml");
+	const candidate = path.resolve(here, "..", "..", "platform.config.yaml");
 	return existsSync(candidate) ? candidate : undefined;
 }
 
@@ -183,7 +195,7 @@ export function locateConfigFile(): string | undefined {
 export function loadConfigFile(): FileConfig {
 	const file = locateConfigFile();
 	if (!file) {
-		throw new Error("未找到配置文件:请在仓库顶层放置 help-sale.config.yaml(或用 CONFIG_PATH 指定路径);所有参数都必须由配置文件提供");
+		throw new Error("未找到平台配置:请在仓库顶层放置 platform.config.yaml(或用 CONFIG_PATH 指定路径);所有参数都必须由配置文件提供");
 	}
 	let raw: string;
 	try {
@@ -203,6 +215,20 @@ export function loadConfigFile(): FileConfig {
 	if (typeof parsed !== "object" || Array.isArray(parsed)) {
 		throw new Error(`配置文件 ${file} 顶层必须是键值映射(yaml mapping)`);
 	}
+	// 门店默认模板:合并进来(平台项优先)。门店自己改的值不在这里,而是在库里(tenant_config / tenant_secrets)
+	const storeFile = locateStoreDefaultsFile(file);
+	if (storeFile) {
+		let storeParsed: unknown;
+		try {
+			storeParsed = parseYaml(readFileSync(storeFile, "utf8"));
+		} catch (error) {
+			throw new Error(`门店默认配置 ${storeFile} 不是合法 YAML: ${(error as Error).message}`);
+		}
+		if (storeParsed && typeof storeParsed === "object" && !Array.isArray(storeParsed)) {
+			parsed = mergeDeep(storeParsed as Record<string, unknown>, parsed as Record<string, unknown>);
+		}
+	}
+
 	// 账户与密钥:先由密钥文件补缺,再统一解析 ${ENV:...} / ${SECRETS:...} 占位
 	const secrets = loadSecretsDocument(file);
 	const root = parsed as Record<string, unknown>;
@@ -211,9 +237,23 @@ export function loadConfigFile(): FileConfig {
 	if (plaintextKeys.length > 0) {
 		console.warn(
 			`[config] 以下账户/密钥仍直接写在主配置里:${plaintextKeys.join(", ")}。` +
-				`建议迁到 ${secrets.source ?? path.join(path.dirname(file), "help-sale.secrets.yaml")},` +
+				`建议迁到 ${secrets.source ?? path.join(path.dirname(file), "platform.secrets.yaml")},` +
 				`或写成 \${ENV:变量名} 由部署环境注入。`,
 		);
 	}
 	return resolved as FileConfig;
+}
+
+/** 深合并:override 覆盖 base(段不重叠时就是拼起来)。 */
+function mergeDeep(base: Record<string, unknown>, override: Record<string, unknown>): Record<string, unknown> {
+	const out: Record<string, unknown> = { ...base };
+	for (const [key, value] of Object.entries(override)) {
+		const prev = out[key];
+		if (prev && value && typeof prev === "object" && typeof value === "object" && !Array.isArray(prev) && !Array.isArray(value)) {
+			out[key] = mergeDeep(prev as Record<string, unknown>, value as Record<string, unknown>);
+		} else {
+			out[key] = value;
+		}
+	}
+	return out;
 }
