@@ -16,7 +16,9 @@ app.get<{ Querystring: { status?: string } }>("/api/v1/subagents", async (reques
 	});
 
 app.post("/api/v1/subagents/run", async (request) => {
-		const executed = await consumeKanbanSubagents({ db: deps.db }, request.tenantId, { limit: 2 });
+		// 带上会话就只消费该会话的卡;不带则按整租户消费(响应里回显,避免"以为只跑了本会话")
+		const requestedThread = String((request.body as { threadId?: string } | undefined)?.threadId ?? (request.query as { threadId?: string } | undefined)?.threadId ?? "").trim();
+		const executed = await consumeKanbanSubagents({ db: deps.db }, request.tenantId, { limit: 2, ...(requestedThread ? { threadId: requestedThread } : {}) });
 		return { executed };
 	});
 }

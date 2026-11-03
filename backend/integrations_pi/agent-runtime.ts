@@ -217,7 +217,7 @@ export async function runSalesAgent(deps: SalesAgentDeps, input: SalesAgentInput
 	const traceHolder: { recorder?: TimelineRecorder } = {};
 	// recallState:工具挂载阶段写入"是否进编目、编目里有多少工具";下面据此决定要不要做双语 query 改写
 	const recallState: ToolRecallState = {};
-	const tools = (await createSalesAgentTools({ db, tenantId, store, traceHolder, recallState })).filter(
+	const tools = (await createSalesAgentTools({ db, tenantId, store, traceHolder, recallState, threadId: input.threadId })).filter(
 		(t) => t.name === "emit_final" || !disabled.has(t.name),
 	);
 
@@ -443,7 +443,7 @@ export async function collectMultiAgentFlow(deps: SalesAgentDeps, input: SalesAg
 	if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "subagents", label: "子代理并行执行", payload: { count: executed.length, results: executed.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result ? c.result.slice(0, 120) : null, error: c.error ?? null })) } });
 
 	// 协调者汇总
-	const coordinatorTools = (await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store })).filter(
+	const coordinatorTools = (await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store, threadId: input.threadId })).filter(
 		(t) => t.name === "kanban" || t.name === "emit_final" || t.name === "subagents",
 	);
 	const coordinatorPrompt = getCoordinatorPrompt({ goal: input.goal });
@@ -517,7 +517,7 @@ export async function runMultiAgentFlow(deps: SalesAgentDeps, input: SalesAgentI
 	if (input.onProgress) input.onProgress({ type: "tool_end", toolName: "subagents", label: "子代理并行执行", payload: { count: executed.length, results: executed.map((c) => ({ id: c.id, title: c.title, status: c.status, result: c.result ? c.result.slice(0, 120) : null, error: c.error ?? null })) } });
 
 	// 3) 协调者(主代理)读看板检查结果并汇总:只挂 kanban/subagents + emit_final,不注册业务工具
-	const coordinatorTools = (await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store })).filter(
+	const coordinatorTools = (await createSalesAgentTools({ db: deps.db, tenantId: deps.tenantId, store: deps.store, threadId: input.threadId })).filter(
 		(t) => t.name === "kanban" || t.name === "emit_final" || t.name === "subagents",
 	);
 	const coordinatorPrompt = getCoordinatorPrompt({ goal: input.goal });

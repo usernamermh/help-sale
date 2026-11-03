@@ -127,6 +127,8 @@ export function checkToolRequires(requires: ExternalToolInfo["requires"], config
 export interface ExternalToolContext {
 	db: unknown;
 	tenantId: string;
+	/** 当前会话:看板卡按会话落位(子代理工具用它,不再写死 default) */
+	threadId?: string;
 	/** 可选:工具环境门槛所需配置(如 web_search 的 Serper 密钥) */
 	webSearchApiKey?: string;
 }

@@ -558,7 +558,7 @@ agent 侧另有 `weixin_send` 工具(`action=send|list`),可以主动给人发�
 
 # 多代理与看板
 
-- `subagents` 工具登记子代理任务,`kanban` 作为主/子代理之间的通信总线(按会话隔离);
+- `subagents` 工具登记子代理任务,`kanban` 作为主/子代理之间的通信总线(按会话隔离);(卡按会话落位:宿主把当前会话 ID 传给工具;`/api/v1/subagents/run` 不带 threadId 时按整租户消费,响应里会回显)
 - 规划器提示词决定 `single` / `multi`;协调者提示词负责汇总看板结果;
 - 并发、轮询间隔、超时、子代理默认工具都在 `subagents` 段配置。
 

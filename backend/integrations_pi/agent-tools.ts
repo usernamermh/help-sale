@@ -23,6 +23,8 @@ export interface SalesAgentToolDeps {
 	store: SessionStore;
 	/** 宿主运行轨迹句柄:工作流步骤事件写入此处当前绑定的 recorder(由 agent 运行时在每次运行前赋值)。 */
 	traceHolder?: { recorder?: TimelineRecorder };
+	/** 当前会话 ID:子代理建卡按会话落位 */
+	threadId?: string;
 	/** 双语召回状态:本函数写入 catalog 信息,宿主写入 bilingual 改写结果(见 ToolRecallState) */
 	recallState?: ToolRecallState;
 }
@@ -178,7 +180,7 @@ export function applyToolPolicy<T extends { name: string }>(tools: T[], states: 
 export async function createSalesAgentTools(deps: SalesAgentToolDeps, opts: SalesAgentToolOptions = {}): Promise<Array<AgentTool<any, any>>> {
 	// check_fn 环境门槛:web_search/web 依赖配置的 Serper 密钥,未配置则自动隐藏
 	// 外部工具的门槛与密钥按租户解析(tenant_secrets 覆盖优先)
-	const external = await loadExternalAgentTools(TOOL_PATHS, { db: deps.db, tenantId: deps.tenantId, webSearchApiKey: tenantWebSearchKey(deps.db, deps.tenantId) });
+	const external = await loadExternalAgentTools(TOOL_PATHS, { db: deps.db, tenantId: deps.tenantId, threadId: deps.threadId, webSearchApiKey: tenantWebSearchKey(deps.db, deps.tenantId) });
 	// 场景分组:按 readme 的 category 过滤,只挂载指定分类工具(模型上下文只看需要的工具)
 	const filteredExternal = opts.toolsets?.length ? external.filter((t) => opts.toolsets!.includes((t as unknown as { category?: string }).category ?? "")) : external;
 	const workflows = listWorkflows(deps.db, deps.tenantId).filter((w) => w.status === "enabled");

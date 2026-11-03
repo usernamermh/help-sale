@@ -1,6 +1,6 @@
 import { createKanbanTask, getKanbanCard, listKanbanCards, type KanbanCard } from "../../backend/services/routes/agent/kanban.js";
 
-interface ToolContext { db: any; tenantId: string; }
+interface ToolContext { db: any; tenantId: string; threadId?: string; }
 
 function cardLine(c: KanbanCard): string {
 	return `[${c.status}] ${c.id} ${c.title}: ${c.goal ?? ""}${c.result ? ` → ${c.result.slice(0, 60)}` : ""}${c.error ? ` ⚠ ${c.error.slice(0, 60)}` : ""}`;
@@ -13,7 +13,9 @@ export function execute(ctx: ToolContext, params: any) {
 		const goal = String(params?.goal ?? "").trim();
 		if (!title || !goal) return { content: [{ type: "text", text: "create 需要 title 与 goal。" }] };
 		const tools = Array.isArray(params?.tools) ? params.tools.map((s: unknown) => String(s)) : undefined;
-		const card = createKanbanTask(ctx.db as never, { tenantId: ctx.tenantId, threadId: "default", title, goal, description: params?.description ? String(params.description) : undefined, tools });
+		// 按会话落位:宿主把当前会话 ID 传进来(拿不到才退到 default),否则所有会话的卡会挤在 default 里
+		const threadId = String(ctx.threadId ?? "").trim() || "default";
+		const card = createKanbanTask(ctx.db as never, { tenantId: ctx.tenantId, threadId, title, goal, description: params?.description ? String(params.description) : undefined, tools });
 		return { content: [{ type: "text", text: `子代理任务已登记 ${card.id}: ${title}(状态 ${card.status},将由消费者并行执行)` }], details: { id: card.id, title: card.title, status: card.status } };
 	}
 	if (op === "get") {
@@ -26,7 +28,8 @@ export function execute(ctx: ToolContext, params: any) {
 		return { content: [{ type: "text", text: lines.join("\n") }], details: card };
 	}
 	const filter = params?.statusFilter ? String(params.statusFilter) : undefined;
-	const tasks = listKanbanCards(ctx.db as never, ctx.tenantId, filter);
+	// 原来把 status 字符串当 options 传(过滤失效且有类型错);这里改成正规 options,并按会话过滤
+	const tasks = listKanbanCards(ctx.db as never, ctx.tenantId, { ...(filter ? { status: filter } : {}), ...(ctx.threadId ? { threadId: ctx.threadId } : {}) });
 	const text = tasks.length ? tasks.map(cardLine).join("\n") : "(子代理队列为空)";
 	return { content: [{ type: "text", text: `子代理队列(${tasks.length}):\n${text}` }], details: { tasks } };
 }
